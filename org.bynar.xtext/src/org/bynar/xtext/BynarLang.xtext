@@ -1,0 +1,9 @@
+grammar org.bynar.xtext.BynarLang with org.eclipse.xtext.common.Terminals
+
+generate bynarLang "http://www.bynar.org/xtext/BynarLang"
+
+Model:
+	greetings+=Greeting*;
+	
+Greeting:
+	'Hello' name=ID '!';

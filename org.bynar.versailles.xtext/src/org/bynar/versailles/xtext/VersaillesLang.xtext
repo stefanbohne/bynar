@@ -1,0 +1,9 @@
+grammar org.bynar.versailles.xtext.VersaillesLang with org.eclipse.xtext.common.Terminals
+
+generate versaillesLang "http://www.bynar.org/versailles/xtext/VersaillesLang"
+
+Model:
+	greetings+=Greeting*;
+	
+Greeting:
+	'Hello' name=ID '!';
