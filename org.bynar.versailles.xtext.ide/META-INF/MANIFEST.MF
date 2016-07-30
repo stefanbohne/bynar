@@ -9,3 +9,6 @@ Require-Bundle: org.bynar.versailles.xtext,
  org.eclipse.xtext.ide,
  org.eclipse.xtext.xbase.ide
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+Export-Package: org.bynar.versailles.xtext.ide.contentassist.antlr,
+ org.bynar.versailles.xtext.ide.contentassist.antlr.internal
+

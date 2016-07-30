@@ -1,9 +1,68 @@
-grammar org.bynar.xtext.BynarLang with org.eclipse.xtext.common.Terminals
+grammar org.bynar.xtext.BynarLang with org.bynar.versailles.xtext.VersaillesLang
+
+import "http://www.bynar.org/versailles/xtext/VersaillesLang" as versailles
 
 generate bynarLang "http://www.bynar.org/xtext/BynarLang"
 
-Model:
-	greetings+=Greeting*;
-	
-Greeting:
-	'Hello' name=ID '!';
+CompilationUnit returns versailles::CompilationUnit: super;
+
+Statement returns versailles::Statement:
+		super 
+	|   "component" ({RegisterComponent} "[" bitPosition=IndexExpr "]" | {RecordComponent}) name=Name (title=STRING)? (description=InterpolatedString)? ":" type=TypeExpression
+	|	{RecordAlign} "align" "at" alignment=Expression unit=BitUnit
+	|	{RecordOffset} "offset" ("to" | "by") offset=Expression unit=BitUnit
+	|	{UnionVariant} "variant" name=Name (title=STRING)? (description=InterpolatedString)? ":" type=TypeExpression
+	|	{EnumValue} "value" name=Name (title=STRING)? (description=InterpolatedString)? "=" value=Expression 
+;
+
+Sep hidden (WS, ML_COMMENT, SL_COMMENT):
+	NL | ";"
+;
+Statements:
+	{Statements} ((statements+=Statement)? Sep)*
+;	
+
+TypeFun returns versailles::TypeExpression:
+	TypeModifiers ({FunctionTypeExpr.argumentType=current} functionClass=("->" | "<->" | ">->" | "<-<" | ">-<") resultType=TypeExpression)?
+;	
+TypeModifiers returns versailles::TypeExpression:
+	TypeInt ( {TypeWrittenExpr.type=current} => "written" written=Expression
+			| {TypeConvertedExpr.type=current} => "converted" conversion=Expression
+			| {TypeWhereExpr.type=current} => "where" where=Expression)*
+			   
+;
+TypeInt returns versailles::TypeExpression:
+	TypeExtension ({TypeWithInterpretationExpr.type=current} "is" interpretation=Interpretation)?
+;
+
+TypeSimple returns versailles::TypeExpression:
+	   	super
+	|	{BitFieldTypeExpr} "bits" (bitWidth=Expression) 
+	|   {ByteFieldTypeExpr} "bytes" (byteWidth=Expression) 
+	|	{RecordTypeExpr} "record" "{" statements=Statements "}"
+	|	{UnionTypeExpr} "union" "{" statements=Statements "}"
+	|	{RegisterTypeExpr} "register" bitWidth=Expression "{" statements=Statements "}"
+	|	{ArrayTypeExpr} "array" "of" elementType=TypeExpression ("length" length=Expression | "until" until=Expression) 
+;
+
+Interpretation:
+		{EnumInterpretation} "one" "of" "{" statements=Statements "}"
+	|	{FixedInterpretation} "fixed" value=Expression
+	|	{UnitInterpretation} "in" unit=STRING
+	|	{ContainingInterpretation} "containing" containedType=TypeExpression
+;
+BitUnit:
+		{UnitBits} ("bits" | "bit")
+	|	{UnitBytes} ("bytes" | "byte")
+	|	{UnitKBytes} ("kB" | "kilobytes" | "kilobyte")
+	|	{UnitMBytes} ("MB" | "megabytes" | "megabyte")
+;
+
+Name: 
+		super
+	|   "component" | "align" | "at" | "offset" | "to" | "by" | "variant" | "value"
+	| 	"written" | "converted" | "where" | "is" | "bits" | "bytes" | "record" | "union"
+	|	"register" | "array" | "length" | "until" | "one" | "fixed" | "containing"
+	| 	"bit" | "byte" | "kB" | "kilobytes" | "kilobyte" | "MB" | "megabytes" | "megabyte"
+;
+

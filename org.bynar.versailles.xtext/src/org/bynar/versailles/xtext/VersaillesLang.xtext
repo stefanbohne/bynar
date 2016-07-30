@@ -1,9 +1,194 @@
 grammar org.bynar.versailles.xtext.VersaillesLang with org.eclipse.xtext.common.Terminals
 
+import "http://www.eclipse.org/emf/2002/Ecore" as ecore
+
 generate versaillesLang "http://www.bynar.org/versailles/xtext/VersaillesLang"
 
-Model:
-	greetings+=Greeting*;
-	
-Greeting:
-	'Hello' name=ID '!';
+
+CompilationUnit hidden(WS, NL, ML_COMMENT, SL_COMMENT): 
+	{CompilationUnit} statements=Statements ("return" expression=Expression)? Sep* 
+;
+Sep hidden (WS, ML_COMMENT, SL_COMMENT):
+	NL | ";"
+;
+
+Name: ID_LOWER | "pass" | "let" | "forget" | "remember" | "def" | "type" |  "if" | "else" | "end" | "case" | "match" | "in" |
+	  "int" | "boolean" | ID_BACKTICK
+;
+TypeName: ID_UPPER | ID_FORWARDTICK;
+
+ 
+Statement:
+		{PassStmt} "pass" 
+	|	{LetStmt} "let" pattern=Expression "=" value=Expression
+	|	{ForgetStmt} "forget" pattern=Expression "=" value=Expression
+	|	{RememberStmt} "remember" pattern=Expression "=" value=Expression
+	|	{IfStmt} "if" condition=Expression "then" then=Statements (=> "else" else=Statements)? ("fi" assertion=Expression)?
+	|   {LoopStmt} ("from" assertion=Expression)? ("do" do=Statements)? ("loop" loop=Statements)? "until" condition=Expression
+	|	{CaseStmt} "case" case=LambdaExpr
+	|	{DefStmt} "def" name=Name
+					    ((arguments+=TupleExpr)+ (title=STRING)? (description=InterpolatedString)?
+						    ("=" expression = Expression |
+				            janusClass=JanusClass (name2=Name)? results=TupleExpr (title2=STRING)? (description2=InterpolatedString)? ("{" statements=Statements "}" | "=" expression=Expression))
+				        | ":" valueType=TypeExpression (title=STRING)? (description=InterpolatedString)? "=" value=Expression)
+	|	{TypeStmt} "type" name=TypeName typeArguments=TypeArgumentsDefinition? valueArguments=TupleTypeExpr? (title=STRING)? (description=InterpolatedString)? "=" type=TypeExpression 
+;
+Statements:
+	{Statements} ((statements+=Statement)? Sep)*
+;	
+
+Expression:
+	ExpressionLambda
+;
+JanusClass returns Expression: 
+		{JanusClass} op=("->" | "<-" | "<->" | ">->" | "<-<" | ">-<" | "<>-<>")
+	|	{GenericJanusClass} ">-" variable=TypeVariable "->" 
+	|   {GenericBackwardJanusClass} "<-" variable=TypeVariable "-<"
+;
+LambdaExpr:
+	pattern=ExpressionIf janusClass=JanusClass body=Expression
+;
+ExpressionLambda returns Expression:
+	ExpressionIf ({LambdaExpr.pattern=current} janusClass=JanusClass body=Expression)?
+;
+ExpressionIf returns Expression:
+    ExpressionMatch ( {IfExpr.then=current} => "if" condition=Expression "else" else=ExpressionMatch
+    	            | {WhereExpr.then=current} => "so" "that" condition=ExpressionMatch)*
+;
+ExpressionMatch returns Expression:
+	ExpressionDisj ({MatchExpr.index=current} => "match" "{" statements+=Statements "}")*
+;
+OrOp returns Operator: {Operator} op="||";
+ExpressionDisj returns Expression:
+	ExpressionConj ({BinaryExpr.left=current} => op=OrOp right=ExpressionConj)*
+;
+AndOp returns Operator: {Operator} op="&&";
+ExpressionConj returns Expression:
+	ExpressionComp ({BinaryExpr.left=current} => op=AndOp right=ExpressionComp)*
+;
+ComparisionOp returns Operator: {Operator} op=("==" | "<" | ">" | "<=" | ">=" | "!=" | "in");
+ExpressionComp returns Expression:
+	ExpressionTyped ({BinaryExpr.left=current} => op=ComparisionOp right=ExpressionAdd)*
+;
+ExpressionTyped returns Expression:
+	ExpressionAdd ({TypedExpr.base=current} => ":" type=TypeExpression)?
+;
+AddOp returns Operator: {Operator} op=("+" | "-");
+ExpressionAdd returns Expression:
+	ExpressionMul ({BinaryExpr.left=current} => op=AddOp right=ExpressionMul)*
+;
+MulOp returns Operator: {Operator} op=("*" | "/" | "%");
+ExpressionMul returns Expression:
+	ExpressionAppl ({BinaryExpr.left=current} => op=MulOp right=ExpressionAppl)*
+;
+ExpressionAppl returns Expression:
+	ExpressionUn ({ApplicationExpr.function=current} argument=TupleExpr)*
+;
+UnaryOp returns Operator: {Operator} op=("~" | "-" | "!");
+ExpressionUn returns Expression:
+		{UnaryExpr} => op=UnaryOp expr=ExpressionUn
+	|   ExpressionSub
+;
+ExpressionSub returns Expression:
+	ExpressionSimple ( {MemberAccessExpr.base=current} => "." memberName=Name
+		             | {SliceExpr.seq=current} => "[" index=IndexExpr "]")*
+;
+ExpressionSimple returns Expression:
+		Variable
+	|	LinearVariable
+	|	{IntegerLiteral} value=INT
+	|	{StringLiteral} value=STRING
+	|	{BlockExpr} "{" statements=Statements ("return" scope=Expression)? Sep* "}"
+	|	{ListExpr} "[" (items+=Expression ("," items+=Expression)* ","?)? "]"
+	|	InterpolatedString
+	|	TupleExpr
+	|	{TypeExpr} "@" type=TypeExpression
+	|   {TypeExpr} type=TypeVariable
+;
+Variable:
+	name=Name
+;
+LinearVariable:
+	 "?" name=Name
+;
+InterpolatedString:
+		strings+=INTERPOL_FULL
+	|   strings+=INTERPOL_START expressions+=Expression (strings+=INTERPOL_MIDDLE expressions+=Expression)* strings+=INTERPOL_END
+;
+TupleExpr returns Expression:
+		{TupleExpr} "(" ")"
+	|	{TupleExpr} "(" positional+=Expression ("," positional+=Expression)* ("," names+=Name "=" named+=Expression)* (forceTuple?=",")?  ")"
+	|	{TupleExpr} "(" names+=Name "=" named+=Expression ("," names+=Name "=" named+=Expression)* (forceTuple?=",")?")"
+;
+IndexExpr:
+		IndexExprSimple ({SequenceIndexExpr.first=current} "," second=IndexExprSimple)*
+;
+IndexExprSimple:		
+		{SingletonIndexExpr} index=Expression ({RangeIndexExpr.from=current} ".." to=Expression)?
+;
+
+TypeExpression:
+		TypeFun
+	;
+TypeFun returns TypeExpression:
+	TypeExtension ({FunctionTypeExpr.argumentType=current} functionClass=JanusClass resultType=TypeExpression)?
+;
+TypeExtension returns TypeExpression:
+	TypeValueApplication ({TypeExtension.base=current} "{" block=Statements "}")*
+;
+TypeValueApplication returns TypeExpression:
+	TypeApplication ({TypeValueApplication.function=current} argument=TupleExpr)*
+;	
+TypeApplication returns TypeExpression:
+	TypeSimple ({TypeApplication.base=current} "[" (arguments+=TypeExpression ("," arguments+=TypeExpression)*)? ","?  "]")?
+;
+TypeSimple returns TypeExpression:	
+		{ExpressionTypeExpr} "type" expression=Expression
+	|	{AbstractTypeExpr} "abstract"
+	|	TypeVariable
+	|	TupleTypeExpr
+;
+TypeVariable:
+	 name=TypeName
+;
+TypeVariableDefinition:
+	variance=("+"|"-")? name=TypeName
+;
+TypeArgumentsDefinition:
+		{TypeArgumentsDefinition} "[" (arguments+=TypeVariableDefinition ("," arguments+=TypeVariableDefinition)*)? ","? "]"
+;
+TupleTypeExpr returns TypeExpression:
+		{TupleTypeExpr} "(" ")"
+	|	{TupleTypeExpr} "(" positional+=TypeExpression ("," positional+=TypeExpression)* ("," names+=Name ":" named+=TypeExpression)* (forceTuple?=",")?  ")"
+	|	{TupleTypeExpr} "(" names+=Name ":" named+=TypeExpression ("," names+=Name ":" named+=TypeExpression)* (forceTuple?=",")?")"
+;
+
+terminal ID_LOWER:
+('a'..'z')('a'..'z'|'A'..'Z'|'_'|'0'..'9')*;
+terminal ID_BACKTICK:
+'`' (!("\n"|'`'))* '`'
+;
+terminal ID_UPPER:
+('A'..'Z')('a'..'z'|'A'..'Z'|'_'|'0'..'9')*;
+terminal ID_FORWARDTICK:
+'´' (!("\n"|'´'))* '´'
+;
+terminal INT returns ecore::EInt:
+('0'..'9')+;
+terminal STRING :
+'"' ( '\\'('b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\') | !('\\'|'"') )* '"';
+terminal INTERPOL_FULL: 
+"'" (!("'"|"$")|"''"|"$$")* "'";
+terminal INTERPOL_START: 
+"'" (!("'"|"$")|"''"|"$$")* "$";
+terminal INTERPOL_MIDDLE: 
+"$" (!("'"|"$")|"''"|"$$")* "$";
+terminal INTERPOL_END: 
+"$" (!("'"|"$")|"''"|"$$")* "'";
+terminal ML_COMMENT :
+'/*' -> '*/';
+terminal SL_COMMENT :
+'//' !('\n'|'\r')* ('\r'? '\n')?; 
+terminal WS :
+(' '|'\t')+;
+terminal NL: ('\r'|'\n')+;

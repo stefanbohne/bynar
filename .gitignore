@@ -1,5 +1,11 @@
 *.class
 *.log
+bin
+src-gen
+xtend-gen
+generated
+*.xml_gen
+.antlr*.jar
 
 # sbt specific
 .cache
