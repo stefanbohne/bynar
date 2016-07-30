@@ -6,6 +6,8 @@ xtend-gen
 generated
 *.xml_gen
 .antlr*.jar
+org.bynar.jar
+org.bynar.versailles.jar
 
 # sbt specific
 .cache

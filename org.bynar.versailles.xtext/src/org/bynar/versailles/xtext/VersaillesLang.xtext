@@ -12,7 +12,7 @@ Sep hidden (WS, ML_COMMENT, SL_COMMENT):
 	NL | ";"
 ;
 
-Name: ID_LOWER | "pass" | "let" | "forget" | "remember" | "def" | "type" |  "if" | "else" | "end" | "case" | "match" | "in" |
+Name: ID_LOWER | "pass" | "fail" | "let" | "forget" | "remember" | "def" | "type" |  "if" | "else" | "end" | "case" | "match" | "in" |
 	  "int" | "boolean" | ID_BACKTICK
 ;
 TypeName: ID_UPPER | ID_FORWARDTICK;
@@ -20,6 +20,7 @@ TypeName: ID_UPPER | ID_FORWARDTICK;
  
 Statement:
 		{PassStmt} "pass" 
+	|	{FailStmt} "fail"
 	|	{LetStmt} "let" pattern=Expression "=" value=Expression
 	|	{ForgetStmt} "forget" pattern=Expression "=" value=Expression
 	|	{RememberStmt} "remember" pattern=Expression "=" value=Expression
@@ -29,7 +30,7 @@ Statement:
 	|	{DefStmt} "def" name=Name
 					    ((arguments+=TupleExpr)+ (title=STRING)? (description=InterpolatedString)?
 						    ("=" expression = Expression |
-				            janusClass=JanusClass (name2=Name)? results=TupleExpr (title2=STRING)? (description2=InterpolatedString)? ("{" statements=Statements "}" | "=" expression=Expression))
+				            janusClass=JanusClassExpression (name2=Name)? results=TupleExpr (title2=STRING)? (description2=InterpolatedString)? ("{" statements=Statements "}" | "=" expression=Expression))
 				        | ":" valueType=TypeExpression (title=STRING)? (description=InterpolatedString)? "=" value=Expression)
 	|	{TypeStmt} "type" name=TypeName typeArguments=TypeArgumentsDefinition? valueArguments=TupleTypeExpr? (title=STRING)? (description=InterpolatedString)? "=" type=TypeExpression 
 ;
@@ -40,8 +41,9 @@ Statements:
 Expression:
 	ExpressionLambda
 ;
-JanusClass returns Expression: 
-		{JanusClass} op=("->" | "<-" | "<->" | ">->" | "<-<" | ">-<" | "<>-<>")
+JanusClass: {JanusClass} op=("->" | "<-" | "<->" | ">->" | "<-<" | ">-<" | "<>-<>");
+JanusClassExpression returns JanusClassExpression: 
+		JanusClass
 	|	{GenericJanusClass} ">-" variable=TypeVariable "->" 
 	|   {GenericBackwardJanusClass} "<-" variable=TypeVariable "-<"
 ;
@@ -95,7 +97,6 @@ ExpressionSub returns Expression:
 ;
 ExpressionSimple returns Expression:
 		Variable
-	|	LinearVariable
 	|	{IntegerLiteral} value=INT
 	|	{StringLiteral} value=STRING
 	|	{BlockExpr} "{" statements=Statements ("return" scope=Expression)? Sep* "}"
@@ -106,10 +107,7 @@ ExpressionSimple returns Expression:
 	|   {TypeExpr} type=TypeVariable
 ;
 Variable:
-	name=Name
-;
-LinearVariable:
-	 "?" name=Name
+	(linear?="?")? name=Name
 ;
 InterpolatedString:
 		strings+=INTERPOL_FULL

@@ -8,4 +8,7 @@ package org.bynar.versailles.xtext
  * Use this class to register components to be used at runtime / without the Equinox extension registry.
  */
 class VersaillesLangRuntimeModule extends AbstractVersaillesLangRuntimeModule {
+	override def Class<? extends org.eclipse.xtext.conversion.IValueConverterService> bindIValueConverterService() {
+		return typeof(VersaillesValueConverterService);
+	}
 }
