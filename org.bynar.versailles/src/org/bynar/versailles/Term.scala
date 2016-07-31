@@ -6,13 +6,21 @@ trait Term extends Annotated { self =>
     
     type SelfTerm <: Term { type SelfTerm <: Term }
     
-    def mapWithNames(f: (Symbol, Term) => Term): SelfTerm
+    def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T): T
+    def copy(children: PartialFunction[Symbol, Term]): SelfTerm
+
+    def mapWithNames(f: (Symbol, Term) => Term): SelfTerm =
+        copy(foldWithNames[Map[Symbol, Term]](Map()){
+            case (n, t, cs) => cs + (n -> f(n, t)) 
+        })
     
     def map(f: Term => Term): SelfTerm =
         mapWithNames{ (_, t) => f(t) }    
     
-    def copy(children: PartialFunction[Symbol, Term]): SelfTerm =
-        mapWithNames{ (n, t) => if (children.isDefinedAt(n)) children(n) else t }
+    lazy val children: Map[Symbol, Term] =
+        foldWithNames[Map[Symbol, Term]](Map()){
+            case (n, t, cs) => cs + (n -> t) 
+        }
     
     def deepCopy(): SelfTerm =
         map{ _.deepCopy() }
@@ -21,7 +29,8 @@ trait Term extends Annotated { self =>
 
 trait ZeroaryTerm extends Term { self =>
 
-    override def mapWithNames(f: (Symbol, Term) => Term) = this.asInstanceOf[SelfTerm]
+    override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) = a 
+    override def copy(children: PartialFunction[Symbol, Term]) = this.asInstanceOf[SelfTerm]
     
 }
 
@@ -42,19 +51,31 @@ trait ZeroaryStatement extends Statement with ZeroaryTerm
 
 case class IntegerLiteral(val value: BigInt) extends Literal {
     override def toString = value.toString
+    def copy(value: BigInt = value) = 
+        IntegerLiteral(value).copyAnnotationsFrom(this)
 }
 case class StringLiteral(val value: String) extends Literal {
     override def toString = "\"" + StringEscapeUtils.escapeJava(value) + "\""
+    def copy(value: String = value) = 
+        StringLiteral(value).copyAnnotationsFrom(this)
 }
 case class BooleanLiteral(val value: Boolean) extends Literal {
     override def toString = value.toString
+    def copy(value: Boolean = value) = 
+        BooleanLiteral(value).copyAnnotationsFrom(this)
 }
 
+case class Janus() extends Literal {
+    override def toString = "janus"
+}
 case class OrElse() extends Literal {
     override def toString = "`|`"
 }
 case class Reverse() extends Literal {
     override def toString = "`~`"
+}
+case class Fix() extends Literal {
+    override def toString = "fix"
 }
 case class Forget() extends Literal {
     override def toString = "forget"
@@ -77,6 +98,9 @@ case class Times() extends Literal {
 case class Divide() extends Literal {
     override def toString = "`/`"
 }
+case class IntegerDivide() extends Literal {
+    override def toString = "div"
+}
 case class Equals() extends Literal {
     override def toString = "`==`"
 }
@@ -87,39 +111,62 @@ case class Fail() extends ZeroaryStatement {
 
 trait JanusClass extends Literal {
     def reverse: JanusClass
+    def < (that: JanusClass): Boolean
+    def <= (that: JanusClass): Boolean =
+        that == this || that < this
 }
 case class Irreversible() extends JanusClass {
     override def toString = "->"
     def reverse = ReverseIrreversible().copyAnnotationsFrom(this)
+    def < (that: JanusClass) =
+        that <= Reversible()
 }
 case class ReverseIrreversible() extends JanusClass {
     override def toString = "<-"
     def reverse = Irreversible().copyAnnotationsFrom(this)
+    def < (that: JanusClass) =
+        that <= Reversible()
 }
 case class Reversible() extends JanusClass {
     override def toString = "<>-<>"
     def reverse = this
+    def < (that: JanusClass) =
+        that <= PseudoInverse()
 }
 case class PseudoInverse() extends JanusClass {
     override def toString = ">-<"
     def reverse = this
+    def < (that: JanusClass) =
+        that <= SemiInverse() || that <= ReverseSemiInverse()
 }
 case class SemiInverse() extends JanusClass {
     override def toString = ">->"
     def reverse = ReverseSemiInverse().copyAnnotationsFrom(this)
+    def < (that: JanusClass) =
+        that <= Inverse()
 }
 case class ReverseSemiInverse() extends JanusClass {
     override def toString = "<-<"
     def reverse = SemiInverse().copyAnnotationsFrom(this)
+    def < (that: JanusClass) =
+        that <= Inverse()
 }
 case class Inverse() extends JanusClass {
     override def toString = "<->"
     def reverse = this
+    def < (that: JanusClass) =  
+        false
 }
 
-class VariableIdentity extends Annotated
+class VariableIdentity extends Annotated {
+    override def toString = VariableIdentity.getName(this) + "@" + hashCode.toHexString
+}
 object VariableIdentity {
-    val originalName = new AnnotationKey[String]
+    val name = new AnnotationKey[String]
+    def getName(it: VariableIdentity): String =
+        it.annotation(name).getOrElse("")
+    def setName(it: VariableIdentity, name: String): VariableIdentity =
+        it.putAnnotation(this.name, name)
 }
 
 case class Variable(val variable: VariableIdentity,
@@ -127,6 +174,9 @@ case class Variable(val variable: VariableIdentity,
     
     type SelfTerm = Variable
     
+    def copy(variable: VariableIdentity = variable, 
+             linear: Boolean = linear) = 
+        Variable(variable, linear).copyAnnotationsFrom(this)
 }
 
 case class Application(val function: Expression,
@@ -134,9 +184,14 @@ case class Application(val function: Expression,
     
     type SelfTerm = Application
     
-    def mapWithNames(f: (Symbol, Term) => Term) =
-        Application(f('f, function).asInstanceOf[Expression], 
-                    f('a, argument).asInstanceOf[Expression]).copyAnnotationsFrom(this)
+    def copy(function: Expression = function,
+             argument: Expression = argument) = 
+         Application(function, argument).copyAnnotationsFrom(this)
+    override def copy(children: PartialFunction[Symbol, Term]) =
+        copy(children.lift('f).getOrElse(function).asInstanceOf[Expression],
+             children.lift('a).getOrElse(argument).asInstanceOf[Expression])
+    override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) = 
+        f('a, argument, f('f, function, a))
     
 }
 
@@ -145,11 +200,17 @@ case class Lambda(val janusClass: Expression,
                   val body: Expression) extends Expression {
     
     type SelfTerm = Lambda
-    
-    def mapWithNames(f: (Symbol, Term) => Term) =
-        Lambda(f('jc, janusClass).asInstanceOf[Expression],
-               f('p, pattern).asInstanceOf[Expression],
-               f('b, body).asInstanceOf[Expression])
+
+    def copy(janusClass: Expression = janusClass,
+             pattern: Expression = pattern,
+             body: Expression = body) = 
+        Lambda(janusClass, pattern, body).copyAnnotationsFrom(this)
+    override def copy(children: PartialFunction[Symbol, Term]) =
+        copy(children.lift('jc).getOrElse(janusClass).asInstanceOf[Expression],
+             children.lift('p).getOrElse(pattern).asInstanceOf[Expression],
+             children.lift('b).getOrElse(body).asInstanceOf[Expression])
+    override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) = 
+        f('b, body, f('p, pattern, f('jc, janusClass, a)))
                
 }
 
@@ -157,10 +218,16 @@ case class Tuple(val components: Expression*) extends Expression {
     
     type SelfTerm = Tuple
     
-    def mapWithNames(f: (Symbol, Term) => Term) =
-        Tuple(components.zipWithIndex.map{ 
-            case (c, i) => f(Symbol(i.toString), c).asInstanceOf[Expression] 
-        }:_*).copyAnnotationsFrom(this)
+    def copy(components: Expression*) =
+        Tuple(components:_*).copyAnnotationsFrom(this)
+    override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) =
+        (a /: components.zipWithIndex){
+        case (a, (c, i)) => f(Symbol(i.toString), c, a)    
+        }
+    def copy(children: PartialFunction[Symbol, Term]) =
+        copy(components.zipWithIndex.map{ 
+            case (c, i) => children.lift(Symbol(i.toString)).getOrElse(c).asInstanceOf[Expression] 
+        }:_*)
         
 }
 
@@ -168,9 +235,13 @@ case class Block(val block: Statement, val scope: Expression) extends Expression
     
     type SelfTerm = Block
     
-    def mapWithNames(f: (Symbol, Term) => Term) =
-        Block(f('b, block).asInstanceOf[Statement], 
-              f('s, scope).asInstanceOf[Expression]).copyAnnotationsFrom(this)
+    def copy(block: Statement = block, scope: Expression = scope) =
+        Block(block, scope).copyAnnotationsFrom(this)
+    override def copy(children: PartialFunction[Symbol, Term]) =
+        copy(children.lift('b).getOrElse(block).asInstanceOf[Statement],
+             children.lift('s).getOrElse(scope).asInstanceOf[Expression])
+    override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) = 
+        f('s, scope, f('b, block, a))
         
 }
 
@@ -178,10 +249,16 @@ case class Sequence(val statements: Statement*) extends Statement {
     
     type SelfTerm = Sequence
     
-    def mapWithNames(f: (Symbol, Term) => Term) =
-        Sequence(statements.zipWithIndex.map{ 
-            case (s, i) => f(Symbol(i.toString), s).asInstanceOf[Statement] 
-        }:_*).copyAnnotationsFrom(this)
+    def copy(statements: Statement*) =
+        Sequence(statements:_*).copyAnnotationsFrom(this)
+    override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) =
+        (a /: statements.zipWithIndex){
+        case (a, (s, i)) => f(Symbol(i.toString), s, a)    
+        }
+    def copy(children: PartialFunction[Symbol, Term]) =
+        copy(statements.zipWithIndex.map{ 
+            case (s, i) => children.lift(Symbol(i.toString)).getOrElse(s).asInstanceOf[Statement] 
+        }:_*)
     
 }
 
@@ -189,9 +266,13 @@ case class Let(val pattern: Expression, val value: Expression) extends Statement
     
     type SelfTerm = Let
     
-    def mapWithNames(f: (Symbol, Term) => Term) =
-        Let(f('p, pattern).asInstanceOf[Expression],
-            f('v, value).asInstanceOf[Expression]).copyAnnotationsFrom(this)
+    def copy(pattern: Expression = pattern, value: Expression = value) =
+        Let(pattern, value).copyAnnotationsFrom(this)
+    override def copy(children: PartialFunction[Symbol, Term]) =
+        copy(children.lift('p).getOrElse(pattern).asInstanceOf[Expression],
+             children.lift('v).getOrElse(value).asInstanceOf[Expression])
+    override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) = 
+        f('v, value, f('p, pattern, a))
             
 }
 
@@ -199,10 +280,17 @@ case class IfStmt(val condition: Expression, val then: Statement, val `else`: St
     
     type SelfTerm = IfStmt
     
-    def mapWithNames(f: (Symbol, Term) => Term) =
-        IfStmt(f('c, condition).asInstanceOf[Expression],
-               f('t, then).asInstanceOf[Statement],
-               f('e, `else`).asInstanceOf[Statement],
-               f('a, assertion).asInstanceOf[Expression]).copyAnnotationsFrom(this)
+    def copy(condition: Expression = condition, 
+             then: Statement = then,
+             `else`: Statement = `else`,
+             assertion: Expression = assertion) =
+        IfStmt(condition, then, `else`, assertion).copyAnnotationsFrom(this)
+    override def copy(children: PartialFunction[Symbol, Term]) =
+        copy(children.lift('c).getOrElse(condition).asInstanceOf[Expression],
+             children.lift('t).getOrElse(then).asInstanceOf[Statement],
+             children.lift('e).getOrElse(`else`).asInstanceOf[Statement],
+             children.lift('a).getOrElse(assertion).asInstanceOf[Expression])
+    override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) = 
+        f('a, assertion, f('e, `else`, f('t, then, f('c, condition, a))))
     
 }

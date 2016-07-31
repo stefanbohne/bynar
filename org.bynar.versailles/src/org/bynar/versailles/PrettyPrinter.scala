@@ -47,7 +47,7 @@ class PrettyPrinter {
         case Variable(id, l) =>
             if (l)
                 result.append("?")
-            prettyPrintName(result, id.annotation(VariableIdentity.originalName).getOrElse("?"))
+            prettyPrintName(result, VariableIdentity.getName(id))
         case Tuple(cs@_*) =>
             result.append("(")
             var first = true

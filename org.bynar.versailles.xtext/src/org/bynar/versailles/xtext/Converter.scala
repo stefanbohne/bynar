@@ -30,7 +30,7 @@ object Converter {
         case it: StringLiteral => 
             v.StringLiteral(it.getValue).putAnnotation(source, it)
         case it: Variable =>
-            v.Variable(new v.VariableIdentity().putAnnotation(v.VariableIdentity.originalName, it.getName),
+            v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), it.getName),
                        it.isLinear()).putAnnotation(source, it)
         case it: BinaryExpr =>
             val l = fromExpression(it.getLeft)
