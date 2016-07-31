@@ -2,6 +2,8 @@ package org.bynar.versailles
 
 class VariableAnalyzer {
     
+    import VariableAnalyzer._
+    
     case class ContextEntry(val variable: VariableIdentity,
                             val linear: Boolean)
     case class Context(val entries: Map[String, ContextEntry]) {
@@ -22,6 +24,10 @@ class VariableAnalyzer {
             entries.get(VariableIdentity.getName(variable)).map{ e => e.variable eq variable }.getOrElse(false)
     }
     
+    def analyze(it: Expression, context: Set[VariableIdentity]): Expression =
+        analyze(it, false, Irreversible(), Context(
+                Map(context.toSeq.map{ case id => VariableIdentity.getName(id) -> ContextEntry(id, false) }:_*)
+        ))._1
     def analyze(it: Expression, pattern: Boolean, janusClass: JanusClass, context: Context): (Expression, Context) =
         it match {
         case it: Literal => (it, context)
@@ -32,12 +38,12 @@ class VariableAnalyzer {
                     if (context(n).linear)
                         (it.copy(context(n).variable), context - context(n).variable)
                     else
-                        (Messages.addError(it.copy(context(n).variable), "Nonlinear variable used linearly"), context)
+                        (Messages.add(it.copy(context(n).variable), NonlinearVariableUsedLinearly), context)
                 else
-                    (Messages.addError(it, "Undefined variable"), context)
+                    (Messages.add(it, UndefinedVariable), context)
             else
                 if (context.contains(n))
-                    (Messages.addError(it, "Already defined"), context + (id, true))
+                    (Messages.add(it, VariableAlreadyDefined), context + (id, true))
                 else
                     (it, context + (id, true))
         case it@Variable(id, false) =>
@@ -46,12 +52,12 @@ class VariableAnalyzer {
                 if (context.contains(n))
                     (it.copy(context(n).variable), context)
                 else
-                    (Messages.addError(it, "Undefined variable"), context)
+                    (Messages.add(it, UndefinedVariable), context)
             else
                 if (context.contains(n))
-                    (it.copy(context(n).variable), context)
+                    (Messages.add(it.copy(context(n).variable), VariableAsConstantPattern), context)
                 else
-                    (Messages.addInfo(it.copy(id, true), "Variable defined"), context + (id, true))
+                    (it.copy(id, true), context + (id, true))
         case it@Tuple(cs@_*) =>
             if (!pattern) {
                 val (cs1, ctx1) = ((Seq[Expression](), context) /: cs){
@@ -64,7 +70,7 @@ class VariableAnalyzer {
                 val (cs1, ctx1) = (cs :\ (Seq[Expression](), context)){
                     case (c, (cs2, ctx2)) => 
                         val (c3, ctx3) = analyze(c, pattern, janusClass, ctx2)
-                        (cs2 :+ c3, ctx3)
+                        (c3 +: cs2, ctx3)
                 }
                 (it.copy(cs1:_*), ctx1)
             }
@@ -82,9 +88,9 @@ class VariableAnalyzer {
             }
         case it@Lambda(jc, p, b) =>
             if (pattern) {
-                (Messages.addError(it, "Lambda as pattern"), context)
+                (Messages.add(it, LambdaAsPattern), context)
             } else if (janusClass != Irreversible()) {
-                (Messages.addError(it, "Lambda in linear context"), context)
+                (Messages.add(it, LambdaUsedLinearly), context)
             } else {
                 val (jc1, ctx1) = analyze(jc, false, Irreversible(), context)
                 assert(ctx1 == context)
@@ -92,7 +98,7 @@ class VariableAnalyzer {
                 val (b3, ctx3) = analyze(b, false, jc1.asInstanceOf[JanusClass], ctx2)
                 if (jc1.asInstanceOf[JanusClass] <= Reversible()) 
                     for (ContextEntry(id, linear) <- ctx3.entries.values if linear)
-                        Messages.addError(id, "Unconsumed variable")
+                        Messages.add(id, UnconsumedVariable)
                 (it.copy(jc1, p2, b3), context)
             }
         case it@Block(b, s) =>
@@ -101,7 +107,7 @@ class VariableAnalyzer {
                 val (s2, ctx2) = analyze(s, pattern, janusClass, ctx1)
                 if (janusClass <= Reversible())
                     for (ContextEntry(v2, l2) <- ctx2.entries.values if l2 && !context.contains(v2))
-                        Messages.addError(v2, "Unconsumed variable") 
+                        Messages.add(v2, UnconsumedVariable) 
                 (it.copy(b1, s2), Context(ctx2.entries.filter{ 
                     case (_, ContextEntry(v, l)) => !l || context.contains(v) 
                 }))
@@ -141,4 +147,39 @@ class VariableAnalyzer {
                 (it.copy(ss1:_*), ctx1)
             }
         }
+}
+
+object VariableAnalyzer {
+    case object VariableAlreadyDefined extends Message {
+        override def toString = "Variable already defined"
+        override def level = Messages.Error
+    }
+    case object VariableAsConstantPattern extends Message {
+        override def toString = "Variable used as constant pattern"
+        override def level = Messages.Info
+    }
+    case object UndefinedVariable extends Message {
+        override def toString = "Undefined variable"
+        override def level = Messages.Error
+    }
+    case object UnconsumedVariable extends Message {
+        override def toString = "Unconsumed variable"
+        override def level = Messages.Error
+    }
+    case object LinearVariableUsedNonlinearly extends Message {
+        override def toString = "Linear variable used non-linearly"
+        override def level = Messages.Error
+    }
+    case object NonlinearVariableUsedLinearly extends Message {
+        override def toString = "Non-linear variable used linearly"
+        override def level = Messages.Error
+    }
+    case object LambdaAsPattern extends Message {
+        override def toString = "Lambda expressions cannot be used as a pattern"
+        override def level = Messages.Error
+    }
+    case object LambdaUsedLinearly extends Message {
+        override def toString = "Lambda expression cannot be used linearly"
+        override def level = Messages.Error
+    }
 }

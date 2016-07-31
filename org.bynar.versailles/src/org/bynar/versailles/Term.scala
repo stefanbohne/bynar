@@ -30,6 +30,7 @@ trait Term extends Annotated { self =>
 trait ZeroaryTerm extends Term { self =>
 
     override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) = a 
+    def copy(): SelfTerm = copy(Map.empty)
     override def copy(children: PartialFunction[Symbol, Term]) = this.asInstanceOf[SelfTerm]
     
 }
@@ -49,10 +50,10 @@ trait Statement extends Term {
 }
 trait ZeroaryStatement extends Statement with ZeroaryTerm
 
-case class IntegerLiteral(val value: BigInt) extends Literal {
+case class NumberLiteral(val value: BigDecimal) extends Literal {
     override def toString = value.toString
-    def copy(value: BigInt = value) = 
-        IntegerLiteral(value).copyAnnotationsFrom(this)
+    def copy(value: BigDecimal = value) = 
+        NumberLiteral(value).copyAnnotationsFrom(this)
 }
 case class StringLiteral(val value: String) extends Literal {
     override def toString = "\"" + StringEscapeUtils.escapeJava(value) + "\""
@@ -100,6 +101,9 @@ case class Divide() extends Literal {
 }
 case class IntegerDivide() extends Literal {
     override def toString = "div"
+}
+case class Power() extends Literal {
+    override def toString = "`^`"
 }
 case class Equals() extends Literal {
     override def toString = "`==`"

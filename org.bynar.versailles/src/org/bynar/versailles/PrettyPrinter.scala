@@ -48,6 +48,8 @@ class PrettyPrinter {
             if (l)
                 result.append("?")
             prettyPrintName(result, VariableIdentity.getName(id))
+            result.append("_")
+            result.append(id.hashCode.toHexString)
         case Tuple(cs@_*) =>
             result.append("(")
             var first = true
@@ -99,14 +101,14 @@ class PrettyPrinter {
 
     def prettyPrintStatement(result: StringBuilder, stmt: Statement, indent: Int) {
         stmt match {
-        case Let(Application(Application(Forget(), Lambda(Irreversible(), Tuple(Seq()), v)), Tuple(Seq())), p) =>
+        case Let(Application(Application(Forget(), Lambda(Irreversible(), Tuple(), v)), Tuple()), p) =>
             result.append(indentText * indent)
             result.append("forget ")
             prettyPrint(result, p, indent, 0)
             result.append(" = ")
             prettyPrint(result, v, indent, 0)
             result.append(";\n")
-        case Let(p, Application(Application(Reverse(), Application(Forget(), Lambda(Irreversible(), Tuple(Seq()), v))), Tuple(Seq()))) =>
+        case Let(p, Application(Application(Reverse(), Application(Forget(), Lambda(Irreversible(), Tuple(), v))), Tuple())) =>
             result.append(indentText * indent)
             result.append("remember ")
             prettyPrint(result, p, indent, 0)

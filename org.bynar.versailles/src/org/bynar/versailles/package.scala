@@ -8,6 +8,7 @@ package object versailles {
             "*" -> Times(),
             "/" -> Divide(),
             "div" -> IntegerDivide(),
+            "^" -> Power(),
             "==" -> Equals(),
             "identity" -> Identity(),
             "fix" -> Fix(),
@@ -16,6 +17,9 @@ package object versailles {
             "|" -> OrElse(),
             "forget" -> Forget(),
             "undefined" -> Undefined()
-    ) 
+    ).map{
+        case (n, l) => 
+            VariableIdentity.setName(new VariableIdentity(), n) -> l
+    }
         
 }

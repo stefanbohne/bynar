@@ -26,7 +26,7 @@ object Converter {
     def fromExpression(it: Expression): v.Expression = 
         it match {
         case it: IntegerLiteral => 
-            v.IntegerLiteral(it.getValue).putAnnotation(source, it)
+            v.NumberLiteral(it.getValue).putAnnotation(source, it)
         case it: StringLiteral => 
             v.StringLiteral(it.getValue).putAnnotation(source, it)
         case it: Variable =>
@@ -63,7 +63,12 @@ object Converter {
                      fromExpression(it.getPattern),
                      fromExpression(it.getBody)).putAnnotation(source, it)
         case it: TupleExpr =>
-            v.Tuple(it.getPositional.map{ fromExpression(_) }:_*).putAnnotation(source, it)
+            if (it.getPositional.size == 1 &&
+                it.getNamed.size == 0 &&
+                !it.isForceTuple())
+                fromExpression(it.getPositional.get(0))
+            else
+                v.Tuple(it.getPositional.map{ fromExpression(_) }:_*).putAnnotation(source, it)
         case it: BlockExpr =>
             if (it.getScope == null && it.getStatements.getStatements.forall{ _.isInstanceOf[CaseStmt] })
                 it.getStatements.getStatements.map{ case s: CaseStmt => fromExpression(s.getCase) }.reduceRight[v.Expression]{
