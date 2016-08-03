@@ -1,9 +1,9 @@
 *.class
 *.log
-bin
-src-gen
-xtend-gen
-generated
+**/bin/
+**/src-gen/
+**/xtend-gen/
+**/generated/
 *.xml_gen
 .antlr*.jar
 org.bynar.jar
