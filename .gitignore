@@ -8,6 +8,7 @@
 .antlr*.jar
 org.bynar.jar
 org.bynar.versailles.jar
+**/.cache-main
 
 # sbt specific
 .cache
