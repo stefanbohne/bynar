@@ -1,6 +1,8 @@
 package org.bynar.versailles
 
 class PrettyPrinter {
+    import PrettyPrinter._
+    
     val indentText = "  "
 
     def prettyPrint(term: Term, indent: Int = 0, precedence: Int = 0): String = {
@@ -63,12 +65,27 @@ class PrettyPrinter {
             if (cs.size == 1)
                 result.append(",")
             result.append(")")
-        case Application(Application(Plus(), r), l) => binOpLeft(" + ", l, r, 10)
-        case Application(Application(Minus(), r), l) => binOpLeft(" - ", l, r, 10)
-        case Application(Application(Times(), r), l) => binOpLeft(" * ", l, r, 20)
-        case Application(Application(Divide(), r), l) => binOpLeft(" / ", l, r, 20)
-        case Application(Application(Equals(), l), r) => binOpNone(" == ", l, r, 5)
-        case Application(Reverse(), a) => prefixOp("~", a, 50)
+        case Application(Application(Plus(), r), l) 
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator => 
+                binOpLeft(" + ", l, r, 10)
+        case Application(Application(Minus(), r), l) 
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator => 
+                binOpLeft(" - ", l, r, 10)
+        case Application(Application(Times(), r), l) 
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator => 
+                binOpLeft(" * ", l, r, 20)
+        case Application(Application(Divide(), r), l) 
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator => 
+                binOpLeft(" / ", l, r, 20)
+        case Application(Application(Equals(), l), r) 
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator => 
+                binOpNone(" == ", l, r, 5)
+        case Application(Reverse(), a) 
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator => 
+                prefixOp("~", a, 50)
+        case Application(f, a) 
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsApplication) == ApplicationAsMatch => 
+                binOpLeft(" match ", a, f, 2)
         case Application(f, a: Tuple) => paren(40, {
                 prettyPrint(result, f, indent, 40)
                 prettyPrint(result, a, indent, 0)
@@ -180,4 +197,12 @@ class PrettyPrinter {
             result.append("´")
         }
     }
+}
+
+object PrettyPrinter {
+    trait ApplicationInfo
+    case object ApplicationAsApplication extends ApplicationInfo
+    case object ApplicationAsOperator extends ApplicationInfo
+    case object ApplicationAsMatch extends ApplicationInfo
+    val applicationInfo = new AnnotationKey[ApplicationInfo]()
 }

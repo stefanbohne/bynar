@@ -58,7 +58,7 @@ ExpressionIf returns Expression:
     	            | {WhereExpr.then=current} => "so" "that" condition=ExpressionMatch)*
 ;
 ExpressionMatch returns Expression:
-	ExpressionDisj ({MatchExpr.index=current} => "match" "{" statements+=Statements "}")*
+	ExpressionDisj ({MatchExpr.index=current} => "match" "{" statements=Statements "}")*
 ;
 OrOp returns Operator: {Operator} op="||";
 ExpressionDisj returns Expression:

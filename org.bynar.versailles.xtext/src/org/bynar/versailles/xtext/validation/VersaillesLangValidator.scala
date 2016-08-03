@@ -14,6 +14,7 @@ import org.bynar.versailles.Term
 import org.bynar.versailles.Irreversible
 import org.bynar.versailles.Messages
 import org.bynar.versailles.Variable
+import org.bynar.versailles.xtext.versaillesLang.MatchExpr
 
 class VersaillesLangValidator extends AbstractVersaillesLangValidator {
   
@@ -27,6 +28,16 @@ class VersaillesLangValidator extends AbstractVersaillesLangValidator {
 		} else
 			if (countCase > 0)
 			    error(message, block.getStatements.getStatements.filter{ _.isInstanceOf[CaseStmt] }.head, null);		
+	}
+    
+    @Check
+	def checkBlock(it: MatchExpr) {
+		val message = "A match expression must contain only case statements.";
+		for (stmt <- it.getStatements.getStatements)
+		    if (!stmt.isInstanceOf[CaseStmt]) {
+		        error(message, stmt, null);
+		        return;
+		    }
 	}
     
     @Check

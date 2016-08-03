@@ -6,9 +6,11 @@ import JavaConversions._
 import org.bynar.{versailles => v}
 import org.bynar.versailles.xtext.versaillesLang._
 import org.eclipse.emf.ecore.EObject
+import org.bynar.versailles.PrettyPrinter
 
 object Converter {
-    
+
+    import PrettyPrinter._
     val source = new v.AnnotationKey[EObject]
   
     def fromCompilationUnit(cu: CompilationUnit): v.Expression = {
@@ -38,11 +40,15 @@ object Converter {
             def normal(op: v.Expression) =
                 v.Application(v.Application(op.putAnnotation(source, it.getOp),
                                             r).putAnnotation(source, it),
-                              l).putAnnotation(source, it)
+                              l).
+                        putAnnotation(source, it).
+                        putAnnotation(applicationInfo, ApplicationAsOperator)
             def swapped(op: v.Expression) =
                 v.Application(v.Application(op.putAnnotation(source, it.getOp),
                                             r).putAnnotation(source, it),
-                              l).putAnnotation(source, it)
+                              l).
+                        putAnnotation(source, it).
+                        putAnnotation(applicationInfo, ApplicationAsOperator)
             it.getOp.getOp match {
             case "+" => swapped(v.Plus())
             case "-" => swapped(v.Minus())
@@ -53,11 +59,20 @@ object Converter {
         case it: UnaryExpr =>
             val a = fromExpression(it.getExpr)
             it.getOp.getOp match {
-            case "~" => v.Application(v.Reverse().putAnnotation(source, it.getOp), a)
+            case "~" => v.Application(v.Reverse().
+                    putAnnotation(source, it.getOp), a).
+                    putAnnotation(applicationInfo, ApplicationAsOperator)
             } 
         case it: ApplicationExpr => 
             v.Application(fromExpression(it.getFunction),
-                          fromExpression(it.getArgument)).putAnnotation(source, it)
+                          fromExpression(it.getArgument)).
+                    putAnnotation(source, it).
+                    putAnnotation(applicationInfo, ApplicationAsApplication)
+        case it: MatchExpr =>
+            v.Application(fromCaseStatements(it.getStatements),
+                          fromExpression(it.getIndex)). 
+                    putAnnotation(source, it).
+                    putAnnotation(applicationInfo, ApplicationAsMatch)
         case it: LambdaExpr =>
             v.Lambda(fromJanusClassExpression(it.getJanusClass),
                      fromExpression(it.getPattern),
@@ -71,12 +86,7 @@ object Converter {
                 v.Tuple(it.getPositional.map{ fromExpression(_) }:_*).putAnnotation(source, it)
         case it: BlockExpr =>
             if (it.getScope == null && it.getStatements.getStatements.forall{ _.isInstanceOf[CaseStmt] })
-                it.getStatements.getStatements.map{ case s: CaseStmt => fromExpression(s.getCase) }.reduceRight[v.Expression]{
-                case (c, r) =>
-                    v.Application(v.Application(v.OrElse().putAnnotation(source, it),
-                                                c).putAnnotation(source, it),
-                                  r).putAnnotation(source, it)
-                } 
+                fromCaseStatements(it.getStatements) 
             else if (it.getScope == null && it.getStatements.getStatements == null)
                 v.Lambda(v.Irreversible().putAnnotation(source, it),
                          v.Undefined().putAnnotation(source, it),
@@ -89,6 +99,14 @@ object Converter {
                             fromExpression(it.getScope)).putAnnotation(source, it)          
         case it: TypedExpr =>
             v.TypedExpr(fromExpression(it.getBase), fromTypeExpression(it.getType)).putAnnotation(source, it)
+        }
+    
+    def fromCaseStatements(it: Statements): v.Expression = 
+        it.getStatements.map{ case s: CaseStmt => fromExpression(s.getCase) }.reduceRight[v.Expression]{
+        case (c, r) =>
+            v.Application(v.Application(v.OrElse().putAnnotation(source, it),
+                                        c).putAnnotation(source, it),
+                          r).putAnnotation(source, it)
         }
     
     def fromJanusClassExpression(it: JanusClassExpression): v.Expression =
