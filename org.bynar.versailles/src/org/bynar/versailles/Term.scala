@@ -285,6 +285,19 @@ case class Block(val block: Statement, val scope: Expression) extends Expression
 
 }
 
+case class Member(val base: Expression, val name: Symbol) extends Expression {
+    
+    override type SelfTerm = Member
+    
+    def copy(base: Expression = base, name: Symbol = name) =
+        Member(base, name).copyAnnotationsFrom(this)
+    override def copy(children: PartialFunction[Symbol, Term]) =
+        copy(children.lift('b).getOrElse(base).asInstanceOf[Expression])
+    override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) =
+        f('b, base, a)
+        
+}
+
 case class Sequence(val statements: Statement*) extends Statement {
 
     type SelfTerm = Sequence

@@ -129,7 +129,10 @@ TypeExpression:
 	TypeFun
 ;
 TypeFun returns TypeExpression:
-	TypeExtension ({FunctionTypeExpr.argumentType=current} => functionClass=JanusClass resultType=TypeExpression)?
+	TypeModifiers ({FunctionTypeExpr.argumentType=current} => functionClass=JanusClass resultType=TypeExpression)?
+;
+TypeModifiers returns TypeExpression:
+	TypeExtension
 ;
 TypeExtension returns TypeExpression:
 	TypeValueApplication ({TypeExtension.base=current} => "{" block=Statements "}")*

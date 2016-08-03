@@ -15,6 +15,7 @@ import org.bynar.versailles.Irreversible
 import org.bynar.versailles.Messages
 import org.bynar.versailles.Variable
 import org.bynar.versailles.xtext.versaillesLang.MatchExpr
+import org.bynar.versailles.xtext.Converter
 
 class VersaillesLangValidator extends AbstractVersaillesLangValidator {
   
@@ -42,23 +43,24 @@ class VersaillesLangValidator extends AbstractVersaillesLangValidator {
     
     @Check
     def checkVariables(it: CompilationUnit) {
-        val cu = Converter.fromCompilationUnit(it)
+        val conv = new Converter()
+        val cu = conv.fromCompilationUnit(it)
         val varAna = new VariableAnalyzer
         val newIt = varAna.analyze(cu, defaultContext.keySet, defaultTypeContext.keySet)
         
         def showErrors(it: Term) {
             for (msg <- Messages.get(it))
                 msg.level match {
-                case Messages.Error => error(msg.toString, it.annotation(Converter.source).get, null)
-                case Messages.Warning => warning(msg.toString, it.annotation(Converter.source).get, null)
-                case Messages.Info => info(msg.toString, it.annotation(Converter.source).get, null)
+                case Messages.Error => error(msg.toString, it.annotation(conv.source).get, null)
+                case Messages.Warning => warning(msg.toString, it.annotation(conv.source).get, null)
+                case Messages.Info => info(msg.toString, it.annotation(conv.source).get, null)
                 }
             if (it.isInstanceOf[Variable])
                 for (msg <- Messages.get(it.asInstanceOf[Variable].variable))
                     msg.level match {
-                    case Messages.Error => error(msg.toString, it.annotation(Converter.source).get, null)
-                    case Messages.Warning => warning(msg.toString, it.annotation(Converter.source).get, null)
-                    case Messages.Info => info(msg.toString, it.annotation(Converter.source).get, null)
+                    case Messages.Error => error(msg.toString, it.annotation(conv.source).get, null)
+                    case Messages.Warning => warning(msg.toString, it.annotation(conv.source).get, null)
+                    case Messages.Info => info(msg.toString, it.annotation(conv.source).get, null)
                     }
             for (child <- it.children.values)
                 showErrors(child)

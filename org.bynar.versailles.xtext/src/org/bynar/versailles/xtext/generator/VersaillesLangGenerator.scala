@@ -18,7 +18,7 @@ class VersaillesLangGenerator extends AbstractGenerator {
     
     override def doGenerate(resource: Resource, fsa: IFileSystemAccess2, context: IGeneratorContext) {
          
-        val cu = Converter.fromCompilationUnit(resource.getContents.get(0).asInstanceOf[CompilationUnit])
+        val cu = new Converter().fromCompilationUnit(resource.getContents.get(0).asInstanceOf[CompilationUnit])
         val pp = new PrettyPrinter()
         fsa.generateFile("pp.txt", pp.prettyPrint(cu))
         val va = new VariableAnalyzer()

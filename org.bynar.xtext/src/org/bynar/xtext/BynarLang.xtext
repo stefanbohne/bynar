@@ -22,9 +22,6 @@ Statements:
 	{Statements} ((statements+=Statement)? Sep)*
 ;	
 
-TypeFun returns versailles::TypeExpression:
-	TypeModifiers ({FunctionTypeExpr.argumentType=current} functionClass=("->" | "<->" | ">->" | "<-<" | ">-<") resultType=TypeExpression)?
-;	
 TypeModifiers returns versailles::TypeExpression:
 	TypeInt ( {TypeWrittenExpr.type=current} => "written" written=Expression
 			| {TypeConvertedExpr.type=current} => "converted" conversion=Expression
@@ -37,12 +34,15 @@ TypeInt returns versailles::TypeExpression:
 
 TypeSimple returns versailles::TypeExpression:
 	   	super
-	|	{BitFieldTypeExpr} "bits" (bitWidth=Expression) 
+	|	BitTypeExpression 
+;
+BitTypeExpression returns BitTypeExpression:
+		{BitFieldTypeExpr} "bits" (bitWidth=Expression) 
 	|   {ByteFieldTypeExpr} "bytes" (byteWidth=Expression) 
 	|	{RecordTypeExpr} "record" "{" statements=Statements "}"
 	|	{UnionTypeExpr} "union" "{" statements=Statements "}"
 	|	{RegisterTypeExpr} "register" bitWidth=Expression "{" statements=Statements "}"
-	|	{ArrayTypeExpr} "array" "of" elementType=TypeExpression ("length" length=Expression | "until" until=Expression) 
+	|	{ArrayTypeExpr} "array" "of" elementType=TypeExpression ("length" length=Expression | "until" until=Expression)
 ;
 
 Interpretation:
@@ -63,6 +63,10 @@ Name:
 	|   "component" | "align" | "at" | "offset" | "to" | "by" | "variant" | "value"
 	| 	"written" | "converted" | "where" | "is" | "bits" | "bytes" | "record" | "union"
 	|	"register" | "array" | "length" | "until" | "one" | "fixed" | "containing"
-	| 	"bit" | "byte" | "kB" | "kilobytes" | "kilobyte" | "MB" | "megabytes" | "megabyte"
+	| 	"bit" | "byte" | "kB" | "kilobytes" | "kilobyte" | "megabytes" | "megabyte"
+;
+TypeName:
+		super
+	| 	"MB"
 ;
 

@@ -8,7 +8,7 @@ import org.bynar.versailles.xtext.versaillesLang._
 import org.eclipse.emf.ecore.EObject
 import org.bynar.versailles.PrettyPrinter
 
-object Converter {
+class Converter {
 
     import PrettyPrinter._
     val source = new v.AnnotationKey[EObject]
@@ -84,6 +84,8 @@ object Converter {
                 fromExpression(it.getPositional.get(0))
             else
                 v.Tuple(it.getPositional.map{ fromExpression(_) }:_*).putAnnotation(source, it)
+        case it: MemberAccessExpr =>
+            v.Member(fromExpression(it.getBase), Symbol(it.getMemberName)).putAnnotation(source, it)
         case it: BlockExpr =>
             if (it.getScope == null && it.getStatements.getStatements.forall{ _.isInstanceOf[CaseStmt] })
                 fromCaseStatements(it.getStatements) 
