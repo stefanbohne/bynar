@@ -173,6 +173,8 @@ class Simplifier {
                 
             case (f, a) => (expr.copy(f, a), ctx2)
             }
+        case expr@TypedExpr(e, t) =>
+            simplify(e, forward, context)
         case expr => (expr, context)
         }
     
@@ -213,6 +215,7 @@ class Simplifier {
                 (ss1(0), ctx1)
             else
                 (stmt.copy(ss1:_*), ctx1)
+        case TypeDef(_, _) => (Sequence(), context)
         case stmt => (stmt, context)
         }
 } 

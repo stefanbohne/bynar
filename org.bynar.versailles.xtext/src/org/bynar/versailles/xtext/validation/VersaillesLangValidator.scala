@@ -8,6 +8,7 @@ import org.bynar.versailles.xtext.versaillesLang.CompilationUnit
 import org.bynar.versailles.xtext.Converter
 import org.bynar.versailles.VariableAnalyzer
 import org.bynar.versailles.defaultContext
+import org.bynar.versailles.defaultTypeContext
 import org.bynar.versailles.VariableIdentity
 import org.bynar.versailles.Term
 import org.bynar.versailles.Irreversible
@@ -32,7 +33,7 @@ class VersaillesLangValidator extends AbstractVersaillesLangValidator {
     def checkVariables(it: CompilationUnit) {
         val cu = Converter.fromCompilationUnit(it)
         val varAna = new VariableAnalyzer
-        val newIt = varAna.analyze(cu, defaultContext.keySet)
+        val newIt = varAna.analyze(cu, defaultContext.keySet, defaultTypeContext.keySet)
         
         def showErrors(it: Term) {
             for (msg <- Messages.get(it))

@@ -21,5 +21,14 @@ package object versailles {
         case (n, l) => 
             VariableIdentity.setName(new VariableIdentity(), n) -> l
     }
+    
+    val defaultTypeContext = Map(
+            "Number" -> NumberType(),
+            "String" -> StringType(),
+            "Boolean" -> BooleanType()
+    ).map{
+        case (n, l) => 
+            TypeVariableIdentity.setName(new TypeVariableIdentity(), n) -> l
+    }
         
 }

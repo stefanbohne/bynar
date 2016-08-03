@@ -10,6 +10,7 @@ import org.bynar.versailles.PrettyPrinter
 import org.bynar.versailles.VariableAnalyzer
 import org.bynar.versailles.Simplifier
 import org.bynar.versailles.defaultContext
+import org.bynar.versailles.defaultTypeContext
 import org.bynar.versailles.VariableIdentity
 import org.bynar.versailles.Irreversible
 
@@ -21,7 +22,7 @@ class VersaillesLangGenerator extends AbstractGenerator {
         val pp = new PrettyPrinter()
         fsa.generateFile("pp.txt", pp.prettyPrint(cu))
         val va = new VariableAnalyzer()
-        val analyzed = va.analyze(cu, defaultContext.keySet)
+        val analyzed = va.analyze(cu, defaultContext.keySet, defaultTypeContext.keySet)
         fsa.generateFile("va.txt", pp.prettyPrint(analyzed))
         val simp = new Simplifier()
         fsa.generateFile("simp.txt", pp.prettyPrint(simp.simplify(analyzed, true, defaultContext)._1))

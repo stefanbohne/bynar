@@ -86,7 +86,9 @@ object Converter {
                         if (it.getScope == null)
                             v.Tuple().putAnnotation(source, it)
                         else
-                            fromExpression(it.getScope)).putAnnotation(source, it)                        
+                            fromExpression(it.getScope)).putAnnotation(source, it)          
+        case it: TypedExpr =>
+            v.TypedExpr(fromExpression(it.getBase), fromTypeExpression(it.getType)).putAnnotation(source, it)
         }
     
     def fromJanusClassExpression(it: JanusClassExpression): v.Expression =
@@ -161,7 +163,24 @@ object Converter {
                     ).putAnnotation(source, it),
                     v.Tuple().putAnnotation(source, it)
                 ).putAnnotation(source, it)
-            ).putAnnotation(source, it) 
+            ).putAnnotation(source, it)
+        case it: TypeStmt =>
+            v.TypeDef(v.TypeVariableIdentity.setName(new v.TypeVariableIdentity(), it.getName),
+                      fromTypeExpression(it.getType)).putAnnotation(source, it)
         }    
+    
+    def fromTypeExpression(it: TypeExpression): v.TypeExpression = 
+        it match {
+        case it: TypeVariable =>
+            v.TypeVariable(v.TypeVariableIdentity.setName(new v.TypeVariableIdentity(), it.getName)).
+                    putAnnotation(source, it)
+        case it: TupleTypeExpr =>
+            if (it.getPositional.size == 1 &&
+                it.getNamed.size == 0 &&
+                !it.isForceTuple())
+                fromTypeExpression(it.getPositional.get(0))
+            else
+                v.TupleType(it.getPositional.map{ fromTypeExpression(_) }:_*).putAnnotation(source, it)
+        }
     
 }

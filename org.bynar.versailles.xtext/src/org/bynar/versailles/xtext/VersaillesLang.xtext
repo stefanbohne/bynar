@@ -126,23 +126,22 @@ IndexExprSimple:
 ;
 
 TypeExpression:
-		TypeFun
-	;
+	TypeFun
+;
 TypeFun returns TypeExpression:
-	TypeExtension ({FunctionTypeExpr.argumentType=current} functionClass=JanusClass resultType=TypeExpression)?
+	TypeExtension ({FunctionTypeExpr.argumentType=current} => functionClass=JanusClass resultType=TypeExpression)?
 ;
 TypeExtension returns TypeExpression:
-	TypeValueApplication ({TypeExtension.base=current} "{" block=Statements "}")*
+	TypeValueApplication ({TypeExtension.base=current} => "{" block=Statements "}")*
 ;
 TypeValueApplication returns TypeExpression:
-	TypeApplication ({TypeValueApplication.function=current} argument=TupleExpr)*
+	TypeApplication ({TypeValueApplication.function=current} => argument=TupleExpr)*
 ;	
 TypeApplication returns TypeExpression:
-	TypeSimple ({TypeApplication.base=current} "[" (arguments+=TypeExpression ("," arguments+=TypeExpression)*)? ","?  "]")?
+	TypeSimple ({TypeApplication.base=current} => "[" (arguments+=TypeExpression ("," arguments+=TypeExpression)*)? ","?  "]")?
 ;
 TypeSimple returns TypeExpression:	
-		{ExpressionTypeExpr} "type" expression=Expression
-	|	{AbstractTypeExpr} "abstract"
+		{AbstractTypeExpr} "abstract"
 	|	TypeVariable
 	|	TupleTypeExpr
 ;

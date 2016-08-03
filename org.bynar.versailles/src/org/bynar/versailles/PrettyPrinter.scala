@@ -20,19 +20,19 @@ class PrettyPrinter {
         def binOpLeft(op: String, left: Term, right: Term, opPrecedence: Int) =
             paren(opPrecedence, {
                 prettyPrint(result, left, indent, opPrecedence - 1)
-                result.append(" ").append(op).append(" ")
+                result.append(op)
                 prettyPrint(result, right, indent, opPrecedence)
             })
         def binOpRight(op: String, left: Term, right: Term, opPrecedence: Int) =
             paren(opPrecedence, {
                 prettyPrint(result, left, indent, opPrecedence)
-                result.append(" ").append(op).append(" ")
+                result.append(op)
                 prettyPrint(result, right, indent, opPrecedence - 1)
             })
         def binOpNone(op: String, left: Term, right: Term, opPrecedence: Int) =
             paren(opPrecedence, {
                 prettyPrint(result, left, indent, opPrecedence)
-                result.append(" ").append(op).append(" ")
+                result.append(op)
                 prettyPrint(result, right, indent, opPrecedence)
             })
         def prefixOp(op: String, operand: Term, opPrecedence: Int) =
@@ -63,11 +63,11 @@ class PrettyPrinter {
             if (cs.size == 1)
                 result.append(",")
             result.append(")")
-        case Application(Application(Plus(), r), l) => binOpLeft("+", l, r, 10)
-        case Application(Application(Minus(), r), l) => binOpLeft("-", l, r, 10)
-        case Application(Application(Times(), r), l) => binOpLeft("*", l, r, 20)
-        case Application(Application(Divide(), r), l) => binOpLeft("/", l, r, 20)
-        case Application(Application(Equals(), l), r) => binOpNone("==", l, r, 5)
+        case Application(Application(Plus(), r), l) => binOpLeft(" + ", l, r, 10)
+        case Application(Application(Minus(), r), l) => binOpLeft(" - ", l, r, 10)
+        case Application(Application(Times(), r), l) => binOpLeft(" * ", l, r, 20)
+        case Application(Application(Divide(), r), l) => binOpLeft(" / ", l, r, 20)
+        case Application(Application(Equals(), l), r) => binOpNone(" == ", l, r, 5)
         case Application(Reverse(), a) => prefixOp("~", a, 50)
         case Application(f, a: Tuple) => paren(40, {
                 prettyPrint(result, f, indent, 40)
@@ -82,7 +82,7 @@ class PrettyPrinter {
         case Lambda(Inverse(), Undefined(), Undefined()) => 
             result.append("{}")
         case Lambda(jc, p, b) =>
-            binOpRight(jc.toString, p, b, 1)
+            binOpRight(" " + jc.toString + " ", p, b, 1)
         case Block(Sequence(), s) =>
             result.append("{ return ")
             prettyPrint(result, s, indent, 0)
@@ -96,6 +96,27 @@ class PrettyPrinter {
             result.append("\n")
             result.append(indentText * indent)
             result.append("}")
+        case TypedExpr(e, t) =>
+            binOpLeft(": ", e, t, 8)
+        case lit: TypeLiteral =>
+            result.append(lit.toString)
+        case TypeVariable(id) =>
+            prettyPrintTypeName(result, TypeVariableIdentity.getName(id))
+            result.append("_")
+            result.append(id.hashCode.toHexString)
+        case TupleType(cts@_*) =>
+            result.append("(")
+            var first = true
+            for (c <- cts) {
+                if (!first)
+                    result.append(", ")
+                else
+                    first = false
+                prettyPrint(result, c, indent, 0)
+            }
+            if (cts.size == 1)
+                result.append(",")
+            result.append(")")
         }
     }
 
@@ -129,6 +150,14 @@ class PrettyPrinter {
         case Sequence(ss@_*) =>
             for (s <- ss)
                 prettyPrintStatement(result, s, indent)
+        case TypeDef(id, t) =>
+            result.append(indentText * indent)
+            result.append("type ")
+            prettyPrintTypeName(result, TypeVariableIdentity.getName(id))
+            result.append("_")
+            result.append(id.hashCode.toHexString)
+            result.append(" = ")
+            prettyPrint(result, t, indent, 0) 
         }
     }
 
@@ -139,6 +168,16 @@ class PrettyPrinter {
             result.append("`")
             result.append(name.replace("`", "``"))
             result.append("`")
+        }
+    }
+
+    def prettyPrintTypeName(result: StringBuilder, name: String) {
+        if (name.matches("[A-Z][a-zA-Z_0-9]*"))
+            result.append(name)
+        else {
+            result.append("´")
+            result.append(name.replace("´", "´´"))
+            result.append("´")
         }
     }
 }
