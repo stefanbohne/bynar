@@ -65,6 +65,19 @@ class PrettyPrinter {
             if (cs.size == 1)
                 result.append(",")
             result.append(")")
+        case TupleType(cts@_*) =>
+            result.append("<")
+            var first = true
+            for (c <- cts) {
+                if (!first)
+                    result.append(", ")
+                else
+                    first = false
+                prettyPrint(result, c, indent, 0)
+            }
+            if (cts.size == 1)
+                result.append(",")
+            result.append(">")
         case Application(Application(Plus(), r), l)
             if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
                 binOpLeft(" + ", l, r, 10)
@@ -93,23 +106,20 @@ class PrettyPrinter {
             if term.annotation(applicationInfo).getOrElse(ApplicationAsApplication) == ApplicationAsTypeApplication =>
             paren(50, {
                 prettyPrint(result, f, indent, 50)
-                result.append("<")
+                if (!a.isInstanceOf[TupleType])
+                    result.append("<")
                 prettyPrint(result, a, indent, 0)
-                result.append(">")
-            })
-        case Application(f, a: Tuple) =>
-            paren(40, {
-                prettyPrint(result, f, indent, 40)
-                result.append("[")
-                prettyPrint(result, a, indent, 0)
-                result.append("]")
+                if (!a.isInstanceOf[TupleType])
+                    result.append(">")
             })
         case Application(f, a) =>
             paren(40, {
                 prettyPrint(result, f, indent, 40)
-                result.append("(")
+                if (!a.isInstanceOf[Tuple])
+                    result.append("(")
                 prettyPrint(result, a, indent, 0)
-                result.append(")")
+                if (!a.isInstanceOf[Tuple])
+                    result.append(")")
             })
         case Lambda(Inverse(), Undefined(), Undefined()) =>
             result.append("{}")
@@ -128,19 +138,6 @@ class PrettyPrinter {
             result.append("\n")
             result.append(indentText * indent)
             result.append("}")
-        case TupleType(cts@_*) =>
-            result.append("(")
-            var first = true
-            for (c <- cts) {
-                if (!first)
-                    result.append(", ")
-                else
-                    first = false
-                prettyPrint(result, c, indent, 0)
-            }
-            if (cts.size == 1)
-                result.append(",")
-            result.append(")")
         }
     }
 

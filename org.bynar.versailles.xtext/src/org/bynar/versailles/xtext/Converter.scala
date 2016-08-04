@@ -70,10 +70,7 @@ class Converter {
                     putAnnotation(applicationInfo, ApplicationAsApplication)
         case it: TypeApplicationExpr =>
             v.Application(fromExpression(it.getFunction),
-                          if (it.getArguments.size == 1)
-                              fromTypeExpression(it.getArguments.get(0))
-                          else
-                              v.TupleType(it.getArguments.map{ fromTypeExpression(_) }:_*).putAnnotation(source, it)).
+                          fromTypeExpression(it.getArgument)).
                     putAnnotation(source, it).
                     putAnnotation(applicationInfo, ApplicationAsTypeApplication)
         case it: MatchExpr =>
@@ -195,8 +192,13 @@ class Converter {
                 ).putAnnotation(source, it)
             ).putAnnotation(source, it)
         case it: TypeStmt =>
+            val t = fromTypeExpression(it.getType)
+            val t2 = if (it.getTypeArguments != null)
+                v.Lambda(v.Irreversible(), fromTupleTypeType(it.getTypeArguments), t)
+            else
+                t
             v.Def(v.VariableIdentity.setName(new v.VariableIdentity(), it.getName),
-                  fromTypeExpression(it.getType)).putAnnotation(source, it)
+                  t2).putAnnotation(source, it)
         }
 
     def fromTypeExpression(it: TypeExpression): v.Expression =
@@ -214,10 +216,7 @@ class Converter {
         case it: TypeConcretion =>
             v.Application(
                 fromTypeExpression(it.getBase),
-                if (it.getArguments.size == 1)
-                    fromTypeExpression(it.getArguments.get(0))
-                else
-                    v.TupleType(it.getArguments.map{ fromTypeExpression(_) }:_*).putAnnotation(source, it)
+                fromTypeExpression(it.getArgument)
             ).putAnnotation(source, it).putAnnotation(applicationInfo, ApplicationAsTypeApplication)
         case it: TypeValueConcretion =>
             v.Application(
@@ -225,5 +224,17 @@ class Converter {
                 fromExpression(it.getArgument)
             ).putAnnotation(source, it).putAnnotation(applicationInfo, ApplicationAsApplication)
         }
+
+    def fromTupleTypeType(it: TupleTypeTypeExpr): v.Expression =
+        if (it.getArguments.size == 1 &&
+                !it.isForceTuple())
+            v.Variable(v.VariableIdentity.setName(new v.VariableIdentity, it.getArguments.get(0).getName), true).
+                putAnnotation(source, it.getArguments.get(0))
+        else
+            v.TupleType(it.getArguments.map{
+            case tv =>
+                v.Variable(v.VariableIdentity.setName(new v.VariableIdentity, tv.getName), true).
+                    putAnnotation(source, tv)
+            }:_*)
 
 }

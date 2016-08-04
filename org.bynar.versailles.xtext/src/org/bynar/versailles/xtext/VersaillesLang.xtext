@@ -28,11 +28,11 @@ Statement:
 	|   {LoopStmt} ("from" assertion=Expression)? ("do" do=Statements)? ("loop" loop=Statements)? "until" condition=Expression
 	|	{CaseStmt} "case" case=LambdaExpr
 	|	{DefStmt} "def" name=Name
-					    ((arguments+=TupleExpr)+ (title=STRING)? (description=InterpolatedString)?
+					    ((typeArguments=TupleTypeTypeExpr)? (arguments+=TupleExpr)+ (title=STRING)? (description=InterpolatedString)?
 						    ("=" expression = Expression |
 				            janusClass=JanusClassExpression (name2=Name)? results=TupleExpr (title2=STRING)? (description2=InterpolatedString)? ("{" statements=Statements "}" | "=" expression=Expression))
 				        | ":" valueType=TypeExpression (title=STRING)? (description=InterpolatedString)? "=" value=Expression)
-	|	{TypeStmt} "type" name=TypeName typeArguments=TypeArgumentsDefinition? valueArguments=TupleTypeExpr? (title=STRING)? (description=InterpolatedString)? "=" type=TypeExpression
+	|	{TypeStmt} "type" name=TypeName typeArguments=TupleTypeTypeExpr? valueArguments=TupleTypeExpr? (title=STRING)? (description=InterpolatedString)? "=" type=TypeExpression
 ;
 Statements:
 	{Statements} ((statements+=Statement)? Sep)*
@@ -87,7 +87,7 @@ ExpressionAppl returns Expression:
 	ExpressionTypeAppl ({ApplicationExpr.function=current} => argument=TupleExpr)*
 ;
 ExpressionTypeAppl returns Expression:
-	ExpressionUn ({TypeApplicationExpr.function=current} => "<" (arguments+=TypeExpression ("," arguments+=TypeExpression)*)? ","?  ">")*
+	ExpressionUn ({TypeApplicationExpr.function=current} => argument=TupleTypeExpr)*
 ;
 UnaryOp returns Operator: {Operator} op=("~" | "-" | "!");
 ExpressionUn returns Expression:
@@ -144,7 +144,7 @@ TypeValueConcretion returns TypeExpression:
 	TypeConcretion ({TypeValueConcretion.function=current} => argument=TupleExpr)*
 ;
 TypeConcretion returns TypeExpression:
-	TypeSimple ({TypeConcretion.base=current} => "<" (arguments+=TypeExpression ("," arguments+=TypeExpression)*)? ","?  ">")?
+	TypeSimple ({TypeConcretion.base=current} => argument=TupleTypeExpr)?
 ;
 TypeSimple returns TypeExpression:
 		{AbstractTypeExpr} "abstract"
@@ -157,13 +157,13 @@ TypeVariable:
 TypeVariableDefinition:
 	variance=("+"|"-")? name=TypeName
 ;
-TypeArgumentsDefinition:
-		{TypeArgumentsDefinition} "<" (arguments+=TypeVariableDefinition ("," arguments+=TypeVariableDefinition)*)? ","? ">"
+TupleTypeTypeExpr:
+		{TupleTypeTypeExpr} "<" (arguments+=TypeVariableDefinition ("," arguments+=TypeVariableDefinition)*)? (forceTuple?=",")? ">"
 ;
 TupleTypeExpr returns TypeExpression:
-		{TupleTypeExpr} "(" ")"
-	|	{TupleTypeExpr} "(" positional+=TypeExpression ("," positional+=TypeExpression)* ("," names+=Name ":" named+=TypeExpression)* (forceTuple?=",")?  ")"
-	|	{TupleTypeExpr} "(" names+=Name ":" named+=TypeExpression ("," names+=Name ":" named+=TypeExpression)* (forceTuple?=",")?")"
+		{TupleTypeExpr} "<" ">"
+	|	{TupleTypeExpr} "<" positional+=TypeExpression ("," positional+=TypeExpression)* ("," names+=Name ":" named+=TypeExpression)* (forceTuple?=",")?  ">"
+	|	{TupleTypeExpr} "<" names+=Name ":" named+=TypeExpression ("," names+=Name ":" named+=TypeExpression)* (forceTuple?=",")?">"
 ;
 
 terminal ID_LOWER:
