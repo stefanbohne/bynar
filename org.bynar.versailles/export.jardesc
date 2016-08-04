@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?xml version="1.0" encoding="WINDOWS-1252" standalone="no"?>
 <jardesc>
     <jar path="org.bynar.versailles.xtext/lib/org.bynar.versailles.jar"/>
     <options buildIfNeeded="true" compress="true" descriptionLocation="/org.bynar.versailles/export.jardesc" exportErrors="true" exportWarnings="true" includeDirectoryEntries="false" overwrite="true" saveDescription="true" storeRefactorings="false" useSourceFolders="false"/>
@@ -14,7 +14,6 @@
         <javaElement handleIdentifier="=org.bynar.versailles/src"/>
         <file path="/org.bynar.versailles/.classpath"/>
         <file path="/org.bynar.versailles/.project"/>
-        <folder path="/org.bynar.versailles/dist"/>
         <file path="/org.bynar.versailles/.cache-main"/>
     </selectedElements>
 </jardesc>

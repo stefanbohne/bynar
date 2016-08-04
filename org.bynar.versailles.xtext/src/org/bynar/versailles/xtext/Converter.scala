@@ -12,24 +12,24 @@ class Converter {
 
     import PrettyPrinter._
     val source = new v.AnnotationKey[EObject]
-  
+
     def fromCompilationUnit(cu: CompilationUnit): v.Expression = {
-        val e = 
-            if (cu.getExpression == null) 
-                v.Tuple().putAnnotation(source, cu) 
-            else 
+        val e =
+            if (cu.getExpression == null)
+                v.Tuple().putAnnotation(source, cu)
+            else
                 fromExpression(cu.getExpression)
         if (cu.getStatements == null)
             e
         else
             v.Block(fromStatements(cu.getStatements), e).putAnnotation(source, cu)
     }
-    
-    def fromExpression(it: Expression): v.Expression = 
+
+    def fromExpression(it: Expression): v.Expression =
         it match {
-        case it: IntegerLiteral => 
+        case it: IntegerLiteral =>
             v.NumberLiteral(it.getValue).putAnnotation(source, it)
-        case it: StringLiteral => 
+        case it: StringLiteral =>
             v.StringLiteral(it.getValue).putAnnotation(source, it)
         case it: Variable =>
             v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), it.getName),
@@ -62,15 +62,23 @@ class Converter {
             case "~" => v.Application(v.Reverse().
                     putAnnotation(source, it.getOp), a).
                     putAnnotation(applicationInfo, ApplicationAsOperator)
-            } 
-        case it: ApplicationExpr => 
+            }
+        case it: ApplicationExpr =>
             v.Application(fromExpression(it.getFunction),
                           fromExpression(it.getArgument)).
                     putAnnotation(source, it).
                     putAnnotation(applicationInfo, ApplicationAsApplication)
+        case it: TypeApplicationExpr =>
+            v.Application(fromExpression(it.getFunction),
+                          if (it.getArguments.size == 1)
+                              fromTypeExpression(it.getArguments.get(0))
+                          else
+                              v.TupleType(it.getArguments.map{ fromTypeExpression(_) }:_*).putAnnotation(source, it)).
+                    putAnnotation(source, it).
+                    putAnnotation(applicationInfo, ApplicationAsTypeApplication)
         case it: MatchExpr =>
             v.Application(fromCaseStatements(it.getStatements),
-                          fromExpression(it.getIndex)). 
+                          fromExpression(it.getIndex)).
                     putAnnotation(source, it).
                     putAnnotation(applicationInfo, ApplicationAsMatch)
         case it: LambdaExpr =>
@@ -88,32 +96,34 @@ class Converter {
             v.Member(fromExpression(it.getBase), Symbol(it.getMemberName)).putAnnotation(source, it)
         case it: BlockExpr =>
             if (it.getScope == null && it.getStatements.getStatements.forall{ _.isInstanceOf[CaseStmt] })
-                fromCaseStatements(it.getStatements) 
+                fromCaseStatements(it.getStatements)
             else if (it.getScope == null && it.getStatements.getStatements == null)
                 v.Lambda(v.Irreversible().putAnnotation(source, it),
                          v.Undefined().putAnnotation(source, it),
                          v.Undefined().putAnnotation(source, it)).putAnnotation(source, it)
-            else 
+            else
                 v.Block(fromStatements(it.getStatements),
                         if (it.getScope == null)
                             v.Tuple().putAnnotation(source, it)
                         else
-                            fromExpression(it.getScope)).putAnnotation(source, it)          
+                            fromExpression(it.getScope)).putAnnotation(source, it)
         case it: TypedExpr =>
-            v.TypedExpr(fromExpression(it.getBase), fromTypeExpression(it.getType)).putAnnotation(source, it)
+            v.Application(v.Application(v.Typed().putAnnotation(source, it),
+                                        fromTypeExpression(it.getType)).putAnnotation(source, it),
+                          fromExpression(it.getBase)).putAnnotation(source, it).putAnnotation(v.PrettyPrinter.applicationInfo, v.PrettyPrinter.ApplicationAsOperator)
         }
-    
-    def fromCaseStatements(it: Statements): v.Expression = 
+
+    def fromCaseStatements(it: Statements): v.Expression =
         it.getStatements.map{ case s: CaseStmt => fromExpression(s.getCase) }.reduceRight[v.Expression]{
         case (c, r) =>
             v.Application(v.Application(v.OrElse().putAnnotation(source, it),
                                         c).putAnnotation(source, it),
                           r).putAnnotation(source, it)
         }
-    
+
     def fromJanusClassExpression(it: JanusClassExpression): v.Expression =
         it match {
-        case it: JanusClass => 
+        case it: JanusClass =>
             it.getOp match {
             case "->" => v.Irreversible().putAnnotation(source, it)
             case "<-" => v.ReverseIrreversible().putAnnotation(source, it)
@@ -124,8 +134,8 @@ class Converter {
             case "<>-<>" => v.Reversible().putAnnotation(source, it)
             }
     }
-    
-    def fromStatements(it: Statements): v.Statement = 
+
+    def fromStatements(it: Statements): v.Statement =
         if (it == null)
             v.Sequence()
         else {
@@ -135,8 +145,8 @@ class Converter {
             else
                 v.Sequence(ss:_*).putAnnotation(source, it)
         }
-    
-    def fromStatement(it: Statement): v.Statement = 
+
+    def fromStatement(it: Statement): v.Statement =
         it match {
         case it: PassStmt =>
             v.Sequence().putAnnotation(source, it)
@@ -149,7 +159,7 @@ class Converter {
             v.IfStmt(fromExpression(it.getCondition),
                      fromStatements(it.getThen),
                      fromStatements(it.getElse),
-                     if (it.getAssertion == null) 
+                     if (it.getAssertion == null)
                          v.Undefined().putAnnotation(source, it)
                      else
                          fromExpression(it.getAssertion)).putAnnotation(source, it)
@@ -185,14 +195,14 @@ class Converter {
                 ).putAnnotation(source, it)
             ).putAnnotation(source, it)
         case it: TypeStmt =>
-            v.TypeDef(v.TypeVariableIdentity.setName(new v.TypeVariableIdentity(), it.getName),
-                      fromTypeExpression(it.getType)).putAnnotation(source, it)
-        }    
-    
-    def fromTypeExpression(it: TypeExpression): v.TypeExpression = 
+            v.Def(v.VariableIdentity.setName(new v.VariableIdentity(), it.getName),
+                  fromTypeExpression(it.getType)).putAnnotation(source, it)
+        }
+
+    def fromTypeExpression(it: TypeExpression): v.Expression =
         it match {
         case it: TypeVariable =>
-            v.TypeVariable(v.TypeVariableIdentity.setName(new v.TypeVariableIdentity(), it.getName)).
+            v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), it.getName), false).
                     putAnnotation(source, it)
         case it: TupleTypeExpr =>
             if (it.getPositional.size == 1 &&
@@ -201,6 +211,19 @@ class Converter {
                 fromTypeExpression(it.getPositional.get(0))
             else
                 v.TupleType(it.getPositional.map{ fromTypeExpression(_) }:_*).putAnnotation(source, it)
+        case it: TypeConcretion =>
+            v.Application(
+                fromTypeExpression(it.getBase),
+                if (it.getArguments.size == 1)
+                    fromTypeExpression(it.getArguments.get(0))
+                else
+                    v.TupleType(it.getArguments.map{ fromTypeExpression(_) }:_*).putAnnotation(source, it)
+            ).putAnnotation(source, it).putAnnotation(applicationInfo, ApplicationAsTypeApplication)
+        case it: TypeValueConcretion =>
+            v.Application(
+                fromTypeExpression(it.getFunction),
+                fromExpression(it.getArgument)
+            ).putAnnotation(source, it).putAnnotation(applicationInfo, ApplicationAsApplication)
         }
-    
+
 }

@@ -53,11 +53,6 @@ trait ZeroaryStatement extends Statement with ZeroaryTerm { self =>
     override type SelfTerm >: self.type <: ZeroaryStatement
 }
 
-trait TypeExpression extends Term {
-}
-trait ZeroaryTypeExpression extends TypeExpression with ZeroaryTerm
-trait TypeLiteral extends ZeroaryTypeExpression 
-
 case class NumberLiteral(val value: BigDecimal) extends Literal {
     type SelfTerm = NumberLiteral
     override def toString = value.toString
@@ -286,16 +281,16 @@ case class Block(val block: Statement, val scope: Expression) extends Expression
 }
 
 case class Member(val base: Expression, val name: Symbol) extends Expression {
-    
+
     override type SelfTerm = Member
-    
+
     def copy(base: Expression = base, name: Symbol = name) =
         Member(base, name).copyAnnotationsFrom(this)
     override def copy(children: PartialFunction[Symbol, Term]) =
         copy(children.lift('b).getOrElse(base).asInstanceOf[Expression])
     override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) =
         f('b, base, a)
-        
+
 }
 
 case class Sequence(val statements: Statement*) extends Statement {
@@ -329,6 +324,20 @@ case class Let(val pattern: Expression, val value: Expression) extends Statement
 
 }
 
+case class Def(val identity: VariableIdentity, val value: Expression) extends Statement {
+
+    override type SelfTerm = Def
+
+    def copy(identity: VariableIdentity = identity,
+             value: Expression = value) =
+        Def(identity, value).copyAnnotationsFrom(this)
+    override def copy(children: PartialFunction[Symbol, Term]) =
+        copy(value = children.lift('v).getOrElse(value).asInstanceOf[Expression])
+    override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) =
+        f('v, value, a)
+
+}
+
 case class IfStmt(val condition: Expression, val `then`: Statement, val `else`: Statement, val assertion: Expression) extends Statement {
 
     type SelfTerm = IfStmt
@@ -348,79 +357,32 @@ case class IfStmt(val condition: Expression, val `then`: Statement, val `else`: 
 
 }
 
-
-case class TypedExpr(val expression: Expression, val `type`: TypeExpression) extends Expression {
-    
-    override type SelfTerm = TypedExpr
-
-    def copy(expression: Expression = expression, 
-             `type`: TypeExpression = `type`) =
-        TypedExpr(expression, `type`).copyAnnotationsFrom(this)
-    override def copy(children: PartialFunction[Symbol, Term]) =
-        copy(children.lift('e).getOrElse(expression).asInstanceOf[Expression],
-             children.lift('t).getOrElse(`type`).asInstanceOf[TypeExpression])
-    override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) =
-        f('t, `type`, f('e, expression, a))
-    
+case class Typed() extends Literal {
+    override def toString = "typed"
 }
-
-case class TypeDef(val identity: TypeVariableIdentity, val `type`: TypeExpression) extends Statement {
-    
-    override type SelfTerm = TypeDef
-
-    def copy(identity: TypeVariableIdentity = identity,
-             `type`: TypeExpression = `type`) =
-        TypeDef(identity, `type`).copyAnnotationsFrom(this)
-    override def copy(children: PartialFunction[Symbol, Term]) =
-        copy(`type` = children.lift('t).getOrElse(`type`).asInstanceOf[TypeExpression])
-    override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) =
-        f('t, `type`, a)
-
-}
-
-case class NumberType() extends TypeLiteral {
+case class NumberType() extends Literal {
     override def toString = "Number"
 }
-case class StringType() extends TypeLiteral {
+case class StringType() extends Literal {
     override def toString = "String"
 }
-case class BooleanType() extends TypeLiteral {
+case class BooleanType() extends Literal {
     override def toString = "Boolean"
 }
 
-class TypeVariableIdentity extends Annotated {
-    override def toString = TypeVariableIdentity.getName(this) + "@" + hashCode.toHexString
-}
-object TypeVariableIdentity {
-    val name = new AnnotationKey[String]
-    def getName(it: TypeVariableIdentity): String =
-        it.annotation(name).getOrElse("")
-    def setName(it: TypeVariableIdentity, name: String): TypeVariableIdentity =
-        it.putAnnotation(this.name, name)
-}
+case class TupleType(val componentTypes: Expression*) extends Expression {
 
-case class TypeVariable(val variable: TypeVariableIdentity) extends ZeroaryTypeExpression {
-      
-    type SelfTerm = TypeVariable
-    
-    def copy(variable: TypeVariableIdentity = variable) = 
-        TypeVariable(variable).copyAnnotationsFrom(this)
-        
-}
-
-case class TupleType(val componentTypes: TypeExpression*) extends TypeExpression {
-    
     type SelfTerm = TupleType
-    
-    def copy(componentTypes: TypeExpression*) =
+
+    def copy(componentTypes: Expression*) =
         TupleType(componentTypes:_*).copyAnnotationsFrom(this)
     override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) =
         (a /: componentTypes.zipWithIndex){
-        case (a, (ct, i)) => f(Symbol(i.toString), ct, a)    
+        case (a, (ct, i)) => f(Symbol(i.toString), ct, a)
         }
     def copy(children: PartialFunction[Symbol, Term]) =
-        copy(componentTypes.zipWithIndex.map{ 
-            case (ct, i) => children.lift(Symbol(i.toString)).getOrElse(ct).asInstanceOf[TypeExpression] 
+        copy(componentTypes.zipWithIndex.map{
+            case (ct, i) => children.lift(Symbol(i.toString)).getOrElse(ct).asInstanceOf[Expression]
         }:_*)
 
 }

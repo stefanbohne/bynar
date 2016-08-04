@@ -1,7 +1,7 @@
 package org.bynar
 
 package object versailles {
-  
+
     val defaultContext = Map(
             "+" -> Plus(),
             "-" -> Minus(),
@@ -16,19 +16,13 @@ package object versailles {
             "~" -> Inverse(),
             "|" -> OrElse(),
             "forget" -> Forget(),
-            "undefined" -> Undefined()
-    ).map{
-        case (n, l) => 
-            VariableIdentity.setName(new VariableIdentity(), n) -> l
-    }
-    
-    val defaultTypeContext = Map(
+            "undefined" -> Undefined(),
             "Number" -> NumberType(),
             "String" -> StringType(),
             "Boolean" -> BooleanType()
     ).map{
-        case (n, l) => 
-            TypeVariableIdentity.setName(new TypeVariableIdentity(), n) -> l
+        case (n, l) =>
+            VariableIdentity.setName(new VariableIdentity(), n) -> l
     }
-        
+
 }

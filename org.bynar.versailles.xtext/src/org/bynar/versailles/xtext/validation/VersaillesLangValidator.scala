@@ -8,7 +8,6 @@ import org.bynar.versailles.xtext.versaillesLang.CompilationUnit
 import org.bynar.versailles.xtext.Converter
 import org.bynar.versailles.VariableAnalyzer
 import org.bynar.versailles.defaultContext
-import org.bynar.versailles.defaultTypeContext
 import org.bynar.versailles.VariableIdentity
 import org.bynar.versailles.Term
 import org.bynar.versailles.Irreversible
@@ -18,7 +17,7 @@ import org.bynar.versailles.xtext.versaillesLang.MatchExpr
 import org.bynar.versailles.xtext.Converter
 
 class VersaillesLangValidator extends AbstractVersaillesLangValidator {
-  
+
     @Check
 	def checkBlock(block: BlockExpr) {
 		val message = "A block expression must either be empty, end with return, or contain only case statements.";
@@ -28,9 +27,9 @@ class VersaillesLangValidator extends AbstractVersaillesLangValidator {
 				error(message, block, null);
 		} else
 			if (countCase > 0)
-			    error(message, block.getStatements.getStatements.filter{ _.isInstanceOf[CaseStmt] }.head, null);		
+			    error(message, block.getStatements.getStatements.filter{ _.isInstanceOf[CaseStmt] }.head, null);
 	}
-    
+
     @Check
 	def checkBlock(it: MatchExpr) {
 		val message = "A match expression must contain only case statements.";
@@ -40,14 +39,14 @@ class VersaillesLangValidator extends AbstractVersaillesLangValidator {
 		        return;
 		    }
 	}
-    
+
     @Check
     def checkVariables(it: CompilationUnit) {
         val conv = new Converter()
         val cu = conv.fromCompilationUnit(it)
         val varAna = new VariableAnalyzer
-        val newIt = varAna.analyze(cu, defaultContext.keySet, defaultTypeContext.keySet)
-        
+        val newIt = varAna.analyze(cu, defaultContext.keySet)
+
         def showErrors(it: Term) {
             for (msg <- Messages.get(it))
                 msg.level match {
@@ -65,6 +64,6 @@ class VersaillesLangValidator extends AbstractVersaillesLangValidator {
             for (child <- it.children.values)
                 showErrors(child)
         }
-        showErrors(newIt)  
+        showErrors(newIt)
     }
 }

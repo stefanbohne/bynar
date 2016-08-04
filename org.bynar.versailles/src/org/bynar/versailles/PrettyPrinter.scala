@@ -2,7 +2,7 @@ package org.bynar.versailles
 
 class PrettyPrinter {
     import PrettyPrinter._
-    
+
     val indentText = "  "
 
     def prettyPrint(term: Term, indent: Int = 0, precedence: Int = 0): String = {
@@ -65,38 +65,53 @@ class PrettyPrinter {
             if (cs.size == 1)
                 result.append(",")
             result.append(")")
-        case Application(Application(Plus(), r), l) 
-            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator => 
+        case Application(Application(Plus(), r), l)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
                 binOpLeft(" + ", l, r, 10)
-        case Application(Application(Minus(), r), l) 
-            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator => 
+        case Application(Application(Minus(), r), l)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
                 binOpLeft(" - ", l, r, 10)
-        case Application(Application(Times(), r), l) 
-            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator => 
+        case Application(Application(Times(), r), l)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
                 binOpLeft(" * ", l, r, 20)
-        case Application(Application(Divide(), r), l) 
-            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator => 
+        case Application(Application(Divide(), r), l)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
                 binOpLeft(" / ", l, r, 20)
-        case Application(Application(Equals(), l), r) 
-            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator => 
+        case Application(Application(Equals(), l), r)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
                 binOpNone(" == ", l, r, 5)
-        case Application(Reverse(), a) 
-            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator => 
+        case Application(Reverse(), a)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
                 prefixOp("~", a, 50)
-        case Application(f, a) 
-            if term.annotation(applicationInfo).getOrElse(ApplicationAsApplication) == ApplicationAsMatch => 
+        case Application(Application(Typed(), r), l)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
+                binOpNone(": ", l, r, 8)
+        case Application(f, a)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsApplication) == ApplicationAsMatch =>
                 binOpLeft(" match ", a, f, 2)
-        case Application(f, a: Tuple) => paren(40, {
-                prettyPrint(result, f, indent, 40)
+        case Application(f, a)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsApplication) == ApplicationAsTypeApplication =>
+            paren(50, {
+                prettyPrint(result, f, indent, 50)
+                result.append("<")
                 prettyPrint(result, a, indent, 0)
+                result.append(">")
             })
-        case Application(f, a) => paren(40, {
+        case Application(f, a: Tuple) =>
+            paren(40, {
+                prettyPrint(result, f, indent, 40)
+                result.append("[")
+                prettyPrint(result, a, indent, 0)
+                result.append("]")
+            })
+        case Application(f, a) =>
+            paren(40, {
                 prettyPrint(result, f, indent, 40)
                 result.append("(")
                 prettyPrint(result, a, indent, 0)
                 result.append(")")
             })
-        case Lambda(Inverse(), Undefined(), Undefined()) => 
+        case Lambda(Inverse(), Undefined(), Undefined()) =>
             result.append("{}")
         case Lambda(jc, p, b) =>
             binOpRight(" " + jc.toString + " ", p, b, 1)
@@ -113,14 +128,6 @@ class PrettyPrinter {
             result.append("\n")
             result.append(indentText * indent)
             result.append("}")
-        case TypedExpr(e, t) =>
-            binOpLeft(": ", e, t, 8)
-        case lit: TypeLiteral =>
-            result.append(lit.toString)
-        case TypeVariable(id) =>
-            prettyPrintTypeName(result, TypeVariableIdentity.getName(id))
-            result.append("_")
-            result.append(id.hashCode.toHexString)
         case TupleType(cts@_*) =>
             result.append("(")
             var first = true
@@ -167,14 +174,15 @@ class PrettyPrinter {
         case Sequence(ss@_*) =>
             for (s <- ss)
                 prettyPrintStatement(result, s, indent)
-        case TypeDef(id, t) =>
+        case Def(id, t) =>
             result.append(indentText * indent)
-            result.append("type ")
-            prettyPrintTypeName(result, TypeVariableIdentity.getName(id))
+            result.append("def ")
+            prettyPrintTypeName(result, VariableIdentity.getName(id))
             result.append("_")
             result.append(id.hashCode.toHexString)
             result.append(" = ")
-            prettyPrint(result, t, indent, 0) 
+            prettyPrint(result, t, indent, 0)
+            result.append(";\n")
         }
     }
 
@@ -202,6 +210,7 @@ class PrettyPrinter {
 object PrettyPrinter {
     trait ApplicationInfo
     case object ApplicationAsApplication extends ApplicationInfo
+    case object ApplicationAsTypeApplication extends ApplicationInfo
     case object ApplicationAsOperator extends ApplicationInfo
     case object ApplicationAsMatch extends ApplicationInfo
     val applicationInfo = new AnnotationKey[ApplicationInfo]()

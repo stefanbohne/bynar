@@ -1,41 +1,30 @@
 package org.bynar.versailles
 
 class VariableAnalyzer {
-    
+
     import VariableAnalyzer._
-    
+
     case class ContextEntry(val identity: VariableIdentity,
                             val linear: Boolean)
-    case class Context(val variables: Map[String, ContextEntry],
-                       val typeVariables: Map[String, TypeVariableIdentity]) {
+    case class Context(val variables: Map[String, ContextEntry]) {
         def +(variable: VariableIdentity, linear: Boolean): Context =
-            Context(variables + (VariableIdentity.getName(variable) -> ContextEntry(variable, linear)),
-                    typeVariables)
+            Context(variables + (VariableIdentity.getName(variable) -> ContextEntry(variable, linear)))
         def -(variable: VariableIdentity): Context = {
             val n = VariableIdentity.getName(variable)
-            assert(containsVariable(variable) && variables(n).linear) 
-            Context(variables - n, typeVariables)
+            assert(containsVariable(variable) && variables(n).linear)
+            Context(variables - n)
         }
         def asNonlinear() =
-            Context(variables.mapValues{ case ContextEntry(v, l) => ContextEntry(v, false) }, typeVariables) 
+            Context(variables.mapValues{ case ContextEntry(v, l) => ContextEntry(v, false) })
         def containsVariable(name: String): Boolean =
             variables.contains(name)
         def containsVariable(variable: VariableIdentity): Boolean =
             variables.get(VariableIdentity.getName(variable)).map{ e => e.identity eq variable }.getOrElse(false)
-
-        def +(typeVariable: TypeVariableIdentity): Context =
-            Context(variables, 
-                    typeVariables + (TypeVariableIdentity.getName(typeVariable) -> typeVariable))
-        def containsTypeVariable(name: String): Boolean =
-            typeVariables.contains(name)
-        def containsTypeVariable(typeVariable: TypeVariableIdentity): Boolean =
-            typeVariables.get(TypeVariableIdentity.getName(typeVariable)).map{ tv => tv eq typeVariable }.getOrElse(false)
     }
-    
-    def analyze(it: Expression, variables: Set[VariableIdentity], typeVariables: Set[TypeVariableIdentity]): Expression =
+
+    def analyze(it: Expression, variables: Set[VariableIdentity]): Expression =
         analyze(it, false, Irreversible(), Context(
-                Map(variables.toSeq.map{ case id => VariableIdentity.getName(id) -> ContextEntry(id, false) }:_*),
-                Map(typeVariables.toSeq.map{ case id => TypeVariableIdentity.getName(id) -> id }:_*)
+                Map(variables.toSeq.map{ case id => VariableIdentity.getName(id) -> ContextEntry(id, false) }:_*)
         ))._1
     def analyze(it: Expression, pattern: Boolean, janusClass: JanusClass, context: Context): (Expression, Context) =
         it match {
@@ -70,18 +59,34 @@ class VariableAnalyzer {
         case it@Tuple(cs@_*) =>
             if (!pattern) {
                 val (cs1, ctx1) = ((Seq[Expression](), context) /: cs){
-                    case ((cs2, ctx2), c) => 
+                    case ((cs2, ctx2), c) =>
                         val (c3, ctx3) = analyze(c, pattern, janusClass, ctx2)
                         (cs2 :+ c3, ctx3)
                 }
                 (it.copy(cs1:_*), ctx1)
             } else {
                 val (cs1, ctx1) = (cs :\ (Seq[Expression](), context)){
-                    case (c, (cs2, ctx2)) => 
+                    case (c, (cs2, ctx2)) =>
                         val (c3, ctx3) = analyze(c, pattern, janusClass, ctx2)
                         (c3 +: cs2, ctx3)
                 }
                 (it.copy(cs1:_*), ctx1)
+            }
+        case it@TupleType(cts@_*) =>
+            if (!pattern) {
+                val (cts1, ctx1) = ((Seq[Expression](), context) /: cts){
+                    case ((cts2, ctx2), ct) =>
+                        val (ct3, ctx3) = analyze(ct, pattern, janusClass, ctx2)
+                        (cts2 :+ ct3, ctx3)
+                }
+                (it.copy(cts1:_*), ctx1)
+            } else {
+                val (cts1, ctx1) = (cts :\ (Seq[Expression](), context)){
+                    case (ct, (cts2, ctx2)) =>
+                        val (ct3, ctx3) = analyze(ct, pattern, janusClass, ctx2)
+                        (ct3 +: cts2, ctx3)
+                }
+                (it.copy(cts1:_*), ctx1)
             }
         case it@Application(f, a) =>
             if (!pattern) {
@@ -105,7 +110,7 @@ class VariableAnalyzer {
                 assert(ctx1 == context)
                 val (p2, ctx2) = analyze(p, true, jc1.asInstanceOf[JanusClass].reverse, context.asNonlinear())
                 val (b3, ctx3) = analyze(b, false, jc1.asInstanceOf[JanusClass], ctx2)
-                if (jc1.asInstanceOf[JanusClass] <= Reversible()) 
+                if (jc1.asInstanceOf[JanusClass] <= Reversible())
                     for (ContextEntry(id, linear) <- ctx3.variables.values if linear)
                         Messages.add(id, UnconsumedVariable)
                 (it.copy(jc1, p2, b3), context)
@@ -117,21 +122,17 @@ class VariableAnalyzer {
                 val (s2, ctx2) = analyze(s, pattern, janusClass, ctx1)
                 if (janusClass <= Reversible())
                     for (ContextEntry(v2, l2) <- ctx2.variables.values if l2 && !context.containsVariable(v2))
-                        Messages.add(v2, UnconsumedVariable) 
-                (it.copy(b1, s2), Context(ctx2.variables.filter{ 
-                    case (_, ContextEntry(v, l)) => !l || context.containsVariable(v) 
-                }, context.typeVariables))
+                        Messages.add(v2, UnconsumedVariable)
+                (it.copy(b1, s2), Context(ctx2.variables.filter{
+                    case (_, ContextEntry(v, l)) => !l || context.containsVariable(v)
+                }))
             } else {
                 val (s1, ctx1) = analyze(s, pattern, janusClass, ctx0)
                 val (b2, ctx2) = analyze(b, pattern, janusClass, ctx1)
                 (it.copy(b2, s1), ctx2)
             }
-        case it@TypedExpr(e, t) =>
-            val (e1, ctx1) = analyze(e, pattern, janusClass, context)
-            val (t2, ctx2) = analyze(t, ctx1)
-            (it.copy(e1, t2), ctx2)
         }
-    
+
     def analyze(it: Statement, pattern: Boolean, janusClass: JanusClass, context: Context): (Statement, Context) =
         it match {
         case it@Let(p, v) =>
@@ -147,72 +148,45 @@ class VariableAnalyzer {
         case it@Sequence(ss@_*) =>
             if (!pattern) {
                 val (ss1, ctx1) = ((Seq[Statement](), context) /: ss){
-                    case ((ss2, ctx2), s) => 
+                    case ((ss2, ctx2), s) =>
                         val (s3, ctx3) = analyze(s, pattern, janusClass, ctx2)
                         (ss2 :+ s3, ctx3)
                 }
                 (it.copy(ss1:_*), ctx1)
             } else {
                 val (ss1, ctx1) = (ss :\ (Seq[Statement](), context)){
-                    case (s, (ss2, ctx2)) => 
+                    case (s, (ss2, ctx2)) =>
                         val (s3, ctx3) = analyze(s, pattern, janusClass, ctx2)
                         (ss2 :+ s3, ctx3)
                 }
                 (it.copy(ss1:_*), ctx1)
             }
-        case it@TypeDef(id, t) =>
-            assert(context.containsTypeVariable(id))
-            val (t1, ctx1) = analyze(t, context)
-            (it.copy(`type` = t1), ctx1)
+        case it@Def(id, v) =>
+            assert(context.containsVariable(id))
+            val (v1, ctx1) = analyze(v, false, Irreversible(), context)
+            (it.copy(value = v1), ctx1)
         }
-    
-    def analyze(it: TypeExpression, context: Context): (TypeExpression, Context) =
+
+    def analyzeDefinitions(it: Statement, context: Context): Context =
         it match {
-        case it: TypeLiteral =>
-            (it, context)
-        case it@TypeVariable(id) =>
-            val n = TypeVariableIdentity.getName(id)
-            if (context.containsTypeVariable(n))
-                (it.copy(context.typeVariables(n)), context)
-            else
-                (Messages.add(it, UndefinedType), context)
-        case it@TupleType(cts@_*) =>
-            val (cts1, ctx1) = ((Seq[TypeExpression](), context) /: cts) {
-                case ((cts2, ctx2), ct) =>
-                    val (ct3, ctx3) = analyze(ct, ctx2)
-                    (cts2 :+ ct3, ctx3)
-            }
-            (it.copy(cts1:_*), ctx1)
-        }
-    
-    def analyzeDefinitions(it: Statement, context: Context): Context = 
-        it match {
-        case TypeDef(id, _) =>
-            val n = TypeVariableIdentity.getName(id)
-            if (context.typeVariables.contains(n)) {
-                Messages.add(it, TypeAlreadyDefined)
+        case Def(id, _) =>
+            val n = VariableIdentity.getName(id)
+            if (context.containsVariable(n)) {
+                Messages.add(it, VariableAlreadyDefined)
                 context
             } else
-                context + id
+                context + (id, false)
         case Sequence(ss@_*) =>
                 (context /: ss){
-                    case (ctx2, s) => 
+                    case (ctx2, s) =>
                         analyzeDefinitions(s, ctx2)
                 }
         case _ =>
             context
-        }        
+        }
 }
 
 object VariableAnalyzer {
-    case object TypeAlreadyDefined extends Message {
-        override def toString = "Type already defined"
-        override def level = Messages.Error
-    }
-    case object UndefinedType extends Message {
-        override def toString = "Undefined type"
-        override def level = Messages.Error
-    }
     case object VariableAlreadyDefined extends Message {
         override def toString = "Variable already defined"
         override def level = Messages.Error
