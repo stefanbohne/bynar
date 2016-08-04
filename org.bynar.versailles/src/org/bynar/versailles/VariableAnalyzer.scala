@@ -21,12 +21,12 @@ class VariableAnalyzer {
         def containsVariable(variable: VariableIdentity): Boolean =
             variables.get(VariableIdentity.getName(variable)).map{ e => e.identity eq variable }.getOrElse(false)
     }
+    
+    def defaultContext = Context(Map(org.bynar.versailles.defaultContext.keySet.toSeq.map{ 
+        id => VariableIdentity.getName(id) -> ContextEntry(id, false) 
+    }:_*)) 
 
-    def analyze(it: Expression, variables: Set[VariableIdentity]): Expression =
-        analyze(it, false, Irreversible(), Context(
-                Map(variables.toSeq.map{ case id => VariableIdentity.getName(id) -> ContextEntry(id, false) }:_*)
-        ))._1
-    def analyze(it: Expression, pattern: Boolean, janusClass: JanusClass, context: Context): (Expression, Context) =
+    def analyze(it: Expression, pattern: Boolean, janusClass: JanusClass, context: Context = defaultContext): (Expression, Context) =
         it match {
         case it: Literal => (it, context)
         case it@Variable(id, true) =>

@@ -6,7 +6,7 @@ import java.math.RoundingMode
 
 class Simplifier {
 
-    val debug = scala.collection.mutable.Buffer[String]()
+    def defaultContext = org.bynar.versailles.defaultContext
 
     def isLiteral(expr: Expression): Boolean =
         expr match {
@@ -43,7 +43,7 @@ class Simplifier {
         case stmt@Sequence(ss@_*) => stmt.copy(ss.reverse.map{ reverseStatement(_) }:_*)
         }
 
-    def simplify(expr: Expression, forward: Boolean, context: Map[VariableIdentity, Expression]): (Expression, Map[VariableIdentity, Expression]) =
+    def simplify(expr: Expression, forward: Boolean, context: Map[VariableIdentity, Expression] = defaultContext): (Expression, Map[VariableIdentity, Expression]) =
         expr match {
         case expr@Variable(id, true) =>
             (if (forward) context.getOrElse(id, expr) else expr, context - id)
@@ -89,6 +89,13 @@ class Simplifier {
         case expr@Application(f, a) =>
             val (a1, ctx1) = simplify(a, forward, context)
             val (f2, ctx2) = simplify(f, true, ctx1)
+            simplifyApplication(expr.copy(f2, a1), forward, ctx1)
+        case expr => (expr, context)
+        }
+    
+    def simplifyApplication(app: Application, forward: Boolean, ctx2: Map[VariableIdentity, Expression]): (Expression, Map[VariableIdentity, Expression]) =
+        app match {
+        case Application(f2, a1) =>
             (f2, a1) match {
             case (Lambda(Irreversible(), p, b), a1) =>
                 simplify(Block(Let(p, a1), b), forward, ctx2)
@@ -96,7 +103,7 @@ class Simplifier {
                 (Reverse(), ctx2)
             case (Reverse(), Application(Reverse(), f)) =>
                 (f, ctx2)
-
+    
             case (Minus(), r: NumberLiteral) =>
                 (Application(Plus(), r.copy(-r.value)), ctx2)
             case (Minus(), r) =>
@@ -112,22 +119,22 @@ class Simplifier {
             case (Application(Plus(), NumberLiteral(z)), x) if z == 0 =>
                 (x, ctx2)
             case (Application(Plus(), Application(Application(op@Plus(), NumberLiteral(r)), x)), NumberLiteral(l)) =>
-                simplify(Application(Application(op, NumberLiteral(l + r)), x), forward, context)
+                simplify(Application(Application(op, NumberLiteral(l + r)), x), forward, ctx2)
             case (Application(Plus(), NumberLiteral(r)), Application(Application(op@Plus(), NumberLiteral(l)), x)) =>
-                simplify(Application(Application(op, NumberLiteral(l + r)), x), forward, context)
+                simplify(Application(Application(op, NumberLiteral(l + r)), x), forward, ctx2)
             case (Application(Plus(), Application(Application(op1@Plus(), NumberLiteral(r)), x)), f3@Application(Application(op2@Plus(), NumberLiteral(l)), y)) =>
-                simplify(Application(Application(op1, Application(Application(op2, NumberLiteral(l + r)), x)), y), forward, context)
+                simplify(Application(Application(op1, Application(Application(op2, NumberLiteral(l + r)), x)), y), forward, ctx2)
             case (Application(op@Plus(), r), l: NumberLiteral) =>
-                simplify(Application(Application(op, l), r), forward, context)
+                simplify(Application(Application(op, l), r), forward, ctx2)
             case (f1@Application(Plus(), x), Application(f3@Application(Plus(), l: NumberLiteral), y)) =>
-                simplify(Application(f3, Application(f1, y)), forward, context)
+                simplify(Application(f3, Application(f1, y)), forward, ctx2)
             case (f1@Application(Plus(), f2@Application(f3@Application(Plus(), r: NumberLiteral), x)), y) =>
-                simplify(Application(f3, Application(Application(f1.function, x), y)), forward, context)
-
+                simplify(Application(f3, Application(Application(f1.function, x), y)), forward, ctx2)
+    
             case (Divide(), l: NumberLiteral) if ((1 / l.value) * l.value == 1) =>
-                simplify(Application(Times(), NumberLiteral(1 / l.value)), forward, context)
+                simplify(Application(Times(), NumberLiteral(1 / l.value)), forward, ctx2)
             case (Divide(), l) =>
-                simplify(Application(Times(), Application(Application(Power(), NumberLiteral(-1)), l)), forward, context)
+                simplify(Application(Times(), Application(Application(Power(), NumberLiteral(-1)), l)), forward, ctx2)
             case (Reverse(), Application(Times(), x)) =>
                 (Application(Divide(), x), ctx2)
             case (Reverse(), Application(Divide(), x)) =>
@@ -140,30 +147,30 @@ class Simplifier {
                 (x, ctx2)
             case (Application(Times(), f1@Application(f2@Application(Times(), NumberLiteral(r)), x)), NumberLiteral(l))
                 if (l * r / r == l && l * r / l == r) =>
-                simplify(Application(Application(f2.function, NumberLiteral(l * r)), x), forward, context)
+                simplify(Application(Application(f2.function, NumberLiteral(l * r)), x), forward, ctx2)
             case (Application(Times(), NumberLiteral(r)), f1@Application(f2@Application(Times(), NumberLiteral(l)), x))
                 if (l * r / r == l && l * r / l == r) =>
-                simplify(Application(Application(f2.function, NumberLiteral(l * r)), x), forward, context)
+                simplify(Application(Application(f2.function, NumberLiteral(l * r)), x), forward, ctx2)
             case (Application(Times(), NumberLiteral(r)), f1@Application(f2@Application(Times(), Application(Application(Power(), NumberLiteral(mo)), NumberLiteral(l))), x))
                 if (mo == -1 && (r / l) * l == r && r / (r / l) == l) =>
-                simplify(Application(Application(f2.function, NumberLiteral(r / l)), x), forward, context)
+                simplify(Application(Application(f2.function, NumberLiteral(r / l)), x), forward, ctx2)
             case (Application(Times(), f1@Application(f2@Application(Times(), NumberLiteral(r)), x)), f3@Application(f4@Application(Times(), NumberLiteral(l)), y)) =>
-                simplify(Application(Application(f2.function, Application(Application(f4.function, NumberLiteral(l * r)), y)), x), forward, context)
+                simplify(Application(Application(f2.function, Application(Application(f4.function, NumberLiteral(l * r)), y)), x), forward, ctx2)
             case (f1@Application(Times(), r), l: NumberLiteral) =>
-                simplify(Application(Application(f1.function, l), r), forward, context)
+                simplify(Application(Application(f1.function, l), r), forward, ctx2)
             case (f1@Application(Times(), x), f2@Application(f3@Application(Times(), l: NumberLiteral), y)) =>
-                simplify(Application(f3, Application(f1, y)), forward, context)
+                simplify(Application(f3, Application(f1, y)), forward, ctx2)
             case (f1@Application(Times(), f2@Application(f3@Application(Times(), r: NumberLiteral), x)), y) =>
-                simplify(Application(f3, Application(Application(f1.function, x), y)), forward, context)
+                simplify(Application(f3, Application(Application(f1.function, x), y)), forward, ctx2)
             case (f1@Application(Times(), r: NumberLiteral), f2@Application(f3@Application(Plus(), NumberLiteral(l)), x)) =>
-                simplify(Application(f3.copy(f3.function, NumberLiteral(l * r.value)), Application(f1.copy(f1.function, r), x)), forward, context)
+                simplify(Application(f3.copy(f3.function, NumberLiteral(l * r.value)), Application(f1.copy(f1.function, r), x)), forward, ctx2)
             case (IntegerDivide(), Tuple(l: NumberLiteral, r: NumberLiteral)) =>
                 (NumberLiteral(((l.value - (l.value % r.value)) / r.value)), ctx2)
-
+    
             case (Application(Typed(), t), v) =>
                 // TODO: proper type check
                 (v, ctx2)
-
+    
             case (Application(Application(Janus(), f), _), a1) =>
                 simplify(Application(f, a1), forward, ctx2)
             case (Reverse(), Application(Application(Janus(), f), b)) =>
@@ -182,20 +189,19 @@ class Simplifier {
                 case v1 if isDefined(v1) =>
                     (v1, ctx3)
                 case v1 =>
-                    (expr.copy(f, a), ctx2)
+                    (app, ctx2)
                 }
-
+    
             case (rev@Reverse(), fix@Application(Fix(), lam@Lambda(Irreversible(), p, b))) =>
                 simplify(fix.copy(argument = lam.copy(pattern = Application(rev.copy(), p), body = Application(rev.copy(), b))), forward, ctx2)
             case (fix@Application(Fix(), f), a) if isLiteral(a) =>
                 simplify(Application(Application(f, fix), a), forward, ctx2)
-
-            case (f, a) => (expr.copy(f, a), ctx2)
+    
+            case (f, a) => (app, ctx2)
             }
-        case expr => (expr, context)
         }
 
-    def simplifyStatement(stmt: Statement, context: Map[VariableIdentity, Expression]): (Statement, Map[VariableIdentity, Expression]) =
+    def simplifyStatement(stmt: Statement, context: Map[VariableIdentity, Expression] = defaultContext): (Statement, Map[VariableIdentity, Expression]) =
         stmt match {
         case stmt@Let(p, v) =>
             val (v1, ctx1) = simplify(v, true, context)

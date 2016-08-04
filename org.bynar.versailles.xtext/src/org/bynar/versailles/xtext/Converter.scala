@@ -8,7 +8,7 @@ import org.bynar.versailles.xtext.versaillesLang._
 import org.eclipse.emf.ecore.EObject
 import org.bynar.versailles.PrettyPrinter
 
-class Converter {
+class Converter { 
 
     import PrettyPrinter._
     val source = new v.AnnotationKey[EObject]
@@ -104,6 +104,8 @@ class Converter {
                             v.Tuple().putAnnotation(source, it)
                         else
                             fromExpression(it.getScope)).putAnnotation(source, it)
+        case it: TypeExpr =>
+            fromTypeExpression(it.getType)
         case it: TypedExpr =>
             v.Application(v.Application(v.Typed().putAnnotation(source, it),
                                         fromTypeExpression(it.getType)).putAnnotation(source, it),
@@ -223,6 +225,8 @@ class Converter {
                 fromTypeExpression(it.getFunction),
                 fromExpression(it.getArgument)
             ).putAnnotation(source, it).putAnnotation(applicationInfo, ApplicationAsApplication)
+        case it: ValueType =>
+            fromExpression(it.getValue)
         }
 
     def fromTupleTypeType(it: TupleTypeTypeExpr): v.Expression =

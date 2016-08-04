@@ -20,8 +20,10 @@ case class BitFieldType(val bitWidth: Expression) extends BitTypeExpression {
     override type SelfTerm = BitFieldType
 
     override def dependentBitWidth(base: Expression) = bitWidth
+    def copy(bitWidth: Expression) =
+        BitFieldType(bitWidth).copyAnnotationsFrom(this)
     override def copy(children: PartialFunction[Symbol, Term]) =
-        BitFieldType(children.lift('bw).getOrElse(bitWidth).asInstanceOf[Expression]).copyAnnotationsFrom(this)
+        copy(children.lift('bw).getOrElse(bitWidth).asInstanceOf[Expression])
     override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) =
         f('bw, bitWidth, a)
 

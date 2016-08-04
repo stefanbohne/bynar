@@ -17,17 +17,18 @@ Require-Bundle: org.eclipse.xtext,
  org.eclipse.emf.common,
  org.scala-lang.scala-library
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
-Export-Package: org.bynar.xtext.validation,
- org.bynar.xtext.parser.antlr.internal,
- org.bynar.xtext.parser.antlr,
+Export-Package: org.bynar,
  org.bynar.xtext,
- org.bynar.xtext.services,
+ org.bynar.xtext.bynarLang,
+ org.bynar.xtext.bynarLang.impl,
+ org.bynar.xtext.bynarLang.util,
  org.bynar.xtext.generator,
+ org.bynar.xtext.parser.antlr,
+ org.bynar.xtext.parser.antlr.internal,
  org.bynar.xtext.scoping,
  org.bynar.xtext.serializer,
- org.bynar.xtext.bynarLang.util,
- org.bynar.xtext.bynarLang,
- org.bynar.xtext.bynarLang.impl
+ org.bynar.xtext.services,
+ org.bynar.xtext.validation
 Import-Package: org.apache.log4j
 Bundle-ClassPath: lib/org.bynar.jar,
  .

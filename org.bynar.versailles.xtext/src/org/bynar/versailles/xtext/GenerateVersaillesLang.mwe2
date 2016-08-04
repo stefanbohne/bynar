@@ -31,11 +31,11 @@ Workflow {
 		language = StandardLanguage {
 			name = "org.bynar.versailles.xtext.VersaillesLang"
 			fileExtensions = "vrs"
-			parserGenerator = {
-				options = {
-					backtrack = true
-				}
-			}
+//			parserGenerator = {
+//				options = {
+//					backtrack = true
+//				}
+//			}
 			serializer = {
 				generateStub = false
 			}

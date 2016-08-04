@@ -16,17 +16,18 @@ Require-Bundle: org.eclipse.xtext,
  org.eclipse.emf.common,
  org.scala-lang.scala-library
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
-Export-Package: org.bynar.versailles.xtext.services,
+Export-Package: org.bynar.versailles,
+ org.bynar.versailles.xtext,
+ org.bynar.versailles.xtext.generator,
+ org.bynar.versailles.xtext.parser.antlr,
+ org.bynar.versailles.xtext.parser.antlr.internal,
+ org.bynar.versailles.xtext.scoping,
+ org.bynar.versailles.xtext.serializer,
+ org.bynar.versailles.xtext.services,
+ org.bynar.versailles.xtext.validation,
  org.bynar.versailles.xtext.versaillesLang,
  org.bynar.versailles.xtext.versaillesLang.impl,
- org.bynar.versailles.xtext.scoping,
- org.bynar.versailles.xtext.parser.antlr,
- org.bynar.versailles.xtext.serializer,
- org.bynar.versailles.xtext.versaillesLang.util,
- org.bynar.versailles.xtext.validation,
- org.bynar.versailles.xtext.parser.antlr.internal,
- org.bynar.versailles.xtext.generator,
- org.bynar.versailles.xtext
+ org.bynar.versailles.xtext.versaillesLang.util
 Import-Package: org.apache.log4j
 Bundle-ClassPath: lib/org.bynar.versailles.jar,
  .

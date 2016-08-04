@@ -70,7 +70,7 @@ ExpressionConj returns Expression:
 ;
 ComparisionOp returns Operator: {Operator} op=("==" | "<" | ">" | "<=" | ">=" | "!=" | "in");
 ExpressionComp returns Expression:
-	ExpressionTyped ({BinaryExpr.left=current} => op=ComparisionOp right=ExpressionAdd)*
+	ExpressionTyped ({BinaryExpr.left=current} op=ComparisionOp => right=ExpressionAdd)*
 ;
 ExpressionTyped returns Expression:
 	ExpressionAdd ({TypedExpr.base=current} => ":" type=TypeExpression)?
@@ -148,6 +148,7 @@ TypeConcretion returns TypeExpression:
 ;
 TypeSimple returns TypeExpression:
 		{AbstractTypeExpr} "abstract"
+	|	{ValueType} "type" value=Expression 
 	|	TypeVariable
 	|	TupleTypeExpr
 ;
@@ -158,12 +159,12 @@ TypeVariableDefinition:
 	variance=("+"|"-")? name=TypeName
 ;
 TupleTypeTypeExpr:
-		{TupleTypeTypeExpr} "<" (arguments+=TypeVariableDefinition ("," arguments+=TypeVariableDefinition)*)? (forceTuple?=",")? ">"
+		{TupleTypeTypeExpr} "<[" (arguments+=TypeVariableDefinition ("," arguments+=TypeVariableDefinition)*)? (forceTuple?=",")? "]>"
 ;
 TupleTypeExpr returns TypeExpression:
-		{TupleTypeExpr} "<" ">"
-	|	{TupleTypeExpr} "<" positional+=TypeExpression ("," positional+=TypeExpression)* ("," names+=Name ":" named+=TypeExpression)* (forceTuple?=",")?  ">"
-	|	{TupleTypeExpr} "<" names+=Name ":" named+=TypeExpression ("," names+=Name ":" named+=TypeExpression)* (forceTuple?=",")?">"
+		{TupleTypeExpr} "<[" "]>"
+	|	{TupleTypeExpr} "<[" => positional+=TypeExpression ("," positional+=TypeExpression)* ("," names+=Name ":" named+=TypeExpression)* (forceTuple?=",")? "]>"
+	|	{TupleTypeExpr} "<[" names+=Name ":" named+=TypeExpression => ("," names+=Name ":" named+=TypeExpression)* (forceTuple?=",")? "]>"
 ;
 
 terminal ID_LOWER:
