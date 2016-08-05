@@ -9,15 +9,15 @@ import org.bynar.versailles.Irreversible
 import org.bynar.versailles.Variable
 
 class Simplifier extends org.bynar.versailles.Simplifier {
-  
+
     override def defaultContext = org.bynar.defaultContext
-    
+
     override def simplifyApplication(app: Application, forward: Boolean, context: Map[VariableIdentity, Expression]): (Expression, Map[VariableIdentity, Expression]) =
         (app.function, app.argument) match {
         case (BitWidth(), bt: BitTypeExpression) =>
-            val x = VariableIdentity.setName(new VariableIdentity(), "_")
-            (Lambda(Irreversible(), Variable(x, true), bt.dependentBitWidth(Variable(x, false))), context)
+            val x = VariableIdentity.setName(new VariableIdentity(), '_)
+            (Lambda(Irreversible(), Variable(x, true), simplify(bt.dependentBitWidth(Variable(x, false)), true, context)._1), context)
         case _ => super.simplifyApplication(app, forward, context)
         }
-    
+
 }

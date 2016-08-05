@@ -1,0 +1,7 @@
+<?xml version="1.0" ?>
+<!-- Configuration of the Ant build system to generate a Jar file -->
+<project name="org.bynar.versailles" default="CreateJar">
+  <target name="CreateJar" description="Create Jar file">
+    <jar jarfile="../org.bynar.xtext/lib/org.bynar.jar" basedir="bin" includes="**/*.class" />
+  </target>
+</project>

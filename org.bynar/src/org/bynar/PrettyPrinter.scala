@@ -1,25 +1,79 @@
 package org.bynar
 
 import org.bynar.versailles.Term
+import org.apache.commons.lang3.StringEscapeUtils
+import org.bynar.versailles.Statement
 
 class PrettyPrinter extends org.bynar.versailles.PrettyPrinter {
-  
-    override def prettyPrint(result: StringBuilder, term: Term, indent: Int, precedence: Int) {
+
+    override def doPrettyPrint(term: Term) {
         term match {
         case BitFieldType(bw) =>
-            result.append("bits ")
-            prettyPrint(result, bw, indent, 0)
-        case BitRecordType(cs@_*) =>
-            result.append("record {\n")
-            for (c <- cs) {
-                prettyPrint(result, c, indent + 1, 0)
-                result.append("\n")
-            }
-            result.append(indentText * indent)
-            result.append("}")
+            prefixOp("bits ", bw, 10)
+        case BitRecordType(b) =>
+            paren("record {\n", indentText*indent + "}", 0, {
+                indent += 1
+                doPrettyPrintStatement(b)
+                indent -= 1
+            })
+        case BitUnionType(b) =>
+            paren("union {\n", indentText*indent + "}", 0, {
+                indent += 1
+                doPrettyPrintStatement(b)
+                indent -= 1
+            })
+        case WrittenType(t, w) =>
+            binOpRight(" written ", t, w, 10)
+        case ConvertedType(t, c) =>
+            binOpRight(" converted ", t, c, 10)
+        case WhereType(t, w) =>
+            binOpRight(" where ", t, w, 10)
+        case InterpretedBitType(t, i) =>
+            binOpRight(" is ", t, i, 5)
+        case EnumInterpretation(b) =>
+            paren("one of {\n", indentText*indent + "}", 0, {
+                indent += 1
+                doPrettyPrintStatement(b)
+                indent -= 1
+            })
+        case FixedInterpretation(fv) =>
+            result.append("fixed ")
+            doPrettyPrint(fv)
+        case UnitInterpretation(u) =>
+            result.append("in ")
+            result.append(StringEscapeUtils.escapeJava(u))
+        case ContainingInterpretation(ct) =>
+            result.append("containing ")
+            doPrettyPrint(ct)
         case term =>
-            super.prettyPrint(result, term, indent, precedence)
+            super.doPrettyPrint(term)
         }
     }
-    
+
+    override def doPrettyPrintStatement(it: Statement) =
+        it match {
+        case it@BitRecordComponent(n, t) =>
+            result.append(indentText * indent)
+            result.append("component ")
+            doPrettyPrintName(n)
+            result.append(" = ")
+            doPrettyPrint(t)
+            result.append(";\n")
+        case it@BitUnionVariant(n, t) =>
+            result.append(indentText * indent)
+            result.append("variant ")
+            doPrettyPrintName(n)
+            result.append(" = ")
+            doPrettyPrint(t)
+            result.append(";\n")
+        case it@EnumValue(n, v) =>
+            result.append(indentText * indent)
+            result.append("value ")
+            doPrettyPrintName(n)
+            result.append(" = ")
+            doPrettyPrint(v)
+            result.append(";\n")
+        case _ => super.doPrettyPrintStatement(it)
+        }
+
 }

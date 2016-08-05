@@ -70,7 +70,7 @@ class Simplifier {
         case expr@Lambda(Irreversible(), block@Block(ss, s), b) =>
             simplify(expr.copy(pattern = s, body = block.copy(reverseStatement(ss), b)), forward, context)
         case expr@Lambda(Irreversible(), app@Application(f, a), b) =>
-            val x = VariableIdentity.setName(new VariableIdentity(), "_")
+            val x = VariableIdentity.setName(new VariableIdentity(), '_)
             simplify(expr.copy(pattern = Variable(x, true),
                                body = Block(Let(app, Variable(x, false)), b)),
                      forward,
@@ -92,7 +92,7 @@ class Simplifier {
             simplifyApplication(expr.copy(f2, a1), forward, ctx1)
         case expr => (expr, context)
         }
-    
+
     def simplifyApplication(app: Application, forward: Boolean, ctx2: Map[VariableIdentity, Expression]): (Expression, Map[VariableIdentity, Expression]) =
         app match {
         case Application(f2, a1) =>
@@ -103,7 +103,7 @@ class Simplifier {
                 (Reverse(), ctx2)
             case (Reverse(), Application(Reverse(), f)) =>
                 (f, ctx2)
-    
+
             case (Minus(), r: NumberLiteral) =>
                 (Application(Plus(), r.copy(-r.value)), ctx2)
             case (Minus(), r) =>
@@ -130,7 +130,7 @@ class Simplifier {
                 simplify(Application(f3, Application(f1, y)), forward, ctx2)
             case (f1@Application(Plus(), f2@Application(f3@Application(Plus(), r: NumberLiteral), x)), y) =>
                 simplify(Application(f3, Application(Application(f1.function, x), y)), forward, ctx2)
-    
+
             case (Divide(), l: NumberLiteral) if ((1 / l.value) * l.value == 1) =>
                 simplify(Application(Times(), NumberLiteral(1 / l.value)), forward, ctx2)
             case (Divide(), l) =>
@@ -166,11 +166,11 @@ class Simplifier {
                 simplify(Application(f3.copy(f3.function, NumberLiteral(l * r.value)), Application(f1.copy(f1.function, r), x)), forward, ctx2)
             case (IntegerDivide(), Tuple(l: NumberLiteral, r: NumberLiteral)) =>
                 (NumberLiteral(((l.value - (l.value % r.value)) / r.value)), ctx2)
-    
+
             case (Application(Typed(), t), v) =>
                 // TODO: proper type check
                 (v, ctx2)
-    
+
             case (Application(Application(Janus(), f), _), a1) =>
                 simplify(Application(f, a1), forward, ctx2)
             case (Reverse(), Application(Application(Janus(), f), b)) =>
@@ -191,12 +191,12 @@ class Simplifier {
                 case v1 =>
                     (app, ctx2)
                 }
-    
+
             case (rev@Reverse(), fix@Application(Fix(), lam@Lambda(Irreversible(), p, b))) =>
                 simplify(fix.copy(argument = lam.copy(pattern = Application(rev.copy(), p), body = Application(rev.copy(), b))), forward, ctx2)
             case (fix@Application(Fix(), f), a) if isLiteral(a) =>
                 simplify(Application(Application(f, fix), a), forward, ctx2)
-    
+
             case (f, a) => (app, ctx2)
             }
         }
@@ -224,6 +224,8 @@ class Simplifier {
                 simplifyStatement(Let(a, value2), ctx2)
             case (p2, v1) => (stmt.copy(p2, v1), ctx2)
             }
+        case Def(id, v) =>
+            simplifyStatement(Let(Variable(id, true), v), context)
         case stmt@Sequence(ss@_*) =>
             val (ss1, ctx1) = ((Seq[Statement](), context) /: ss){
             case ((ss2, context2), s2) =>
@@ -238,7 +240,6 @@ class Simplifier {
                 (ss1(0), ctx1)
             else
                 (stmt.copy(ss1:_*), ctx1)
-        case Def(_, _) => (Sequence(), context)
         case stmt => (stmt, context)
         }
 }

@@ -197,10 +197,10 @@ class VariableIdentity extends Annotated {
         new VariableIdentity().copyAnnotationsFrom(this)
 }
 object VariableIdentity {
-    val name = new AnnotationKey[String]
-    def getName(it: VariableIdentity): String =
-        it.annotation(name).getOrElse("")
-    def setName(it: VariableIdentity, name: String): VariableIdentity =
+    val name = new AnnotationKey[Symbol]
+    def getName(it: VariableIdentity): Symbol =
+        it.annotation(name).getOrElse(Symbol(""))
+    def setName(it: VariableIdentity, name: Symbol): VariableIdentity =
         it.putAnnotation(this.name, name)
 }
 
@@ -212,6 +212,7 @@ case class Variable(val variable: VariableIdentity,
     def copy(variable: VariableIdentity = variable,
              linear: Boolean = linear) =
         Variable(variable, linear).copyAnnotationsFrom(this)
+
 }
 
 case class Application(val function: Expression,

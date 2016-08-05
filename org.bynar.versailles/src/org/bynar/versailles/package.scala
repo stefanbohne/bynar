@@ -22,7 +22,7 @@ package object versailles {
             "Boolean" -> BooleanType()
     ).map{
         case (n, l) =>
-            VariableIdentity.setName(new VariableIdentity(), n) -> l
+            VariableIdentity.setName(new VariableIdentity(), Symbol(n)) -> l
     }
 
 }

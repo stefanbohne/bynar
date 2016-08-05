@@ -6,7 +6,7 @@ class VariableAnalyzer {
 
     case class ContextEntry(val identity: VariableIdentity,
                             val linear: Boolean)
-    case class Context(val variables: Map[String, ContextEntry]) {
+    case class Context(val variables: Map[Symbol, ContextEntry]) {
         def +(variable: VariableIdentity, linear: Boolean): Context =
             Context(variables + (VariableIdentity.getName(variable) -> ContextEntry(variable, linear)))
         def -(variable: VariableIdentity): Context = {
@@ -16,15 +16,15 @@ class VariableAnalyzer {
         }
         def asNonlinear() =
             Context(variables.mapValues{ case ContextEntry(v, l) => ContextEntry(v, false) })
-        def containsVariable(name: String): Boolean =
+        def containsVariable(name: Symbol): Boolean =
             variables.contains(name)
         def containsVariable(variable: VariableIdentity): Boolean =
             variables.get(VariableIdentity.getName(variable)).map{ e => e.identity eq variable }.getOrElse(false)
     }
-    
-    def defaultContext = Context(Map(org.bynar.versailles.defaultContext.keySet.toSeq.map{ 
-        id => VariableIdentity.getName(id) -> ContextEntry(id, false) 
-    }:_*)) 
+
+    def defaultContext = Context(Map(org.bynar.versailles.defaultContext.keySet.toSeq.map{
+        id => VariableIdentity.getName(id) -> ContextEntry(id, false)
+    }:_*))
 
     def analyze(it: Expression, pattern: Boolean, janusClass: JanusClass, context: Context = defaultContext): (Expression, Context) =
         it match {
@@ -56,6 +56,10 @@ class VariableAnalyzer {
                     (Messages.add(it.copy(context.variables(n).identity), VariableAsConstantPattern), context)
                 else
                     (it.copy(id, true), context + (id, true))
+        case it@Member(b, n) =>
+            val (b1, ctx1) = analyze(b, false, Irreversible(), context.asNonlinear())
+            assert(ctx1 == context.asNonlinear())
+            (it.copy(b1), context)
         case it@Tuple(cs@_*) =>
             if (!pattern) {
                 val (cs1, ctx1) = ((Seq[Expression](), context) /: cs){

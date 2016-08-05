@@ -11,26 +11,67 @@ import org.bynar.xtext.bynarLang.ByteFieldTypeExpr
 import org.bynar.xtext.bynarLang.RecordTypeExpr
 import org.bynar.xtext.bynarLang.RecordComponent
 import org.bynar.xtext.bynarLang.BitTypeExpression
+import org.bynar.xtext.bynarLang.TypeWrittenExpr
+import org.bynar.xtext.bynarLang.TypeConvertedExpr
+import org.bynar.xtext.bynarLang.TypeWhereExpr
+import org.bynar.xtext.bynarLang.TypeWithInterpretationExpr
+import org.bynar.xtext.bynarLang.Interpretation
+import org.bynar.xtext.bynarLang.EnumInterpretation
+import org.bynar.xtext.bynarLang.FixedInterpretation
+import org.bynar.xtext.bynarLang.UnitInterpretation
+import org.bynar.xtext.bynarLang.ContainingInterpretation
+import org.bynar.xtext.bynarLang.UnionVariant
+import org.bynar.xtext.bynarLang.EnumValue
+import org.bynar.versailles.xtext.versaillesLang.Statement
+import org.bynar.xtext.bynarLang.UnionTypeExpr
 
 class Converter extends org.bynar.versailles.xtext.Converter {
 
-    def fromBitTypeExpression(it: BitTypeExpression): v.Expression =
+    def fromInterpretation(it: Interpretation): b.BitTypeInterpretation =
         it match {
+        case it: EnumInterpretation =>
+            b.EnumInterpretation(fromStatements(it.getStatements)).putAnnotation(source, it)
+        case it: FixedInterpretation =>
+            b.FixedInterpretation(fromExpression(it.getValue)).putAnnotation(source, it)
+        case it: UnitInterpretation =>
+            b.UnitInterpretation(it.getUnit).putAnnotation(source, it)
+        case it: ContainingInterpretation =>
+            b.ContainingInterpretation(fromTypeExpression(it.getContainedType)).putAnnotation(source, it)
+        }
+
+    override def fromStatement(it: Statement): v.Statement =
+        it match {
+        case it: RecordComponent =>
+            b.BitRecordComponent(Symbol(it.getName), fromTypeExpression(it.getType)).putAnnotation(source, it)
+        case it: UnionVariant =>
+            b.BitUnionVariant(Symbol(it.getName), fromTypeExpression(it.getType)).putAnnotation(source, it)
+        case it: EnumValue =>
+            b.EnumValue(Symbol(it.getName), fromExpression(it.getValue)).putAnnotation(source, it)
+        case _ => super.fromStatement(it)
+        }
+
+    override def fromTypeExpression(it: TypeExpression): v.Expression =
+        it match {
+        case it: TypeWrittenExpr =>
+            b.WrittenType(fromTypeExpression(it.getType),
+                          fromExpression(it.getWritten)).putAnnotation(source, it)
+        case it: TypeConvertedExpr =>
+            b.WrittenType(fromTypeExpression(it.getType),
+                          fromExpression(it.getConversion)).putAnnotation(source, it)
+        case it: TypeWhereExpr =>
+            b.WhereType(fromTypeExpression(it.getType),
+                        fromExpression(it.getWhere)).putAnnotation(source, it)
+        case it: TypeWithInterpretationExpr =>
+            b.InterpretedBitType(fromTypeExpression(it.getType),
+                                 fromInterpretation(it.getInterpretation)).putAnnotation(source, it)
         case it: BitFieldTypeExpr =>
             b.BitFieldType(fromExpression(it.getBitWidth)).putAnnotation(source, it)
         case it: ByteFieldTypeExpr =>
             b.BitFieldType(v.Application(v.Application(v.Times(), v.NumberLiteral(8)), fromExpression(it.getByteWidth))).putAnnotation(source, it)
         case it: RecordTypeExpr =>
-            b.BitRecordType(it.getStatements.getStatements.map{
-            case c: RecordComponent =>
-                b.BitRecordComponent(Symbol(c.getName), fromTypeExpression(c.getType))
-            }:_*)
-        }
-
-    override def fromTypeExpression(it: TypeExpression): v.Expression =
-        it match {
-        case it: BitTypeExpression =>
-            fromBitTypeExpression(it)
+            b.BitRecordType(fromStatements(it.getStatements)).putAnnotation(source, it)
+        case it: UnionTypeExpr =>
+            b.BitUnionType(fromStatements(it.getStatements)).putAnnotation(source, it)
         case it =>
             super.fromTypeExpression(it)
         }

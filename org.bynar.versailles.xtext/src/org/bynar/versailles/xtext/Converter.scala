@@ -8,7 +8,7 @@ import org.bynar.versailles.xtext.versaillesLang._
 import org.eclipse.emf.ecore.EObject
 import org.bynar.versailles.PrettyPrinter
 
-class Converter { 
+class Converter {
 
     import PrettyPrinter._
     val source = new v.AnnotationKey[EObject]
@@ -32,15 +32,15 @@ class Converter {
         case it: StringLiteral =>
             v.StringLiteral(it.getValue).putAnnotation(source, it)
         case it: Variable =>
-            v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), it.getName),
+            v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName)),
                        it.isLinear()).putAnnotation(source, it)
         case it: BinaryExpr =>
             val l = fromExpression(it.getLeft)
             val r = fromExpression(it.getRight)
             def normal(op: v.Expression) =
                 v.Application(v.Application(op.putAnnotation(source, it.getOp),
-                                            r).putAnnotation(source, it),
-                              l).
+                                            l).putAnnotation(source, it),
+                              r).
                         putAnnotation(source, it).
                         putAnnotation(applicationInfo, ApplicationAsOperator)
             def swapped(op: v.Expression) =
@@ -63,6 +63,9 @@ class Converter {
                     putAnnotation(source, it.getOp), a).
                     putAnnotation(applicationInfo, ApplicationAsOperator)
             }
+        case it: MemberAccessExpr =>
+            v.Member(fromExpression(it.getBase),
+                     Symbol(it.getMemberName)).putAnnotation(source, it)
         case it: ApplicationExpr =>
             v.Application(fromExpression(it.getFunction),
                           fromExpression(it.getArgument)).
@@ -89,8 +92,6 @@ class Converter {
                 fromExpression(it.getPositional.get(0))
             else
                 v.Tuple(it.getPositional.map{ fromExpression(_) }:_*).putAnnotation(source, it)
-        case it: MemberAccessExpr =>
-            v.Member(fromExpression(it.getBase), Symbol(it.getMemberName)).putAnnotation(source, it)
         case it: BlockExpr =>
             if (it.getScope == null && it.getStatements.getStatements.forall{ _.isInstanceOf[CaseStmt] })
                 fromCaseStatements(it.getStatements)
@@ -199,14 +200,14 @@ class Converter {
                 v.Lambda(v.Irreversible(), fromTupleTypeType(it.getTypeArguments), t)
             else
                 t
-            v.Def(v.VariableIdentity.setName(new v.VariableIdentity(), it.getName),
+            v.Def(v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName)),
                   t2).putAnnotation(source, it)
         }
 
     def fromTypeExpression(it: TypeExpression): v.Expression =
         it match {
         case it: TypeVariable =>
-            v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), it.getName), false).
+            v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName)), false).
                     putAnnotation(source, it)
         case it: TupleTypeExpr =>
             if (it.getPositional.size == 1 &&
@@ -232,12 +233,12 @@ class Converter {
     def fromTupleTypeType(it: TupleTypeTypeExpr): v.Expression =
         if (it.getArguments.size == 1 &&
                 !it.isForceTuple())
-            v.Variable(v.VariableIdentity.setName(new v.VariableIdentity, it.getArguments.get(0).getName), true).
+            v.Variable(v.VariableIdentity.setName(new v.VariableIdentity, Symbol(it.getArguments.get(0).getName)), true).
                 putAnnotation(source, it.getArguments.get(0))
         else
             v.TupleType(it.getArguments.map{
             case tv =>
-                v.Variable(v.VariableIdentity.setName(new v.VariableIdentity, tv.getName), true).
+                v.Variable(v.VariableIdentity.setName(new v.VariableIdentity, Symbol(tv.getName)), true).
                     putAnnotation(source, tv)
             }:_*)
 
