@@ -31,14 +31,18 @@ class VariableAnalyzer extends org.bynar.versailles.VariableAnalyzer {
                 (Messages.add(it, IllegalUseOfType), context)
             else {
                 val (b1, ctx1) = analyze(b, pattern, janusClass, context)
-                (it.copy(b1), ctx1)
+                (it.copy(b1), Context(ctx1.variables.filter{
+                    case (_, ContextEntry(v, l)) => !l || context.containsVariable(v)
+                }))
             }
         case it@BitUnionType(b) =>
             if (pattern || janusClass != Irreversible())
                 (Messages.add(it, IllegalUseOfType), context)
             else {
                 val (b1, ctx1) = analyze(b, pattern, janusClass, context)
-                (it.copy(b1), ctx1)
+                (it.copy(b1), Context(ctx1.variables.filter{
+                    case (_, ContextEntry(v, l)) => !l || context.containsVariable(v)
+                }))
             }
         case it@WrittenType(t, w) =>
             val (t1, ctx1) = analyze(t, pattern, janusClass, context)
