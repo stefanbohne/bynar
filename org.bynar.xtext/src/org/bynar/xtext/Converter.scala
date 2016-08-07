@@ -39,17 +39,37 @@ class Converter extends org.bynar.versailles.xtext.Converter {
             b.ContainingInterpretation(fromTypeExpression(it.getContainedType)).putAnnotation(source, it)
         }
 
+    override def fromTypeExpression(it: TypeExpression): v.Expression = 
+        new MemberConverter(Seq()).fromTypeExpression(it)
+        
+    def originalFromTypeExpression(it: TypeExpression) =
+        super.fromTypeExpression(it)
+        
+    
+}
+
+class MemberConverter(val path: Seq[Symbol]) extends Converter {
+    
     override def fromStatement(it: Statement): v.Statement =
         it match {
         case it: RecordComponent =>
-            b.BitRecordComponent(Symbol(it.getName), fromTypeExpression(it.getType)).putAnnotation(source, it)
+            b.BitRecordComponent(
+                    Symbol(it.getName), 
+                    new MemberConverter(path :+ Symbol(it.getName)).fromTypeExpression(it.getType)).
+                    putAnnotation(source, it)
         case it: UnionVariant =>
-            b.BitUnionVariant(Symbol(it.getName), fromTypeExpression(it.getType)).putAnnotation(source, it)
+            b.BitUnionVariant(
+                    Symbol(it.getName), 
+                    new MemberConverter(path :+ Symbol(it.getName)).fromTypeExpression(it.getType)).
+                    putAnnotation(source, it)
         case it: EnumValue =>
-            b.EnumValue(Symbol(it.getName), fromExpression(it.getValue)).putAnnotation(source, it)
+            b.EnumValue(
+                    Symbol(it.getName), 
+                    new MemberConverter(path :+ Symbol(it.getName)).fromExpression(it.getValue)).
+                    putAnnotation(source, it)
         case _ => super.fromStatement(it)
         }
-
+    
     override def fromTypeExpression(it: TypeExpression): v.Expression =
         it match {
         case it: TypeWrittenExpr =>
@@ -73,7 +93,8 @@ class Converter extends org.bynar.versailles.xtext.Converter {
         case it: UnionTypeExpr =>
             b.BitUnionType(fromStatements(it.getStatements)).putAnnotation(source, it)
         case it =>
-            super.fromTypeExpression(it)
+            v.Application(b.MemberContextedType(path), new Converter().originalFromTypeExpression(it))
         }
-
+    
+    
 }

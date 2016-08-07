@@ -166,6 +166,9 @@ class Simplifier {
                 simplify(Application(f3.copy(f3.function, NumberLiteral(l * r.value)), Application(f1.copy(f1.function, r), x)), forward, ctx2)
             case (IntegerDivide(), Tuple(l: NumberLiteral, r: NumberLiteral)) =>
                 (NumberLiteral(((l.value - (l.value % r.value)) / r.value)), ctx2)
+                
+            case (Application(Equals(), l1), l2) if isLiteral(l1) && isLiteral(l2) =>
+                (BooleanLiteral(l1 == l2), ctx2)
 
             case (Application(Typed(), t), v) =>
                 // TODO: proper type check
@@ -200,7 +203,7 @@ class Simplifier {
             case (f, a) => (app, ctx2)
             }
         }
-
+    
     def simplifyStatement(stmt: Statement, context: Map[VariableIdentity, Expression] = defaultContext): (Statement, Map[VariableIdentity, Expression]) =
         stmt match {
         case stmt@Let(p, v) =>

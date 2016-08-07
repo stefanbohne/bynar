@@ -76,7 +76,7 @@ class PrettyPrinter {
             doPrettyPrintName(VariableIdentity.getName(id))
             result.append("_")
             result.append(id.hashCode.toHexString)
-        case Member(b, n) =>
+        case Application(Member(n), b) =>
             suffixOp("." + n.name, b, 60)
         case Tuple(cs@_*) =>
             paren(0, {

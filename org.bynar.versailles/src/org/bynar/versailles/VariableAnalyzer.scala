@@ -56,10 +56,6 @@ class VariableAnalyzer {
                     (Messages.add(it.copy(context.variables(n).identity), VariableAsConstantPattern), context)
                 else
                     (it.copy(id, true), context + (id, true))
-        case it@Member(b, n) =>
-            val (b1, ctx1) = analyze(b, false, Irreversible(), context.asNonlinear())
-            assert(ctx1 == context.asNonlinear())
-            (it.copy(b1), context)
         case it@Tuple(cs@_*) =>
             if (!pattern) {
                 val (cs1, ctx1) = ((Seq[Expression](), context) /: cs){

@@ -108,6 +108,7 @@ ExpressionSimple returns Expression:
 	|	TupleExpr
 	|	{TypeExpr} "@" type=TypeExpression
 	|   {TypeExpr} type=TypeVariable
+	|	{SpecialVariable} "_"
 ;
 Variable:
 	(linear?="?")? name=Name

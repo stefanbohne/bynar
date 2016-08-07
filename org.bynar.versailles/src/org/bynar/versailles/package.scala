@@ -17,6 +17,41 @@ package object versailles {
             "|" -> OrElse(),
             "forget" -> Forget(),
             "undefined" -> Undefined(),
+            "if" -> {
+                val t = VariableIdentity.setName(new VariableIdentity(), 't)
+                val e = VariableIdentity.setName(new VariableIdentity(), 'e)
+                Application(
+                    Application(
+                        OrElse(), 
+                        Lambda(
+                            Irreversible(),
+                            BooleanLiteral(true),
+                            Lambda(
+                                Irreversible(),
+                                Variable(t, true),
+                                Lambda(
+                                    Irreversible(),
+                                    Variable(e, true),
+                                    Application(Variable(t, false), Tuple())
+                                )
+                            )
+                        )
+                    ),
+                    Lambda(
+                        Irreversible(),
+                        BooleanLiteral(false),
+                        Lambda(
+                            Irreversible(),
+                            Variable(t, true),
+                            Lambda(
+                                Irreversible(),
+                                Variable(e, true),
+                                Application(Variable(e, false), Tuple())
+                            )
+                        )
+                    )
+                )
+            },
             "Number" -> NumberType(),
             "String" -> StringType(),
             "Boolean" -> BooleanType()

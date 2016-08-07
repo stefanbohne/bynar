@@ -3,6 +3,7 @@ package org.bynar
 import org.bynar.versailles.Term
 import org.apache.commons.lang3.StringEscapeUtils
 import org.bynar.versailles.Statement
+import org.bynar.versailles.Application
 
 class PrettyPrinter extends org.bynar.versailles.PrettyPrinter {
 
@@ -10,6 +11,9 @@ class PrettyPrinter extends org.bynar.versailles.PrettyPrinter {
         term match {
         case BitFieldType(bw) =>
             prefixOp("bits ", bw, 10)
+        case Application(MemberContextedType(p), t) =>
+            doPrettyPrint(t)
+            result.append(p.map{ _.name }.mkString("@", ".", "")) 
         case BitRecordType(b) =>
             paren("record {\n", indentText*indent + "}", 0, {
                 indent += 1

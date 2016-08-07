@@ -18,6 +18,9 @@ import org.bynar.versailles.Tuple
 import org.bynar.versailles.Equals
 import org.bynar.versailles.IfStmt
 import org.bynar.versailles.BooleanLiteral
+import org.bynar.versailles.Lambda
+import org.bynar.versailles.Irreversible
+import org.bynar.versailles.OrElse
 
 trait BitTypeExpression extends Expression {
 
@@ -44,6 +47,13 @@ case class BitWidth() extends Literal {
     override def toString = "bitwidth"
 }
 
+case class MemberContextedType(val path: Seq[Symbol]) extends Literal {
+    override type SelfTerm = MemberContextedType
+    
+    def copy(path: Seq[Symbol] = path) =
+        MemberContextedType(path).copyAnnotationsFrom(this)
+}
+
 case class BitRecordComponent(val name: Symbol, val `type`: Expression) extends Statement {
 
     override type SelfTerm = BitRecordComponent
@@ -59,24 +69,46 @@ case class BitRecordComponent(val name: Symbol, val `type`: Expression) extends 
 case class BitRecordType(val body: Statement) extends BitTypeExpression {
 
     override type SelfTerm = BitRecordType
-
-    override def dependentBitWidth(base: Expression) = {
-        val result0 = VariableIdentity.setName(new VariableIdentity(), 'result)
-        var result = result0
+        
+    def foldComponents[T](a: T)(f: (BitRecordComponent, T) => T): T = {
+        def foldStatements(a: T, s: Statement): T =
+            s match {
+            case s@Sequence(ss@_*) =>
+                (a /: ss)(foldStatements _)
+            case s: BitRecordComponent =>
+                f(s, a)
+            case s => a
+            }
+        foldStatements(a, body)
+    }        
+    def mapComponents(f: BitRecordComponent => Statement): Statement = {
         def mapStatements(s: Statement): Statement =
             s match {
             case s@Sequence(ss@_*) =>
                 s.copy(ss.map{ mapStatements(_) }:_*)
+            case s: BitRecordComponent =>
+                f(s)
+            case s => s
+            }
+        mapStatements(body)
+    }
+    lazy val components: Seq[BitRecordComponent] =
+        foldComponents[Seq[BitRecordComponent]](Seq()){ case (brc, s) => s :+ brc }
+
+    override def dependentBitWidth(base: Expression) = {
+        val result0 = VariableIdentity.setName(new VariableIdentity(), 'result)
+        var result = result0
+        val newBody = mapComponents{
             case BitRecordComponent(n, t) =>
                 val result1 = result
                 result = VariableIdentity.setName(new VariableIdentity(), 'result)
                 Let(Variable(result, true),
                     Application(Application(Plus(),
-                        Application(Application(BitWidth(), t.copy(Map())), Member(base, n))),
+                        Application(Application(BitWidth(), t.copy(Map())), base)),
                         Variable(result1, true)))
-            }
+        }
         Block(Sequence(Let(Variable(result0, true), NumberLiteral(0)),
-                       mapStatements(body)),
+                       newBody),
               Variable(result, true))
     }
     def copy(body: Statement = body) =
@@ -103,24 +135,50 @@ case class BitUnionType(val body: Statement) extends BitTypeExpression {
 
     override type SelfTerm = BitUnionType
 
-    override def dependentBitWidth(base: Expression) = {
-        val result0 = VariableIdentity.setName(new VariableIdentity(), 'result)
-        var result = result0
+    def foldVariants[T](a: T)(f: (BitUnionVariant, T) => T): T = {
+        def foldStatements(a: T, s: Statement): T =
+            s match {
+            case s@Sequence(ss@_*) =>
+                (a /: ss)(foldStatements _)
+            case s: BitUnionVariant =>
+                f(s, a)
+            case s => a
+            }
+        foldStatements(a, body)
+    }        
+    def mapVariants(f: BitUnionVariant => Statement): Statement = {
         def mapStatements(s: Statement): Statement =
             s match {
             case s@Sequence(ss@_*) =>
                 s.copy(ss.map{ mapStatements(_) }:_*)
+            case s: BitUnionVariant =>
+                f(s)
+            case s => s
+            }
+        mapStatements(body)
+    }
+    lazy val variants: Seq[BitUnionVariant] =
+        foldVariants[Seq[BitUnionVariant]](Seq()){ case (buv, s) => s :+ buv }
+
+    override def dependentBitWidth(base: Expression) = {
+        val result0 = VariableIdentity.setName(new VariableIdentity(), 'result)
+        var result = result0
+        val newBody = mapVariants{
             case BitUnionVariant(n, t) =>
                 val result1 = result
                 result = VariableIdentity.setName(new VariableIdentity(), 'result)
-                IfStmt(Application(Application(Equals(), Variable(result1, true)), Tuple()),
-                       Let(Variable(result, true), Application(Application(BitWidth(), t.copy(Map())), Variable(result1, true))),
-                       Let(Variable(result, true), Variable(result1, true)),
-                       Undefined())
+                val arg = VariableIdentity.setName(new VariableIdentity(), 'it)
+                Let(Variable(result, true),
+                    Application(Application(OrElse(), Variable(result1, false)), 
+                                Lambda(Irreversible(),
+                                       Variable(arg, true),
+                                       Block(Let(Application(Application(Member(n), BitUnionType.this), Variable(VariableIdentity.setName(new VariableIdentity(), '_), true)),
+                                                 Variable(arg, false)),
+                                             Application(Application(BitWidth(), t.copy(Map())), Variable(arg, false))))))
             }
-        Block(Sequence(Let(Variable(result0, true), Tuple()),
-                       mapStatements(body)),
-              Variable(result, true))
+        Block(Sequence(Let(Variable(result0, true), Lambda(Irreversible(), Variable(VariableIdentity.setName(new VariableIdentity(), '_), true), Undefined())),
+                       newBody),
+              Application(Variable(result, false), base))
     }
     def copy(body: Statement = body) =
         BitUnionType(body).copyAnnotationsFrom(this)
