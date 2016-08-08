@@ -24,6 +24,8 @@ import org.bynar.xtext.bynarLang.UnionVariant
 import org.bynar.xtext.bynarLang.EnumValue
 import org.bynar.versailles.xtext.versaillesLang.Statement
 import org.bynar.xtext.bynarLang.UnionTypeExpr
+import org.bynar.versailles.AnnotationKey
+import org.eclipse.emf.ecore.EObject
 
 class Converter extends org.bynar.versailles.xtext.Converter {
 
@@ -40,7 +42,7 @@ class Converter extends org.bynar.versailles.xtext.Converter {
         }
 
     override def fromTypeExpression(it: TypeExpression): v.Expression = 
-        new MemberConverter(Seq()).fromTypeExpression(it)
+        new MemberConverter(Seq(), source).fromTypeExpression(it)
         
     def originalFromTypeExpression(it: TypeExpression) =
         super.fromTypeExpression(it)
@@ -48,24 +50,24 @@ class Converter extends org.bynar.versailles.xtext.Converter {
     
 }
 
-class MemberConverter(val path: Seq[Symbol]) extends Converter {
+class MemberConverter(val path: Seq[Symbol], override val source: AnnotationKey[EObject]) extends Converter {
     
     override def fromStatement(it: Statement): v.Statement =
         it match {
         case it: RecordComponent =>
             b.BitRecordComponent(
                     Symbol(it.getName), 
-                    new MemberConverter(path :+ Symbol(it.getName)).fromTypeExpression(it.getType)).
+                    new MemberConverter(path :+ Symbol(it.getName), source).fromTypeExpression(it.getType)).
                     putAnnotation(source, it)
         case it: UnionVariant =>
             b.BitUnionVariant(
                     Symbol(it.getName), 
-                    new MemberConverter(path :+ Symbol(it.getName)).fromTypeExpression(it.getType)).
+                    new MemberConverter(path :+ Symbol(it.getName), source).fromTypeExpression(it.getType)).
                     putAnnotation(source, it)
         case it: EnumValue =>
             b.EnumValue(
                     Symbol(it.getName), 
-                    new MemberConverter(path :+ Symbol(it.getName)).fromExpression(it.getValue)).
+                    new MemberConverter(path :+ Symbol(it.getName), source).fromExpression(it.getValue)).
                     putAnnotation(source, it)
         case _ => super.fromStatement(it)
         }
@@ -76,8 +78,8 @@ class MemberConverter(val path: Seq[Symbol]) extends Converter {
             b.WrittenType(fromTypeExpression(it.getType),
                           fromExpression(it.getWritten)).putAnnotation(source, it)
         case it: TypeConvertedExpr =>
-            b.WrittenType(fromTypeExpression(it.getType),
-                          fromExpression(it.getConversion)).putAnnotation(source, it)
+            b.ConvertedType(fromTypeExpression(it.getType),
+                            fromExpression(it.getConversion)).putAnnotation(source, it)
         case it: TypeWhereExpr =>
             b.WhereType(fromTypeExpression(it.getType),
                         fromExpression(it.getWhere)).putAnnotation(source, it)
@@ -87,13 +89,17 @@ class MemberConverter(val path: Seq[Symbol]) extends Converter {
         case it: BitFieldTypeExpr =>
             b.BitFieldType(fromExpression(it.getBitWidth)).putAnnotation(source, it)
         case it: ByteFieldTypeExpr =>
-            b.BitFieldType(v.Application(v.Application(v.Times(), v.NumberLiteral(8)), fromExpression(it.getByteWidth))).putAnnotation(source, it)
+            b.BitFieldType(
+                    v.Application(v.Application(v.Times().putAnnotation(source, it), v.NumberLiteral(8).putAnnotation(source, it)).putAnnotation(source, it), fromExpression(it.getByteWidth))).
+                putAnnotation(source, it)
         case it: RecordTypeExpr =>
             b.BitRecordType(fromStatements(it.getStatements)).putAnnotation(source, it)
         case it: UnionTypeExpr =>
             b.BitUnionType(fromStatements(it.getStatements)).putAnnotation(source, it)
         case it =>
-            v.Application(b.MemberContextedType(path), new Converter().originalFromTypeExpression(it))
+            v.Application(b.MemberContextedType(path).putAnnotation(source, it), 
+                    new Converter().originalFromTypeExpression(it)).
+                putAnnotation(source, it)
         }
     
     
