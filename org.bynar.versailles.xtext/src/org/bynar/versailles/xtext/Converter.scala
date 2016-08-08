@@ -55,12 +55,26 @@ class Converter {
             case "*" => swapped(v.Times())
             case "/" => swapped(v.Divide())
             case "==" => normal(v.Equals())
+            case "!=" => normal(v.NotEquals())
+            case "<" => normal(v.Less())
+            case "<=" => normal(v.LessOrEquals())
+            case ">" => normal(v.Greater())
+            case ">=" => normal(v.GreaterOrEquals())
+            case "&&" => normal(v.And())
+            case "||" => normal(v.Or())
             }
         case it: UnaryExpr =>
             val a = fromExpression(it.getExpr)
             it.getOp.getOp match {
-            case "~" => v.Application(v.Reverse().
-                    putAnnotation(source, it.getOp), a).
+            case "~" => v.Application(v.Reverse().putAnnotation(source, it.getOp), a).
+                    putAnnotation(source, it.getOp).
+                    putAnnotation(applicationInfo, ApplicationAsOperator)
+            case "!" => v.Application(v.Not().putAnnotation(source, it.getOp), a).
+                    putAnnotation(source, it.getOp).
+                    putAnnotation(applicationInfo, ApplicationAsOperator)
+            case "-" => v.Application(v.Application(v.Times().putAnnotation(source, it),
+                    v.NumberLiteral(-1).putAnnotation(source, it)).putAnnotation(source, it),
+                    a).putAnnotation(source, it).
                     putAnnotation(applicationInfo, ApplicationAsOperator)
             }
         case it: MemberAccessExpr =>

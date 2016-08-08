@@ -128,6 +128,38 @@ case class Equals() extends Literal {
     type SelfTerm = Equals
     override def toString = "`==`"
 }
+case class NotEquals() extends Literal {
+    type SelfTerm = NotEquals
+    override def toString = "`!=`"
+}
+case class Less() extends Literal {
+    type SelfTerm = Less
+    override def toString = "`<`"
+}
+case class LessOrEquals() extends Literal {
+    type SelfTerm = LessOrEquals
+    override def toString = "`<=`"
+}
+case class Greater() extends Literal {
+    type SelfTerm = Greater
+    override def toString = "`>`"
+}
+case class GreaterOrEquals() extends Literal {
+    type SelfTerm = GreaterOrEquals
+    override def toString = "`>=`"
+}
+case class And() extends Literal {
+    type SelfTerm = And
+    override def toString = "`&&`"
+}
+case class Or() extends Literal {
+    type SelfTerm = Or
+    override def toString = "`||`"
+}
+case class Not() extends Literal {
+    type SelfTerm = Not
+    override def toString = "`!`"
+}
 
 case class Fail() extends ZeroaryStatement {
     type SelfTerm = Fail

@@ -14,6 +14,24 @@ class Simplifier {
         case Tuple(cs@_*) => cs.forall(isLiteral(_))
         case _ => false
         }
+    def literalLessOrEquals(l1: Expression, l2: Expression): Option[Boolean] = 
+        (l1, l2) match {
+        case (Tuple(cs1@_*), Tuple(cs2@_*)) if cs1.size == cs2.size =>
+            ((Some(true): Option[Boolean]) /: cs1.zip(cs2)){
+                case (acc, (c1, c2)) => 
+                    for (acc <- acc;
+                         le <- literalLessOrEquals(c1, c2))
+                        yield acc && le
+            }
+        case (NumberLiteral(v1), NumberLiteral(v2)) =>
+            Some(v1 <= v2)
+        case (StringLiteral(v1), StringLiteral(v2)) =>
+            Some(v1 <= v2)
+        case (BooleanLiteral(v1), BooleanLiteral(v2)) =>
+            Some(v1 <= v2)
+        case _ =>
+            None
+    }
     def isDefined(expr: Expression): Boolean =
         expr match {
         case Undefined() => false
@@ -169,6 +187,30 @@ class Simplifier {
                 
             case (Application(Equals(), l1), l2) if isLiteral(l1) && isLiteral(l2) =>
                 (BooleanLiteral(l1 == l2), ctx2)
+            case (Application(NotEquals(), l1), l2) if isLiteral(l1) && isLiteral(l2) =>
+                (BooleanLiteral(l1 != l2), ctx2)
+            case (Application(Less(), l1), l2) if isLiteral(l1) && isLiteral(l2) =>
+                (literalLessOrEquals(l1, l2).map{ v => BooleanLiteral(v && l1 != l2) }.getOrElse(Undefined()), ctx2)
+            case (Application(LessOrEquals(), l1), l2) if isLiteral(l1) && isLiteral(l2) =>
+                (literalLessOrEquals(l1, l2).map{ v => BooleanLiteral(v) }.getOrElse(Undefined()), ctx2)
+            case (Application(Greater(), l1), l2) if isLiteral(l1) && isLiteral(l2) =>
+                (literalLessOrEquals(l1, l2).map{ v => BooleanLiteral(!v) }.getOrElse(Undefined()), ctx2)
+            case (Application(GreaterOrEquals(), l1), l2) if isLiteral(l1) && isLiteral(l2) =>
+                (literalLessOrEquals(l1, l2).map{ v => BooleanLiteral(!v || l1 == l2) }.getOrElse(Undefined()), ctx2)
+            case (Application(And(), BooleanLiteral(false)), _) =>
+                (BooleanLiteral(false), ctx2)
+            case (Application(And(), _), BooleanLiteral(false)) =>
+                (BooleanLiteral(false), ctx2)
+            case (Application(And(), BooleanLiteral(b1)), BooleanLiteral(b2)) =>
+                (BooleanLiteral(b1 && b2), ctx2)
+            case (Application(Or(), BooleanLiteral(b1)), BooleanLiteral(b2)) =>
+                (BooleanLiteral(b1 || b2), ctx2)
+            case (Application(Or(), BooleanLiteral(true)), _) =>
+                (BooleanLiteral(true), ctx2)
+            case (Application(Or(), _), BooleanLiteral(true)) =>
+                (BooleanLiteral(true), ctx2)
+            case (Not(), BooleanLiteral(b)) =>
+                (BooleanLiteral(!b), ctx2)
 
             case (Application(Typed(), t), v) =>
                 // TODO: proper type check
