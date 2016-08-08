@@ -195,7 +195,7 @@ case class WrittenType(val `type`: Expression, val written: Expression) extends 
     override def dependentBitWidth(base: Expression) =
         Application(Application(BitWidth(), `type`), base)
     def copy(`type`: Expression = `type`, written: Expression = written) =
-        WrittenType(`type`, written)
+        WrittenType(`type`, written).copyAnnotationsFrom(this)
     override def copy(children: PartialFunction[Symbol, Term]) =
         copy(children.lift('t).getOrElse(`type`).asInstanceOf[Expression],
              children.lift('w).getOrElse(written).asInstanceOf[Expression])
@@ -211,7 +211,7 @@ case class ConvertedType(val `type`: Expression, val conversion: Expression) ext
     override def dependentBitWidth(base: Expression) =
         Application(Application(BitWidth(), `type`), base)
     def copy(`type`: Expression = `type`, conversion: Expression = conversion) =
-        ConvertedType(`type`, conversion)
+        ConvertedType(`type`, conversion).copyAnnotationsFrom(this)
     override def copy(children: PartialFunction[Symbol, Term]) =
         copy(children.lift('t).getOrElse(`type`).asInstanceOf[Expression],
              children.lift('c).getOrElse(conversion).asInstanceOf[Expression])
@@ -231,7 +231,7 @@ case class WhereType(val `type`: Expression, val condition: Expression) extends 
               Application(Application(BitWidth(), `type`), Variable(it, false)))
     }
     def copy(`type`: Expression = `type`, condition: Expression = condition) =
-        WhereType(`type`, condition)
+        WhereType(`type`, condition).copyAnnotationsFrom(this)
     override def copy(children: PartialFunction[Symbol, Term]) =
         copy(children.lift('t).getOrElse(`type`).asInstanceOf[Expression],
              children.lift('c).getOrElse(condition).asInstanceOf[Expression])
@@ -246,7 +246,7 @@ trait BitTypeInterpretation extends Term { self =>
 case class EnumValue(val name: Symbol, val value: Expression) extends Statement {
     override type SelfTerm = EnumValue
     def copy(name: Symbol = name, value: Expression = value) =
-        EnumValue(name, value)
+        EnumValue(name, value).copyAnnotationsFrom(this)
     override def copy(children: PartialFunction[Symbol, Term]) =
         copy(value = children.lift('v).getOrElse(value).asInstanceOf[Expression])
     override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) =
@@ -255,7 +255,7 @@ case class EnumValue(val name: Symbol, val value: Expression) extends Statement 
 case class EnumInterpretation(val body: Statement) extends BitTypeInterpretation {
     override type SelfTerm = EnumInterpretation
     def copy(body: Statement = body) =
-        EnumInterpretation(body)
+        EnumInterpretation(body).copyAnnotationsFrom(this)
     override def copy(children: PartialFunction[Symbol, Term]) =
         copy(children.lift('b).getOrElse(body).asInstanceOf[Statement])
     override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) =
@@ -264,7 +264,7 @@ case class EnumInterpretation(val body: Statement) extends BitTypeInterpretation
 case class FixedInterpretation(val fixedValue: Expression) extends BitTypeInterpretation {
     override type SelfTerm = FixedInterpretation
     def copy(fixedValue: Expression = fixedValue) =
-        FixedInterpretation(fixedValue)
+        FixedInterpretation(fixedValue).copyAnnotationsFrom(this)
     override def copy(children: PartialFunction[Symbol, Term]) =
         copy(children.lift('fv).getOrElse(fixedValue).asInstanceOf[Expression])
     override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) =
@@ -273,7 +273,7 @@ case class FixedInterpretation(val fixedValue: Expression) extends BitTypeInterp
 case class UnitInterpretation(val unit: String) extends BitTypeInterpretation {
     override type SelfTerm = UnitInterpretation
     def copy(unit: String = unit) =
-        UnitInterpretation(unit)
+        UnitInterpretation(unit).copyAnnotationsFrom(this)
     override def copy(children: PartialFunction[Symbol, Term]) =
         copy()
     override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) =
@@ -282,7 +282,7 @@ case class UnitInterpretation(val unit: String) extends BitTypeInterpretation {
 case class ContainingInterpretation(val containedType: Expression) extends BitTypeInterpretation {
     override type SelfTerm = ContainingInterpretation
     def copy(containedType: Expression = containedType) =
-        ContainingInterpretation(containedType)
+        ContainingInterpretation(containedType).copyAnnotationsFrom(this)
     override def copy(children: PartialFunction[Symbol, Term]) =
         copy(children.lift('ct).getOrElse(containedType).asInstanceOf[Expression])
     override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) =
@@ -295,7 +295,7 @@ case class InterpretedBitType(`type`: Expression, interpretation: BitTypeInterpr
     override def dependentBitWidth(base: Expression) =
         Application(Application(BitWidth(), `type`), base)
     def copy(`type`: Expression = `type`, interpretation: BitTypeInterpretation = interpretation) =
-        InterpretedBitType(`type`, interpretation)
+        InterpretedBitType(`type`, interpretation).copyAnnotationsFrom(this)
     override def copy(children: PartialFunction[Symbol, Term]) =
         copy(children.lift('t).getOrElse(`type`).asInstanceOf[Expression],
              children.lift('i).getOrElse(interpretation).asInstanceOf[BitTypeInterpretation])
