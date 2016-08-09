@@ -52,18 +52,19 @@ class VersaillesLangValidator extends AbstractVersaillesLangValidator {
         val newIt = variableAnalyzer.analyze(cu, false, Irreversible())._1
 
         def showErrors(it: Term) {
+            assert(it.annotation(Converter.source).nonEmpty)
             for (msg <- Messages.get(it))
                 msg.level match {
-                case Messages.Error => error(msg.toString, it.annotation(converter.source).get, null)
-                case Messages.Warning => warning(msg.toString, it.annotation(converter.source).get, null)
-                case Messages.Info => info(msg.toString, it.annotation(converter.source).get, null)
+                case Messages.Error => error(msg.toString, it.annotation(Converter.source).get, null)
+                case Messages.Warning => warning(msg.toString, it.annotation(Converter.source).get, null)
+                case Messages.Info => info(msg.toString, it.annotation(Converter.source).get, null)
                 }
             if (it.isInstanceOf[Variable])
                 for (msg <- Messages.get(it.asInstanceOf[Variable].variable))
                     msg.level match {
-                    case Messages.Error => error(msg.toString, it.annotation(converter.source).get, null)
-                    case Messages.Warning => warning(msg.toString, it.annotation(converter.source).get, null)
-                    case Messages.Info => info(msg.toString, it.annotation(converter.source).get, null)
+                    case Messages.Error => error(msg.toString, it.annotation(Converter.source).get, null)
+                    case Messages.Warning => warning(msg.toString, it.annotation(Converter.source).get, null)
+                    case Messages.Info => info(msg.toString, it.annotation(Converter.source).get, null)
                     }
             for (child <- it.children.values)
                 showErrors(child)
