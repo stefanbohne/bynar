@@ -14,7 +14,7 @@ import org.bynar.versailles.Undefined
 class Simplifier extends org.bynar.versailles.Simplifier {
 
     override def defaultContext = org.bynar.defaultContext
-    
+
     override def isLiteral(expr: Expression): Boolean =
         expr match {
         case Application(_: BitRecordType, v) =>
@@ -23,12 +23,12 @@ class Simplifier extends org.bynar.versailles.Simplifier {
             isLiteral(v)
         case Application(t: WhereType, v) =>
             isLiteral(Application(t.`type`, v))
-        case _ => 
+        case _ =>
             super.isLiteral(expr)
         }
     override def isDefined(expr: Expression): Boolean =
         expr match {
-        case _ => 
+        case _ =>
             super.isDefined(expr)
         }
 
@@ -36,11 +36,13 @@ class Simplifier extends org.bynar.versailles.Simplifier {
         (app.function, app.argument) match {
         case (MemberContextedType(Seq()), t) =>
             (t, context)
-        case (f@Application(BitWidth(), Application(MemberContextedType(p), t)), x) =>
-            simplifyApplication(app.copy(f.copy(argument = t),
-                                         (p :\ x){ case (n, x) => Application(Member(n), x) }),
-                                forward,
-                                context)
+        case (f: BitWidth, Application(MemberContextedType(p), t)) =>
+            val v = VariableIdentity.setName(new VariableIdentity(), '_)
+            simplify(Lambda(Irreversible(),
+                   Variable(v, true),
+                   Application(app.copy(argument = t),
+                               (p :\ (Variable(v, false): Expression)){ case (n, x) => Application(Member(n), x) })),
+               forward, context)
         case (BitWidth(), bt: BitTypeExpression) =>
             val x = VariableIdentity.setName(new VariableIdentity(), '_)
             (Lambda(Irreversible(), Variable(x, true), simplify(bt.dependentBitWidth(Variable(x, false)), true, context)._1), context)
@@ -51,7 +53,7 @@ class Simplifier extends org.bynar.versailles.Simplifier {
             }
         case (Member(n), t: BitRecordType) =>
             t.components.find{ case brc => brc.name == n } match {
-            case Some(brc) => 
+            case Some(brc) =>
                 (brc.`type`, context)
             case None => (Undefined(), context)
             }
@@ -60,11 +62,17 @@ class Simplifier extends org.bynar.versailles.Simplifier {
                 (Undefined(), context)
             else
                 t.components.zipWithIndex.find{ case (brc, i) => brc.name == n } match {
-                case Some((brc, i)) => 
+                case Some((brc, i)) =>
                     (cs(i), context)
                 case None => (Undefined(), context)
                 }
+        case (Member(n), InterpretedBitType(t, i: EnumInterpretation)) =>
+            i.values.find{ case ev => ev.name == n } match {
+            case Some(ev) =>
+                (ev.value, context)
+            case None => (Undefined(), context)
+            }
         case _ => super.simplifyApplication(app, forward, context)
         }
-    
+
 }

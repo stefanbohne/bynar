@@ -49,7 +49,7 @@ case class BitWidth() extends Literal {
 
 case class MemberContextedType(val path: Seq[Symbol]) extends Literal {
     override type SelfTerm = MemberContextedType
-    
+
     def copy(path: Seq[Symbol] = path) =
         MemberContextedType(path).copyAnnotationsFrom(this)
 }
@@ -69,7 +69,7 @@ case class BitRecordComponent(val name: Symbol, val `type`: Expression) extends 
 case class BitRecordType(val body: Statement) extends BitTypeExpression {
 
     override type SelfTerm = BitRecordType
-        
+
     def foldComponents[T](a: T)(f: (BitRecordComponent, T) => T): T = {
         def foldStatements(a: T, s: Statement): T =
             s match {
@@ -80,7 +80,7 @@ case class BitRecordType(val body: Statement) extends BitTypeExpression {
             case s => a
             }
         foldStatements(a, body)
-    }        
+    }
     def mapComponents(f: BitRecordComponent => Statement): Statement = {
         def mapStatements(s: Statement): Statement =
             s match {
@@ -145,7 +145,7 @@ case class BitUnionType(val body: Statement) extends BitTypeExpression {
             case s => a
             }
         foldStatements(a, body)
-    }        
+    }
     def mapVariants(f: BitUnionVariant => Statement): Statement = {
         def mapStatements(s: Statement): Statement =
             s match {
@@ -169,7 +169,7 @@ case class BitUnionType(val body: Statement) extends BitTypeExpression {
                 result = VariableIdentity.setName(new VariableIdentity(), 'result)
                 val arg = VariableIdentity.setName(new VariableIdentity(), 'it)
                 Let(Variable(result, true),
-                    Application(Application(OrElse(), Variable(result1, false)), 
+                    Application(Application(OrElse(), Variable(result1, false)),
                                 Lambda(Irreversible(),
                                        Variable(arg, true),
                                        Block(Let(Application(Application(Member(n), BitUnionType.this), Variable(VariableIdentity.setName(new VariableIdentity(), '_), true)),
@@ -254,6 +254,32 @@ case class EnumValue(val name: Symbol, val value: Expression) extends Statement 
 }
 case class EnumInterpretation(val body: Statement) extends BitTypeInterpretation {
     override type SelfTerm = EnumInterpretation
+
+    def foldValues[T](a: T)(f: (EnumValue, T) => T): T = {
+        def foldStatements(a: T, s: Statement): T =
+            s match {
+            case s@Sequence(ss@_*) =>
+                (a /: ss)(foldStatements _)
+            case s: EnumValue =>
+                f(s, a)
+            case s => a
+            }
+        foldStatements(a, body)
+    }
+    def mapValues(f: EnumValue => Statement): Statement = {
+        def mapStatements(s: Statement): Statement =
+            s match {
+            case s@Sequence(ss@_*) =>
+                s.copy(ss.map{ mapStatements(_) }:_*)
+            case s: EnumValue =>
+                f(s)
+            case s => s
+            }
+        mapStatements(body)
+    }
+    lazy val values: Seq[EnumValue] =
+        foldValues[Seq[EnumValue]](Seq()){ case (ev, s) => s :+ ev }
+
     def copy(body: Statement = body) =
         EnumInterpretation(body).copyAnnotationsFrom(this)
     override def copy(children: PartialFunction[Symbol, Term]) =
