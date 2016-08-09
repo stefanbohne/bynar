@@ -104,6 +104,26 @@ class PrettyPrinter {
                 if (cts.size == 1)
                     result.append(",")
             })
+        case term@Application(Application(OrElse(), l), r) =>
+            paren("{\n", indentText * indent + "}", 0, {
+                indent += 1
+                var tmp: Expression = term
+                while (tmp match {
+                    case Application(Application(OrElse(), l), r) =>
+                        result.append(indentText * indent)
+                        result.append("case ")
+                        doPrettyPrint(l)
+                        result.append(";\n")
+                        tmp = r
+                        true
+                    case _ => false
+                }) {}
+                result.append(indentText * indent)
+                result.append("case ")
+                doPrettyPrint(tmp)
+                result.append(";\n")
+                indent -= 1
+            })
         case Application(Application(Plus(), r), l)
             if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
                 binOpLeft(" + ", l, r, 10)
