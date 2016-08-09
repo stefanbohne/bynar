@@ -27,8 +27,8 @@ class Converter {
 
     def fromExpression(it: Expression): v.Expression =
         it match {
-        case it: IntegerLiteral =>
-            v.NumberLiteral(it.getValue).putAnnotation(source, it)
+        case it: NumberLiteral =>
+            v.NumberLiteral(it.getValue).putAnnotation(source, it) 
         case it: StringLiteral =>
             v.StringLiteral(it.getValue).putAnnotation(source, it)
         case it: Variable =>
