@@ -108,6 +108,7 @@ class PrettyPrinter {
             paren("{\n", indentText * indent + "}", 0, {
                 indent += 1
                 var tmp: Expression = term
+                precedence = 0
                 while (tmp match {
                     case Application(Application(OrElse(), l), r) =>
                         result.append(indentText * indent)

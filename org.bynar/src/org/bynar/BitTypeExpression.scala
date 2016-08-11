@@ -178,7 +178,9 @@ case class BitUnionType(val body: Statement) extends BitTypeExpression {
             }
         Block(Sequence(Let(Variable(result0, true), Lambda(Irreversible(), Variable(VariableIdentity.setName(new VariableIdentity(), '_), true), Undefined())),
                        newBody),
-              Application(Variable(result, false), base))
+              Application(Variable(result, false), base).
+                      putAnnotation(org.bynar.versailles.PrettyPrinter.applicationInfo,
+                                    org.bynar.versailles.PrettyPrinter.ApplicationAsMatch))
     }
     def copy(body: Statement = body) =
         BitUnionType(body).copyAnnotationsFrom(this)
