@@ -36,7 +36,7 @@ class Simplifier extends org.bynar.versailles.Simplifier {
         (app.function, app.argument) match {
         case (MemberContextedType(Seq()), t) =>
             (t, context)
-        case (f: BitWidth, Application(MemberContextedType(p), t)) =>
+        case (BitWidth(), Application(MemberContextedType(p), t)) =>
             val v = VariableIdentity.setName(new VariableIdentity(), '_)
             simplify(Lambda(Irreversible(),
                    Variable(v, true),
