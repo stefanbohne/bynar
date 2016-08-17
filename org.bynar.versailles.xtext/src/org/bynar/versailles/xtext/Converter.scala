@@ -11,7 +11,7 @@ import org.bynar.versailles.PrettyPrinter
 class Converter {
 
     import PrettyPrinter._
-    val source = new v.AnnotationKey[EObject]
+    import Converter._
 
     def fromCompilationUnit(cu: CompilationUnit): v.Expression = {
         val e =
@@ -27,8 +27,8 @@ class Converter {
 
     def fromExpression(it: Expression): v.Expression =
         it match {
-        case it: IntegerLiteral =>
-            v.NumberLiteral(it.getValue).putAnnotation(source, it)
+        case it: NumberLiteral =>
+            v.NumberLiteral(it.getValue).putAnnotation(source, it) 
         case it: StringLiteral =>
             v.StringLiteral(it.getValue).putAnnotation(source, it)
         case it: Variable =>
@@ -256,4 +256,8 @@ class Converter {
                     putAnnotation(source, tv)
             }:_*)
 
+}
+
+object Converter {
+    val source = new v.AnnotationKey[EObject]
 }
