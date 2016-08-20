@@ -42,49 +42,49 @@ class Converter extends org.bynar.versailles.xtext.Converter {
             b.ContainingInterpretation(fromTypeExpression(it.getContainedType)).putAnnotation(source, it)
         }
 
-    override def fromTypeExpression(it: TypeExpression): v.Expression = 
+    override def fromTypeExpression(it: TypeExpression): v.Expression =
         new MemberConverter(Seq()).fromTypeExpression(it)
-        
+
     def originalFromTypeExpression(it: TypeExpression) =
         super.fromTypeExpression(it)
-        
-    
+
+
 }
 
 class MemberConverter(val path: Seq[Symbol]) extends Converter {
     import org.bynar.versailles.xtext.Converter._
-    
+
     override def fromStatement(it: Statement): v.Statement =
         it match {
         case it: RecordComponent =>
             b.BitRecordComponent(
-                    Symbol(it.getName), 
+                    Symbol(it.getName),
                     new MemberConverter(path :+ Symbol(it.getName)).fromTypeExpression(it.getType)).
                     putAnnotation(source, it)
         case it: UnionVariant =>
             b.BitUnionVariant(
-                    Symbol(it.getName), 
+                    Symbol(it.getName),
                     new MemberConverter(path :+ Symbol(it.getName)).fromTypeExpression(it.getType)).
                     putAnnotation(source, it)
         case it: EnumValue =>
             b.EnumValue(
-                    Symbol(it.getName), 
+                    Symbol(it.getName),
                     new MemberConverter(path :+ Symbol(it.getName)).fromExpression(it.getValue)).
                     putAnnotation(source, it)
         case _ => super.fromStatement(it)
         }
-    
+
     override def fromTypeExpression(it: TypeExpression): v.Expression =
         it match {
         case it: TypeWrittenExpr =>
             b.WrittenType(fromTypeExpression(it.getType),
-                          fromExpression(it.getWritten)).putAnnotation(source, it)
+                          new Converter().fromExpression(it.getWritten)).putAnnotation(source, it)
         case it: TypeConvertedExpr =>
             b.ConvertedType(fromTypeExpression(it.getType),
-                            fromExpression(it.getConversion)).putAnnotation(source, it)
+                            new Converter().fromExpression(it.getConversion)).putAnnotation(source, it)
         case it: TypeWhereExpr =>
             b.WhereType(fromTypeExpression(it.getType),
-                        fromExpression(it.getWhere)).putAnnotation(source, it)
+                        new Converter().fromExpression(it.getWhere)).putAnnotation(source, it)
         case it: TypeWithInterpretationExpr =>
             b.InterpretedBitType(fromTypeExpression(it.getType),
                                  fromInterpretation(it.getInterpretation)).putAnnotation(source, it)
@@ -99,10 +99,10 @@ class MemberConverter(val path: Seq[Symbol]) extends Converter {
         case it: UnionTypeExpr =>
             b.BitUnionType(fromStatements(it.getStatements)).putAnnotation(source, it)
         case it =>
-            v.Application(b.MemberContextedType(path).putAnnotation(source, it), 
+            v.Application(b.MemberContextedType(path).putAnnotation(source, it),
                     new Converter().originalFromTypeExpression(it)).
                 putAnnotation(source, it)
         }
-    
-    
+
+
 }

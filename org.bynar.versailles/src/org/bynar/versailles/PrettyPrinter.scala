@@ -107,6 +107,7 @@ class PrettyPrinter {
         case term@Application(Application(OrElse(), l), r) =>
             paren("{\n", indentText * indent + "}", 0, {
                 indent += 1
+                precedence = 0
                 def printCase(c: Expression) {
                     c match {
                     case Application(Application(OrElse(), l), r) =>
