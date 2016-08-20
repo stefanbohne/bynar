@@ -107,21 +107,19 @@ class PrettyPrinter {
         case term@Application(Application(OrElse(), l), r) =>
             paren("{\n", indentText * indent + "}", 0, {
                 indent += 1
-                var tmp: Expression = term
-                while (tmp match {
+                def printCase(c: Expression) {
+                    c match {
                     case Application(Application(OrElse(), l), r) =>
+                        printCase(l)
+                        printCase(r)
+                    case c =>
                         result.append(indentText * indent)
                         result.append("case ")
-                        doPrettyPrint(l)
+                        doPrettyPrint(c)
                         result.append(";\n")
-                        tmp = r
-                        true
-                    case _ => false
-                }) {}
-                result.append(indentText * indent)
-                result.append("case ")
-                doPrettyPrint(tmp)
-                result.append(";\n")
+                    }
+                }
+                printCase(term)
                 indent -= 1
             })
         case Application(Application(Plus(), r), l)
@@ -139,6 +137,27 @@ class PrettyPrinter {
         case Application(Application(Equals(), l), r)
             if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
                 binOpNone(" == ", l, r, 5)
+        case Application(Application(NotEquals(), l), r)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
+                binOpNone(" != ", l, r, 5)
+        case Application(Application(Less(), l), r)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
+               binOpNone(" < ", l, r, 5)
+        case Application(Application(LessOrEquals(), l), r)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
+                binOpNone(" <= ", l, r, 5)
+        case Application(Application(Greater(), l), r)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
+                binOpNone(" > ", l, r, 5)
+        case Application(Application(GreaterOrEquals(), l), r)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
+                binOpNone(" >= ", l, r, 5)
+        case Application(Application(And(), l), r)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
+                binOpLeft(" && ", l, r, 4)
+        case Application(Application(Or(), l), r)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
+                binOpRight(" || ", l, r, 3)
         case Application(Reverse(), a)
             if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
                 prefixOp("~", a, 50)
