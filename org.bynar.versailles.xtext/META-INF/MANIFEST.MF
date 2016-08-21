@@ -15,7 +15,8 @@ Require-Bundle: org.eclipse.xtext,
  org.eclipse.xtend.lib,
  org.eclipse.emf.common,
  org.scala-lang.scala-library,
- org.apache.commons.lang3;bundle-version="3.1.0"
+ org.apache.commons.lang3;bundle-version="3.1.0",
+ org.scala-lang.modules.scala-xml;bundle-version="1.0.3"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Export-Package: org.bynar.versailles,
  org.bynar.versailles.xtext,

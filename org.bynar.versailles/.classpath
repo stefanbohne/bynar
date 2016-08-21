@@ -9,5 +9,7 @@
 	<classpathentry kind="lib" path="lib/scalatest_2.11-2.2.6-javadoc.jar"/>
 	<classpathentry kind="lib" path="lib/scalatest_2.11-2.2.6.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+	<classpathentry kind="lib" path="lib/scala-xml_2.11-1.0.5-javadoc.jar"/>
+	<classpathentry kind="lib" path="lib/scala-xml_2.11-1.0.5.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

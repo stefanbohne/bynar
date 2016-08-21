@@ -7,10 +7,12 @@ import org.bynar.{versailles => v}
 import org.bynar.versailles.xtext.versaillesLang._
 import org.eclipse.emf.ecore.EObject
 import org.bynar.versailles.PrettyPrinter
+import org.bynar.versailles.DocGenerator
 
 class Converter {
 
     import PrettyPrinter._
+    import DocGenerator._
     import Converter._
 
     def fromCompilationUnit(cu: CompilationUnit): v.Expression = {
@@ -31,6 +33,25 @@ class Converter {
             v.NumberLiteral(it.getValue).putAnnotation(source, it) 
         case it: StringLiteral =>
             v.StringLiteral(it.getValue).putAnnotation(source, it)
+        case it: InterpolatedString =>
+            def stringLit(index: Int): v.Expression =
+                v.StringLiteral(it.getStrings.get(index).substring(1, it.getStrings.get(index).length - 1)).putAnnotation(source, it)
+            (stringLit(0) /: (0 until it.getExpressions.size)){
+            case (acc, i) =>
+                v.Application(
+                    v.Application(
+                        v.Concat().putAnnotation(source, it), 
+                        v.Application(
+                            v.Application(
+                                v.Concat().putAnnotation(source, it), 
+                                acc
+                            ).putAnnotation(source, it), 
+                            fromExpression(it.getExpressions.get(i))
+                        ).putAnnotation(source, it)
+                    ).putAnnotation(source, it),
+                    stringLit(i + 1)
+                ).putAnnotation(source, it)
+            }
         case it: Variable =>
             v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName)),
                        it.isLinear()).putAnnotation(source, it)
@@ -214,8 +235,17 @@ class Converter {
                 v.Lambda(v.Irreversible(), fromTupleTypeType(it.getTypeArguments), t)
             else
                 t
-            v.Def(v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName)),
-                  t2).putAnnotation(source, it)
+            val result = v.Def(v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName)),
+                  t2).
+                  putAnnotation(source, it)
+            if (it.getTitle != null)
+                result.putAnnotation(titleKey, it.getTitle)
+            if (it.getDescription != null)
+                result.putAnnotation(descriptionKey, 
+                        v.Lambda(v.Irreversible(),
+                                 v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), 'it), true),
+                                 fromExpression(it.getDescription)))
+            result
         }
 
     def fromTypeExpression(it: TypeExpression): v.Expression =

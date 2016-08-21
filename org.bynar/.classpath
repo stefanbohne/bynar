@@ -5,5 +5,7 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/org.bynar.versailles"/>
 	<classpathentry kind="lib" path="/org.bynar.versailles/lib/commons-lang3-3.4.jar"/>
+	<classpathentry kind="lib" path="/org.bynar.versailles/lib/scala-xml_2.11-1.0.5-javadoc.jar"/>
+	<classpathentry kind="lib" path="/org.bynar.versailles/lib/scala-xml_2.11-1.0.5.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

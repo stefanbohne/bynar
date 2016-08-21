@@ -211,6 +211,9 @@ class Simplifier {
                 (BooleanLiteral(true), ctx2)
             case (Not(), BooleanLiteral(b)) =>
                 (BooleanLiteral(!b), ctx2)
+                
+            case (Application(Concat(), StringLiteral(l1)), StringLiteral(l2)) =>
+                (StringLiteral(l1 + l2), ctx2)
 
             case (Application(Typed(), t), v) =>
                 // TODO: proper type check

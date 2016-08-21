@@ -13,6 +13,8 @@ import org.bynar.versailles.defaultContext
 import org.bynar.versailles.VariableIdentity
 import org.bynar.versailles.Irreversible
 import com.google.inject.Inject
+import org.bynar.versailles.xtext.DocGeneratorFactory
+import org.bynar.versailles.Block
 
 class VersaillesLangGenerator extends AbstractGenerator {
     
@@ -24,7 +26,7 @@ class VersaillesLangGenerator extends AbstractGenerator {
     val prettyPrinter: PrettyPrinter = null
     @Inject
     val simplifier: Simplifier = null
-
+    
     override def doGenerate(resource: Resource, fsa: IFileSystemAccess2, context: IGeneratorContext) {
         val cu = converter.fromCompilationUnit(resource.getContents.get(0).asInstanceOf[CompilationUnit])
         fsa.generateFile("pp.txt", prettyPrinter.prettyPrint(cu))

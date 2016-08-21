@@ -17,5 +17,7 @@ class VersaillesLangRuntimeModule extends AbstractVersaillesLangRuntimeModule {
 	    classOf[Simplifier]
 	def bindPrettyPrinter(): Class[_ <: PrettyPrinter] =
 	    classOf[PrettyPrinter]
+    def bindDocGeneratorFactory(): Class[_ <: DocGeneratorFactory] =
+        classOf[DocGeneratorFactory]
 
 }

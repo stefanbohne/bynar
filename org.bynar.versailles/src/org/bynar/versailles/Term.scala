@@ -124,6 +124,10 @@ case class Power() extends Literal {
     type SelfTerm = Power
     override def toString = "`^`"
 }
+case class Concat() extends Literal {
+    type SelfTerm = Concat
+    override def toString = "`++`"
+}
 case class Equals() extends Literal {
     type SelfTerm = Equals
     override def toString = "`==`"
