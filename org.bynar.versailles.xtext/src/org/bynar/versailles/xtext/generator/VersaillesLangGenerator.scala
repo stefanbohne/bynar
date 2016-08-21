@@ -13,7 +13,6 @@ import org.bynar.versailles.defaultContext
 import org.bynar.versailles.VariableIdentity
 import org.bynar.versailles.Irreversible
 import com.google.inject.Inject
-import org.bynar.versailles.xtext.DocGeneratorFactory
 import org.bynar.versailles.Block
 
 class VersaillesLangGenerator extends AbstractGenerator {
