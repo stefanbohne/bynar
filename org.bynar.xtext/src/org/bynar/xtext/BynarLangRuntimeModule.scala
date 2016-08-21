@@ -13,6 +13,6 @@ class BynarLangRuntimeModule extends AbstractBynarLangRuntimeModule {
 	    classOf[Simplifier]
 	def bindPrettyPrinter(): Class[_ <: org.bynar.versailles.PrettyPrinter] =
 	    classOf[PrettyPrinter]
-    def bindDocGeneratorFactory(): Class[_ <: org.bynar.versailles.xtext.DocGeneratorFactory] =
-	    classOf[DocGeneratorFactory]
+    def bindDocBookGeneratorFactory(): Class[_ <: org.bynar.versailles.xtext.DocBookGeneratorFactory] =
+	    classOf[DocBookGeneratorFactory]
 }

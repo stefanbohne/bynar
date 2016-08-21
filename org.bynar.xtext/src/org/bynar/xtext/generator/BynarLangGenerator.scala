@@ -12,7 +12,7 @@ import com.google.inject.Inject
 import org.bynar.versailles.Irreversible
 import org.bynar.versailles.xtext.versaillesLang.CompilationUnit
 import org.bynar.versailles.Block
-import org.bynar.versailles.xtext.DocGeneratorFactory
+import org.bynar.versailles.xtext.DocBookGeneratorFactory
 
 class BynarLangGenerator extends AbstractGenerator {
     
@@ -25,7 +25,7 @@ class BynarLangGenerator extends AbstractGenerator {
     @Inject
     val simplifier: Simplifier = null
     @Inject
-    val docGenerator: DocGeneratorFactory = null
+    val dbGen: DocBookGeneratorFactory = null
 
     def doGenerate(resource: Resource, fsa: IFileSystemAccess2, context: IGeneratorContext) {
 	    val cu = converter.fromCompilationUnit(resource.getContents.get(0).asInstanceOf[CompilationUnit])
@@ -34,7 +34,7 @@ class BynarLangGenerator extends AbstractGenerator {
         fsa.generateFile("va.txt", prettyPrinter.prettyPrint(analyzed))
         fsa.generateFile("simp.txt", prettyPrinter.prettyPrint(simplifier.simplify(analyzed, true)._1))
         
-        val docGen = docGenerator.create(cu.asInstanceOf[Block].block)
+        val docGen = dbGen.create(cu.asInstanceOf[Block].block)
         fsa.generateFile(resource.getURI.trimFileExtension().devicePath() + ".xml", docGen.generate().toString)
     }
 }

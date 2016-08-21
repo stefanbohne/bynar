@@ -3,8 +3,8 @@ package org.bynar.versailles
 import scala.xml.Elem
 import scala.xml.Node
 
-class DocGenerator(root: Statement) {
-    import DocGenerator._
+class DocBookGenerator(root: Statement) {
+    import DocBookGenerator._
   
     def generate(): Elem = 
         <article>
@@ -29,7 +29,7 @@ class DocGenerator(root: Statement) {
     }
 }
 
-object DocGenerator {
+object DocBookGenerator {
     val titleKey = new AnnotationKey[String]
     val descriptionKey = new AnnotationKey[Expression]
 }

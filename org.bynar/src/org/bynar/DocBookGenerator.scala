@@ -13,8 +13,8 @@ import org.bynar.versailles.Irreversible
 import scala.xml.Node
 import scala.xml.XML
 
-class DocGenerator(root: Statement) extends org.bynar.versailles.DocGenerator(root) {
-    import org.bynar.versailles.DocGenerator._
+class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGenerator(root) {
+    import org.bynar.versailles.DocBookGenerator._
     
     val va = new VariableAnalyzer();
     val simp = new Simplifier()
