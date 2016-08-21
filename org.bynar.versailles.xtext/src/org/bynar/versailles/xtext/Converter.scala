@@ -7,12 +7,12 @@ import org.bynar.{versailles => v}
 import org.bynar.versailles.xtext.versaillesLang._
 import org.eclipse.emf.ecore.EObject
 import org.bynar.versailles.PrettyPrinter
-import org.bynar.versailles.DocGenerator
+import org.bynar.versailles.DocBookGenerator
 
 class Converter {
 
     import PrettyPrinter._
-    import DocGenerator._
+    import DocBookGenerator._
     import Converter._
 
     def fromCompilationUnit(cu: CompilationUnit): v.Expression = {
