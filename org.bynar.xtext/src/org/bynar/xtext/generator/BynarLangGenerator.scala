@@ -15,7 +15,7 @@ import org.bynar.versailles.Block
 import org.bynar.versailles.xtext.DocBookGeneratorFactory
 
 class BynarLangGenerator extends AbstractGenerator {
-    
+
     @Inject
     val converter: Converter = null
     @Inject
@@ -33,8 +33,8 @@ class BynarLangGenerator extends AbstractGenerator {
         val analyzed = variableAnalyzer.analyze(cu, false, Irreversible())._1
         fsa.generateFile("va.txt", prettyPrinter.prettyPrint(analyzed))
         fsa.generateFile("simp.txt", prettyPrinter.prettyPrint(simplifier.simplify(analyzed, true)._1))
-        
-        val docGen = dbGen.create(cu.asInstanceOf[Block].block)
+
+        val docGen = dbGen.create(analyzed.asInstanceOf[Block].block)
         fsa.generateFile(resource.getURI.trimFileExtension().devicePath() + ".xml", docGen.generate().toString)
     }
 }

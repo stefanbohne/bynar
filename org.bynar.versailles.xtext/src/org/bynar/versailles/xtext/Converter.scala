@@ -249,9 +249,9 @@ class Converter {
                     v.Def(v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName)), t2).
                         putAnnotation(source, it)
             if (it.getTitle != null)
-                result.putAnnotation(titleKey, it.getTitle)
+                result.putAnnotation(titleInfo, it.getTitle)
             if (it.getDescription != null)
-                result.putAnnotation(descriptionKey,
+                result.putAnnotation(descriptionInfo,
                         v.Lambda(v.Irreversible(),
                                  v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), 'it), true),
                                  fromExpression(it.getDescription)))
