@@ -13,7 +13,7 @@ class PrettyPrinter extends org.bynar.versailles.PrettyPrinter {
             prefixOp("bits ", bw, 10)
         case Application(MemberContextedType(p), t) =>
             doPrettyPrint(t)
-            result.append(p.map{ _.name }.mkString("@", ".", "")) 
+            result.append(p.map{ _.name }.mkString("@", ".", ""))
         case BitRecordType(b) =>
             paren("record {\n", indentText*indent + "}", 0, {
                 indent += 1

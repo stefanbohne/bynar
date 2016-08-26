@@ -229,7 +229,8 @@ case class WhereType(val `type`: Expression, val condition: Expression) extends 
     override def dependentBitWidth(base: Expression) = {
         val it = VariableIdentity.setName(new VariableIdentity(), 'it)
         Block(Sequence(Let(Variable(it, true), base),
-                       Let(BooleanLiteral(true), Application(condition, Variable(it, false)))),
+                       Let(BooleanLiteral(true), Application(condition, Variable(it, false)).
+                               putAnnotation(versailles.PrettyPrinter.letInfo, versailles.PrettyPrinter.LetAsAssert))),
               Application(Application(BitWidth(), `type`), Variable(it, false)))
     }
     def copy(`type`: Expression = `type`, condition: Expression = condition) =

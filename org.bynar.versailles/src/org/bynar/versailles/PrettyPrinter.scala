@@ -214,6 +214,18 @@ class PrettyPrinter {
 
     def doPrettyPrintStatement(stmt: Statement) {
         stmt match {
+        case Let(Variable(id, true), t) if stmt.annotation(letInfo).getOrElse(LetAsLet) == LetAsType =>
+            result.append(indentText * indent)
+            result.append("let type ")
+            doPrettyPrintTypeName(VariableIdentity.getName(id))
+            result.append(" = ")
+            doPrettyPrint(t)
+            result.append(";\n")
+        case Let(BooleanLiteral(true), a) if stmt.annotation(letInfo).getOrElse(LetAsAssert) == LetAsAssert =>
+            result.append(indentText * indent)
+            result.append("let ")
+            doPrettyPrint(a)
+            result.append(";\n")
         case Let(Application(Application(Forget(), Lambda(Irreversible(), Tuple(), v)), Tuple()), p) =>
             result.append(indentText * indent)
             result.append("forget ")
@@ -307,4 +319,10 @@ object PrettyPrinter {
     case object ApplicationAsOperator extends ApplicationInfo
     case object ApplicationAsMatch extends ApplicationInfo
     val applicationInfo = new AnnotationKey[ApplicationInfo]()
+
+    trait LetInfo
+    case object LetAsLet extends LetInfo
+    case object LetAsAssert extends LetInfo
+    case object LetAsType extends LetInfo
+    val letInfo = new AnnotationKey[LetInfo]
 }

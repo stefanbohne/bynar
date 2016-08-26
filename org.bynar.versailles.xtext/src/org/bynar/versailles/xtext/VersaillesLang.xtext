@@ -22,7 +22,7 @@ TypeNamePath: steps+=TypeName ("." steps+=TypeName)*;
 Statement:
 		{PassStmt} "pass"
 	|	{FailStmt} "fail"
-	|	{LetStmt} "let" pattern=Expression "=" value=Expression
+	|	{LetStmt} "let" pattern=Expression ("=" value=Expression)?
 	|	{ForgetStmt} "forget" pattern=Expression "=" value=Expression
 	|	{RememberStmt} "remember" pattern=Expression "=" value=Expression
 	|	{IfStmt} "if" condition=Expression "then" then=Statements (=> "else" else=Statements)? ("fi" assertion=Expression)?
@@ -33,7 +33,7 @@ Statement:
 						    ("=" expression = Expression |
 				            janusClass=JanusClassExpression (name2=Name)? results=TupleExpr (title2=STRING)? (description2=InterpolatedString)? ("{" statements=Statements "}" | "=" expression=Expression))
 				        | ":" valueType=TypeExpression (title=STRING)? (description=InterpolatedString)? "=" value=Expression)
-	|	{TypeStmt} "type" name=TypeName typeArguments=TupleTypeTypeExpr? valueArguments=TupleTypeExpr? (title=STRING)? (description=InterpolatedString)? "=" type=TypeExpression
+	|	{TypeStmt} (let?="let")? "type" name=TypeName typeArguments=TupleTypeTypeExpr? valueArguments=TupleTypeExpr? (title=STRING)? (description=InterpolatedString)? "=" type=TypeExpression
 	|   {ModuleStmt} "module" path=TypeNamePath (title=STRING)? (description=InterpolatedString)? "{" statements=Statements "}"
 ;
 Statements:
@@ -151,7 +151,7 @@ TypeConcretion returns TypeExpression:
 ;
 TypeSimple returns TypeExpression:
 		{AbstractTypeExpr} "abstract"
-	|	{ValueType} "type" value=Expression 
+	|	{ValueType} "type" value=Expression
 	|	TypeVariable
 	|	TupleTypeExpr
 ;

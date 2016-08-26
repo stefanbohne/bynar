@@ -30,7 +30,7 @@ class Converter {
     def fromExpression(it: Expression): v.Expression =
         it match {
         case it: NumberLiteral =>
-            v.NumberLiteral(it.getValue).putAnnotation(source, it) 
+            v.NumberLiteral(it.getValue).putAnnotation(source, it)
         case it: StringLiteral =>
             v.StringLiteral(it.getValue).putAnnotation(source, it)
         case it: InterpolatedString =>
@@ -40,12 +40,12 @@ class Converter {
             case (acc, i) =>
                 v.Application(
                     v.Application(
-                        v.Concat().putAnnotation(source, it), 
+                        v.Concat().putAnnotation(source, it),
                         v.Application(
                             v.Application(
-                                v.Concat().putAnnotation(source, it), 
+                                v.Concat().putAnnotation(source, it),
                                 acc
-                            ).putAnnotation(source, it), 
+                            ).putAnnotation(source, it),
                             fromExpression(it.getExpressions.get(i))
                         ).putAnnotation(source, it)
                     ).putAnnotation(source, it),
@@ -99,7 +99,7 @@ class Converter {
                     putAnnotation(applicationInfo, ApplicationAsOperator)
             }
         case it: MemberAccessExpr =>
-            v.Application(v.Member(Symbol(it.getMemberName)).putAnnotation(source, it), 
+            v.Application(v.Member(Symbol(it.getMemberName)).putAnnotation(source, it),
                           fromExpression(it.getBase)).putAnnotation(source, it)
         case it: ApplicationExpr =>
             v.Application(fromExpression(it.getFunction),
@@ -188,8 +188,14 @@ class Converter {
         case it: FailStmt =>
             v.Sequence().putAnnotation(source, it)
         case it: LetStmt =>
-            v.Let(fromExpression(it.getPattern),
-                  fromExpression(it.getValue)).putAnnotation(source, it)
+            if (it.getValue() != null)
+                v.Let(fromExpression(it.getPattern),
+                      fromExpression(it.getValue)).putAnnotation(source, it)
+            else
+                v.Let(v.BooleanLiteral(true).putAnnotation(source, it),
+                      fromExpression(it.getPattern)).
+                          putAnnotation(source, it).
+                          putAnnotation(letInfo, LetAsAssert)
         case it: IfStmt =>
             v.IfStmt(fromExpression(it.getCondition),
                      fromStatements(it.getThen),
@@ -235,13 +241,17 @@ class Converter {
                 v.Lambda(v.Irreversible(), fromTupleTypeType(it.getTypeArguments), t)
             else
                 t
-            val result = v.Def(v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName)),
-                  t2).
-                  putAnnotation(source, it)
+            val result = if (it.isLet)
+                    v.Let(v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName)), true).putAnnotation(source, it), t2).
+                        putAnnotation(source, it).
+                        putAnnotation(letInfo, LetAsType)
+                else
+                    v.Def(v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName)), t2).
+                        putAnnotation(source, it)
             if (it.getTitle != null)
                 result.putAnnotation(titleKey, it.getTitle)
             if (it.getDescription != null)
-                result.putAnnotation(descriptionKey, 
+                result.putAnnotation(descriptionKey,
                         v.Lambda(v.Irreversible(),
                                  v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), 'it), true),
                                  fromExpression(it.getDescription)))
