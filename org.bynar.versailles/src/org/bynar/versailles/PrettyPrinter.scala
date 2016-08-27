@@ -16,14 +16,17 @@ class PrettyPrinter {
         result.toString()
     }
 
+    def append(text: Any) {
+        result.append(text)
+    }
     def paren(left: String, right: String, minPrecedence: Int, print: => Unit) {
         val savePrecedence = precedence
         if (minPrecedence <= precedence)
-            result.append(left)
+            append(left)
         print
         precedence = savePrecedence
         if (minPrecedence <= precedence)
-            result.append(right)
+            append(right)
     }
     def paren(minPrecedence: Int, print: => Unit) {
         paren("(", ")", minPrecedence, print)
@@ -32,7 +35,7 @@ class PrettyPrinter {
         paren(opPrecedence, {
             precedence = opPrecedence - 1
             doPrettyPrint(left)
-            result.append(op)
+            append(op)
             precedence = opPrecedence
             doPrettyPrint(right)
         })
@@ -40,7 +43,7 @@ class PrettyPrinter {
         paren(opPrecedence, {
             precedence = opPrecedence
             doPrettyPrint(left)
-            result.append(op)
+            append(op)
             precedence = opPrecedence - 1
             doPrettyPrint(right)
         })
@@ -48,13 +51,13 @@ class PrettyPrinter {
         paren(opPrecedence, {
             precedence = opPrecedence
             doPrettyPrint(left)
-            result.append(op)
+            append(op)
             precedence = opPrecedence
             doPrettyPrint(right)
         })
     def prefixOp(op: String, operand: Term, opPrecedence: Int) =
         paren(opPrecedence, {
-            result.append(op)
+            append(op)
             precedence = opPrecedence - 1
             doPrettyPrint(operand)
         })
@@ -62,20 +65,20 @@ class PrettyPrinter {
         paren(opPrecedence, {
             precedence = opPrecedence - 1
             doPrettyPrint(operand)
-            result.append(op)
+            append(op)
         })
 
     def doPrettyPrint(term: Term) {
         term match {
         case stmt: Statement => doPrettyPrintStatement(stmt)
         case expr: Literal =>
-            result.append(expr.toString)
+            append(expr.toString)
         case Variable(id, l) =>
             if (l)
-                result.append("?")
+                append("?")
             doPrettyPrintName(VariableIdentity.getName(id))
-            result.append("_")
-            result.append(id.hashCode.toHexString)
+            append("_")
+            append(id.hashCode.toHexString)
         case Application(Member(n), b) =>
             suffixOp("." + n.name, b, 60)
         case Tuple(cs@_*) =>
@@ -83,26 +86,26 @@ class PrettyPrinter {
                 var first = true
                 for (c <- cs) {
                     if (!first)
-                        result.append(", ")
+                        append(", ")
                     else
                         first = false
                     doPrettyPrint(c)
                 }
                 if (cs.size == 1)
-                    result.append(",")
+                    append(",")
             })
         case TupleType(cts@_*) =>
             paren("<[", "]>", 0, {
                 var first = true
                 for (c <- cts) {
                     if (!first)
-                        result.append(", ")
+                        append(", ")
                     else
                         first = false
                     doPrettyPrint(c)
                 }
                 if (cts.size == 1)
-                    result.append(",")
+                    append(",")
             })
         case term@Application(Application(OrElse(), l), r) =>
             paren("{\n", indentText * indent + "}", 0, {
@@ -114,10 +117,10 @@ class PrettyPrinter {
                         printCase(l)
                         printCase(r)
                     case c =>
-                        result.append(indentText * indent)
-                        result.append("case ")
+                        append(indentText * indent)
+                        append("case ")
                         doPrettyPrint(c)
-                        result.append(";\n")
+                        append(";\n")
                     }
                 }
                 printCase(term)
@@ -174,25 +177,25 @@ class PrettyPrinter {
                 precedence = 50
                 doPrettyPrint(f)
                 if (!a.isInstanceOf[TupleType])
-                    result.append("<[")
+                    append("<[")
                 precedence = 0
                 doPrettyPrint(a)
                 if (!a.isInstanceOf[TupleType])
-                    result.append("]>")
+                    append("]>")
             })
         case Application(f, a) =>
             paren(40, {
                 precedence = 40
                 doPrettyPrint(f)
                 if (!a.isInstanceOf[Tuple])
-                    result.append("(")
+                    append("(")
                 precedence = 0
                 doPrettyPrint(a)
                 if (!a.isInstanceOf[Tuple])
-                    result.append(")")
+                    append(")")
             })
         case Lambda(Inverse(), Undefined(), Undefined()) =>
-            result.append("{}")
+            append("{}")
         case Lambda(jc, p, b) =>
             binOpRight(" " + jc.toString + " ", p, b, 1)
         case Block(Sequence(), s) =>
@@ -203,10 +206,10 @@ class PrettyPrinter {
             paren("{\n", indentText * indent + "}", 0, {
                 indent += 1
                 doPrettyPrintStatement(b)
-                result.append(indentText * indent)
-                result.append("return ")
+                append(indentText * indent)
+                append("return ")
                 doPrettyPrint(s)
-                result.append("\n")
+                append("\n")
                 indent -= 1
             })
         }
@@ -215,99 +218,99 @@ class PrettyPrinter {
     def doPrettyPrintStatement(stmt: Statement) {
         stmt match {
         case Let(Variable(id, true), t) if stmt.annotation(letInfo).getOrElse(LetAsLet) == LetAsType =>
-            result.append(indentText * indent)
-            result.append("let type ")
+            append(indentText * indent)
+            append("let type ")
             doPrettyPrintTypeName(VariableIdentity.getName(id))
-            result.append(" = ")
+            append(" = ")
             doPrettyPrint(t)
-            result.append(";\n")
+            append(";\n")
         case Let(BooleanLiteral(true), a) if stmt.annotation(letInfo).getOrElse(LetAsAssert) == LetAsAssert =>
-            result.append(indentText * indent)
-            result.append("let ")
+            append(indentText * indent)
+            append("let ")
             doPrettyPrint(a)
-            result.append(";\n")
+            append(";\n")
         case Let(Application(Application(Forget(), Lambda(Irreversible(), Tuple(), v)), Tuple()), p) =>
-            result.append(indentText * indent)
-            result.append("forget ")
+            append(indentText * indent)
+            append("forget ")
             doPrettyPrint(p)
-            result.append(" = ")
+            append(" = ")
             doPrettyPrint(v)
-            result.append(";\n")
+            append(";\n")
         case Let(p, Application(Application(Reverse(), Application(Forget(), Lambda(Irreversible(), Tuple(), v))), Tuple())) =>
-            result.append(indentText * indent)
-            result.append("remember ")
+            append(indentText * indent)
+            append("remember ")
             doPrettyPrint(p)
-            result.append(" = ")
+            append(" = ")
             doPrettyPrint(v)
-            result.append(";\n")
+            append(";\n")
         case Let(p, v) =>
-            result.append(indentText * indent)
-            result.append("let ")
+            append(indentText * indent)
+            append("let ")
             doPrettyPrint(p)
-            result.append(" = ")
+            append(" = ")
             doPrettyPrint(v)
-            result.append(";\n")
+            append(";\n")
         case Fail() =>
-            result.append(indentText * indent)
-            result.append("fail;\n")
+            append(indentText * indent)
+            append("fail;\n")
         case Sequence() =>
-            result.append(indentText * indent)
-            result.append("pass;\n")
+            append(indentText * indent)
+            append("pass;\n")
         case Sequence(ss@_*) =>
             for (s <- ss)
                 doPrettyPrintStatement(s)
         case Def(id, t) =>
-            result.append(indentText * indent)
-            result.append("def ")
+            append(indentText * indent)
+            append("def ")
             doPrettyPrintTypeName(VariableIdentity.getName(id))
-            result.append("_")
-            result.append(id.hashCode.toHexString)
-            result.append(" = ")
+            append("_")
+            append(id.hashCode.toHexString)
+            append(" = ")
             doPrettyPrint(t)
-            result.append(";\n")
+            append(";\n")
 
         case IfStmt(c, t, e, a) =>
-            result.append(indentText * indent)
-            result.append("if ")
+            append(indentText * indent)
+            append("if ")
             doPrettyPrint(c)
-            result.append(" then\n")
+            append(" then\n")
             indent += 1
             doPrettyPrintStatement(t)
             indent -= 1
             if (e != Sequence()) {
-                result.append(indentText * indent)
-                result.append("else\n")
+                append(indentText * indent)
+                append("else\n")
                 indent += 1
                 doPrettyPrintStatement(e)
                 indent -= 1
             }
-            result.append(indentText * indent)
-            result.append("fi")
+            append(indentText * indent)
+            append("fi")
             if (a != Undefined()) {
-                result.append(" ")
+                append(" ")
                 doPrettyPrint(a)
             }
-            result.append(";\n")
+            append(";\n")
         }
     }
 
     def doPrettyPrintName(name: Symbol) {
         if (name.name.matches("[a-z][a-zA-Z_0-9]*"))
-            result.append(name.name)
+            append(name.name)
         else {
-            result.append("`")
-            result.append(name.name.replace("`", "``"))
-            result.append("`")
+            append("`")
+            append(name.name.replace("`", "``"))
+            append("`")
         }
     }
 
     def doPrettyPrintTypeName(name: Symbol) {
         if (name.name.matches("[A-Z][a-zA-Z_0-9]*"))
-            result.append(name.name)
+            append(name.name)
         else {
-            result.append("´")
-            result.append(name.name.replace("´", "´´"))
-            result.append("´")
+            append("´")
+            append(name.name.replace("´", "´´"))
+            append("´")
         }
     }
 }
