@@ -53,7 +53,7 @@ class TextPrettyPrinter extends PrettyPrinter {
             if (id.annotation(versailles.DocBookGenerator.pathInfo).nonEmpty) {
                 val path = id.annotation(versailles.DocBookGenerator.pathInfo).get :+ VariableIdentity.getName(id)
                 result.append("<link linkend=\"")
-                result.append(path.mkString("."))
+                result.append(path.map{ _.name }.mkString("."))
                 result.append("\">")
             }
             result.append("<emphasis>")
