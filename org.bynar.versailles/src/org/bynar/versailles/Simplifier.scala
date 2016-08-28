@@ -12,6 +12,9 @@ class Simplifier {
         expr match {
         case expr: Literal => true
         case Tuple(cs@_*) => cs.forall(isLiteral(_))
+        case Application(SingletonIndex(), i) => isLiteral(i)
+        case Application(Application(RangeIndex(), f), t) => isLiteral(f) && isLiteral(t)
+        case Application(Application(ConcatIndex(), f), s) => isLiteral(f) && isLiteral(s)
         case _ => false
         }
     def literalLessOrEquals(l1: Expression, l2: Expression): Option[Boolean] = 

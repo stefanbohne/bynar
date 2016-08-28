@@ -147,6 +147,21 @@ class Converter {
                                         fromTypeExpression(it.getType)).putAnnotation(source, it),
                           fromExpression(it.getBase)).putAnnotation(source, it).putAnnotation(v.PrettyPrinter.applicationInfo, v.PrettyPrinter.ApplicationAsOperator)
         }
+    
+    def fromIndexExpr(it: IndexExpr): v.Expression =
+        it match {
+        case it: SingletonIndexExpr =>
+            v.Application(v.SingletonIndex().putAnnotation(source, it),
+                          fromExpression(it.getIndex)).putAnnotation(source, it)
+        case it: RangeIndexExpr =>
+            v.Application(v.Application(v.RangeIndex().putAnnotation(source, it),
+                    fromExpression(it.getFrom.getIndex)).putAnnotation(source, it),
+                    fromExpression(it.getTo)).putAnnotation(source, it)
+        case it: SequenceIndexExpr =>
+            v.Application(v.Application(v.ConcatIndex().putAnnotation(source, it),
+                    fromIndexExpr(it.getFirst)).putAnnotation(source, it),
+                    fromIndexExpr(it.getSecond)).putAnnotation(source, it)
+        }
 
     def fromCaseStatements(it: Statements): v.Expression =
         it.getStatements.map{ case s: CaseStmt => fromExpression(s.getCase) }.reduceRight[v.Expression]{
