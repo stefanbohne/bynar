@@ -35,6 +35,7 @@ class BynarLangGenerator extends AbstractGenerator {
         fsa.generateFile("simp.txt", prettyPrinter.prettyPrint(simplifier.simplify(analyzed, true)._1))
 
         val docGen = dbGen.create(analyzed.asInstanceOf[Block].block)
-        fsa.generateFile(resource.getURI.trimFileExtension().devicePath() + ".xml", docGen.generate().toString)
+        fsa.generateFile(resource.getURI.trimFileExtension().devicePath() + ".xml", 
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + docGen.generate().toString)
     }
 }

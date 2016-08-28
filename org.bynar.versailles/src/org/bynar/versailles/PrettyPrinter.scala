@@ -107,6 +107,17 @@ class PrettyPrinter {
                 if (cts.size == 1)
                     append(",")
             })
+        case OrElseValue(f, s) =>
+            paren(40, {
+                precedence = 40
+                append("or_else")
+                append("(")
+                precedence = 0
+                doPrettyPrint(f)
+                append(", ")
+                doPrettyPrint(s)
+                append(")")
+            })
         case term@Application(Application(OrElse(), l), r) =>
             paren("{\n", indentText * indent + "}", 0, {
                 indent += 1

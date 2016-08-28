@@ -9,17 +9,40 @@ import scala.xml.Text
 import scala.xml.Node
 import org.bynar.versailles.Concat
 import org.bynar.versailles.Application
+import org.bynar.versailles.Block
+import org.bynar.versailles.Let
+import org.bynar.versailles.BooleanLiteral
+import org.bynar.versailles.OrElseValue
+import org.bynar.versailles.Equals
+import org.bynar.versailles.NotEquals
+import org.bynar.versailles.LessOrEquals
+import org.bynar.versailles.GreaterOrEquals
+import org.bynar.versailles.And
+import org.bynar.versailles.Or
 
 class TextPrettyPrinter extends PrettyPrinter {
 
     override def append(text: Any) {
-        result.append(Text(text.toString).toString)
+        result.append(Text(text.toString).toString.
+                replace(" == ", " = ").
+                replace(" != ", " &#x2260; ").
+                replace(" &lt;= ", " &#x2264; ").
+                replace(" &gt;= ", " &#x2265; ").
+                replace(" &amp;&amp; ", " and ").
+                replace(" || ", " or "))
     }
     def appendXml(xml: Node*) {
         for (node <- xml)
             result.append(node.toString)
     }
-    override def doPrettyPrint(term: Term) =
+    override def doPrettyPrint(term: Term) = {
+        def isIfThenElse(term: Term): Boolean =
+            term match {
+            case Block(Let(BooleanLiteral(true), _), _) => true
+            case OrElseValue(_, _) => true
+            case _ => false
+            }
+        
         term match {
         case StringLiteral(s) =>
             result.append(s)
@@ -43,8 +66,32 @@ class TextPrettyPrinter extends PrettyPrinter {
             result.append("<emphasis>?")
             result.append(VariableIdentity.getName(id).name)
             result.append("</emphasis>")
+        case term if isIfThenElse(term) =>
+            def printIfThenElse(term: Term, last: Boolean) {
+                term match {
+                    case Block(Let(BooleanLiteral(true), c), v) =>
+                        result.append("<member>")
+                        paren(5, {
+                            doPrettyPrint(v)
+                            append(" if ")
+                            doPrettyPrint(c)
+                        })
+                        result.append("</member>")
+                    case OrElseValue(f, s) =>
+                        paren(5, {
+                            printIfThenElse(f, false)
+                            printIfThenElse(s, last)
+                        })
+                    case term =>
+                        doPrettyPrint(term)
+                }
+            }
+            result.append("<simplelist>")
+            printIfThenElse(term, true)
+            result.append("</simplelist>")
         case _ =>
             super.doPrettyPrint(term)
         }
+    }
 
 }

@@ -80,6 +80,17 @@ case class OrElse() extends Literal {
     type SelfTerm = OrElse
     override def toString = "`|`"
 }
+case class OrElseValue(first: Expression, second: Expression) extends Expression {
+    type SelfTerm = OrElseValue
+    override def toString = s"or_else($first, $second)"
+    def copy(first: Expression = first, second: Expression = second) =
+        OrElseValue(first, second).copyAnnotationsFrom(this)
+    override def copy(children: PartialFunction[Symbol, Term]) =
+        copy(children.lift('f).getOrElse(first).asInstanceOf[Expression],
+             children.lift('s).getOrElse(second).asInstanceOf[Expression])
+    override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) =
+        f('s, second, f('f, first, a))
+}
 case class Reverse() extends Literal {
     type SelfTerm = Reverse
     override def toString = "`~`"

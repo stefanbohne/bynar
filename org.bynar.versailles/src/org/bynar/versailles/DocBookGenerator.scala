@@ -19,7 +19,7 @@ class DocBookGenerator(root: Statement) {
     annotatePathInfo(root)
 
     def generate(): Elem =
-        <article>
+        <article xmlns="http://docbook.org/ns/docbook" version="5.0">
 			<info>
 				<title>Data Type Definition</title>
 			</info>

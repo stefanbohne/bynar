@@ -74,6 +74,8 @@ class Simplifier {
                 (cs2 :+ c2, ctx3)
             }
             (expr.copy(cs1:_*), ctx1)
+        case expr@Block(b1, Block(b2, s)) =>
+            simplify(Block(Sequence(b1, b2), s), forward, context)
         case expr@Block(b, s) =>
             val (b2, ctx2) = simplifyStatement(b, context)
             b2 match {
@@ -104,6 +106,16 @@ class Simplifier {
                                            body = p)),
                      forward,
                      context)
+        case expr@OrElseValue(a, b) =>
+            val (a2, ctx2) = simplify(a, forward, context)
+            val (b2, ctx3) = simplify(b, forward, ctx2)
+            (a2, b2) match {
+            case (Undefined(), b2) => (b2, ctx3)
+            case (a2, Undefined()) => (a2, ctx3)
+            case (a2, _) if isDefined(a2) => (a2, ctx3)
+            case (a2, b2) => (expr.copy(a2, b2), ctx3)
+            }
+
         case expr@Application(f, a) =>
             val (a1, ctx1) = simplify(a, forward, context)
             val (f2, ctx2) = simplify(f, true, ctx1)
@@ -231,7 +243,7 @@ class Simplifier {
                 simplify(app1.copy(app2.copy(argument = Application(rev.copy(), f1)), Application(rev.copy(), f2)), forward, ctx2)
             case (Application(OrElse(), Lambda(Irreversible(), _, Undefined())), f2) =>
                 (f2, ctx2)
-            case (f@Application(Application(OrElse(), f1), f2), a) =>
+            case (app1@Application(app2@Application(OrElse(), f1), f2), a) =>
                 val (v1, ctx3) = simplify(Application(f1, a), forward, ctx2)
                 v1 match {
                 case Undefined() =>
@@ -239,14 +251,21 @@ class Simplifier {
                 case v1 if isDefined(v1) =>
                     (v1, ctx3)
                 case v1 =>
-                    (app, ctx2)
+                    simplify(OrElseValue(Application(f1, a.deepCopy()), Application(f2, a)), forward, ctx2)
                 }
-
             case (rev@Reverse(), fix@Application(Fix(), lam@Lambda(Irreversible(), p, b))) =>
                 simplify(fix.copy(argument = lam.copy(pattern = Application(rev.copy(), p), body = Application(rev.copy(), b))), forward, ctx2)
             case (fix@Application(Fix(), f), a) if isLiteral(a) =>
                 simplify(Application(Application(f, fix), a), forward, ctx2)
 
+            case (f, or@OrElseValue(l, r)) =>
+                simplify(or.copy(Application(f, l), Application(f.deepCopy(), r)), forward, ctx2)
+            case (or@OrElseValue(f1, f2), a) =>
+                simplify(or.copy(Application(f1, a), Application(f2, a.deepCopy())), forward, ctx2)
+            case (f, b: Block) =>
+                simplify(b.copy(scope=Application(f, b.scope)), forward, ctx2)
+            case (b: Block, a) =>
+                simplify(b.copy(scope=Application(b.scope, a)), forward, ctx2)
             case (f, a) => (app, ctx2)
             }
         }
@@ -286,10 +305,32 @@ class Simplifier {
             }
             if (ss1.exists(_ == Fail()))
                 (Fail(), ctx1)
-            else if (ss1.size == 1)
-                (ss1(0), ctx1)
-            else
-                (stmt.copy(ss1:_*), ctx1)
+            else {
+                var ss2 = ss1
+                var i = 0
+                var j = ss2.size - 1
+                while (j > 0 && (ss2(j) match { case Let(BooleanLiteral(true), _) => false; case _ => true }))
+                    j -= 1
+                while (j > i) {
+                    ss2(i) match { 
+                    case Let(BooleanLiteral(true), c1) => 
+                        ss2(j) match {
+                        case cond@Let(BooleanLiteral(true), c2) =>
+                            ss2 = ss2.take(i) ++ ss2.drop(i + 1).take(j - i - 1) ++
+                                Seq(cond.copy(value = Application(Application(And(), c1), c2))) ++
+                                ss2.drop(j + 1)
+                            j -= 1
+                            i -= 1
+                        }
+                    case _ =>                         
+                    }
+                    i += 1
+                }
+                if (ss2.size == 1)
+                    (ss2(0), ctx1)
+                else
+                    (stmt.copy(ss2:_*), ctx1)
+            }
         case stmt => (stmt, context)
         }
 }
