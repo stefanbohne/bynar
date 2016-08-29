@@ -99,9 +99,12 @@ class MemberConverter(val path: Seq[Symbol]) extends Converter {
         case it: UnionTypeExpr =>
             b.BitUnionType(fromStatements(it.getStatements)).putAnnotation(source, it)
         case it =>
-            v.Application(b.MemberContextedType(path).putAnnotation(source, it),
-                    new Converter().originalFromTypeExpression(it)).
-                putAnnotation(source, it)
+            if (path.size > 0)
+                v.Application(b.MemberContextedType(path).putAnnotation(source, it),
+                        new Converter().originalFromTypeExpression(it)).
+                    putAnnotation(source, it)
+            else
+                new Converter().originalFromTypeExpression(it)
         }
 
 

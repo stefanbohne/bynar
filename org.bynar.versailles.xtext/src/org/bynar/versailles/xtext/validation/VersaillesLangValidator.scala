@@ -18,7 +18,7 @@ import org.bynar.versailles.xtext.Converter
 import com.google.inject.Inject
 
 class VersaillesLangValidator extends AbstractVersaillesLangValidator {
-    
+
     @Inject
     val converter: Converter = null
     @Inject

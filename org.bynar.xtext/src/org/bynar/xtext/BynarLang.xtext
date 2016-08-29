@@ -7,26 +7,19 @@ generate bynarLang "http://www.bynar.org/xtext/BynarLang"
 CompilationUnit returns versailles::CompilationUnit: super;
 
 Statement returns versailles::Statement:
-		super 
+		super
 	|   "component" ({RegisterComponent} "[" bitPosition=IndexExpr "]" | {RecordComponent}) name=Name (title=STRING)? (description=InterpolatedString)? ":" type=TypeExpression
 	|	{RecordAlign} "align" "at" alignment=Expression unit=BitUnit
 	|	{RecordOffset} "offset" ("to" | "by") offset=Expression unit=BitUnit
 	|	{UnionVariant} "variant" name=Name (title=STRING)? (description=InterpolatedString)? ":" type=TypeExpression
-	|	{EnumValue} "value" name=Name (title=STRING)? (description=InterpolatedString)? "=" value=Expression 
+	|	{EnumValue} "value" name=Name (title=STRING)? (description=InterpolatedString)? "=" value=Expression
 ;
-
-Sep hidden (WS, ML_COMMENT, SL_COMMENT):
-	NL | ";"
-;
-Statements:
-	{Statements} ((statements+=Statement)? Sep)*
-;	
 
 TypeModifiers returns versailles::TypeExpression:
 	TypeInt ( {TypeWrittenExpr.type=current} => "written" written=Expression
 			| {TypeConvertedExpr.type=current} => "converted" conversion=Expression
 			| {TypeWhereExpr.type=current} => "where" where=Expression)*
-			   
+
 ;
 TypeInt returns versailles::TypeExpression:
 	TypeExtension ({TypeWithInterpretationExpr.type=current} "is" interpretation=Interpretation)?
@@ -34,11 +27,11 @@ TypeInt returns versailles::TypeExpression:
 
 TypeSimple returns versailles::TypeExpression:
 	   	super
-	|	BitTypeExpression 
+	|	BitTypeExpression
 ;
 BitTypeExpression returns BitTypeExpression:
-		{BitFieldTypeExpr} "bits" (bitWidth=Expression) 
-	|   {ByteFieldTypeExpr} "bytes" (byteWidth=Expression) 
+		{BitFieldTypeExpr} "bits" (bitWidth=Expression)
+	|   {ByteFieldTypeExpr} "bytes" (byteWidth=Expression)
 	|	{RecordTypeExpr} "record" "{" statements=Statements "}"
 	|	{UnionTypeExpr} "union" "{" statements=Statements "}"
 	|	{RegisterTypeExpr} "register" bitWidth=Expression "{" statements=Statements "}"
@@ -58,7 +51,7 @@ BitUnit:
 	|	{UnitMBytes} ("MB" | "megabytes" | "megabyte")
 ;
 
-Name: 
+Name:
 		super
 	|   "component" | "align" | "at" | "offset" | "to" | "by" | "variant" | "value"
 	| 	"written" | "converted" | "where" | "is" | "bits" | "bytes" | "record" | "union"

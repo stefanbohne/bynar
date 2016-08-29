@@ -29,7 +29,14 @@ class TextPrettyPrinter extends PrettyPrinter {
                 replace(" &lt;= ", " &#x2264; ").
                 replace(" &gt;= ", " &#x2265; ").
                 replace(" &amp;&amp; ", " and ").
-                replace(" || ", " or "))
+                replace(" || ", " or ").
+                replace(" -&gt; ", " &#x2192; ").
+                replace(" &lt;- ", " &#x2190; ").
+                replace(" &lt;-&gt; ", " &#x2194; ").
+                replace(" &gt;-&gt; ", " &#x21A3; ").
+                replace(" &lt;-&lt; ", " &#x21A2; ").
+                replace(" &gt;-&lt; ", " &#x21AD; ").
+                replace(" &lt;&gt;-&lt;&gt; ", " &#x21C4; "))
     }
     def appendXml(xml: Node*) {
         for (node <- xml)
@@ -42,7 +49,7 @@ class TextPrettyPrinter extends PrettyPrinter {
             case OrElseValue(_, _) => true
             case _ => false
             }
-        
+
         term match {
         case StringLiteral(s) =>
             result.append(s)

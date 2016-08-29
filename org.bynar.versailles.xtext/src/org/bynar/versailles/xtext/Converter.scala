@@ -147,7 +147,7 @@ class Converter {
                                         fromTypeExpression(it.getType)).putAnnotation(source, it),
                           fromExpression(it.getBase)).putAnnotation(source, it).putAnnotation(v.PrettyPrinter.applicationInfo, v.PrettyPrinter.ApplicationAsOperator)
         }
-    
+
     def fromIndexExpr(it: IndexExpr): v.Expression =
         it match {
         case it: SingletonIndexExpr =>
@@ -271,6 +271,45 @@ class Converter {
                                  v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), 'it), true),
                                  fromExpression(it.getDescription)))
             result
+        case it: DefStmt =>
+            val value = if (it.getValueType != null) {
+                // value with type
+                assert(it.getArguments == null || it.getArguments.size == 0)
+                val x = fromExpression(it.getValue)
+                val t = fromTypeExpression(it.getValueType)
+                v.Application(v.Application(v.Typed().putAnnotation(source, it), t).putAnnotation(source, it), x).putAnnotation(source, it)
+            } else {
+                assert(it.getValue == null && it.getValueType == null)
+                val args = (if (it.getTypeArguments != null) Seq(fromTupleTypeType(it.getTypeArguments)) else Seq()) ++
+                    (for (a <- it.getArguments) yield fromExpression(a))
+                val body = if (it.getStatements == null) {
+                    // function with expression
+                    fromExpression(it.getResults)
+                } else {
+                    // function with statements
+                            v.Block(fromStatements(it.getStatements),
+                                    fromExpression(it.getResults)).putAnnotation(source, it)
+                }
+                (args.take(args.size - 1) :\ v.Lambda(
+                        fromJanusClassExpression(it.getJanusClass), args.last, body).putAnnotation(source, it)){
+                case (a, b) => v.Lambda(v.Irreversible().putAnnotation(source, it), a, b).putAnnotation(source, it)
+                }
+            }
+            val result = if (it.isLet)
+                    v.Let(v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName)), true).putAnnotation(source, it), value).
+                        putAnnotation(source, it).
+                        putAnnotation(letInfo, LetAsLet)
+                else
+                    v.Def(v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName)), value).
+                        putAnnotation(source, it)
+            if (it.getTitle != null)
+                result.putAnnotation(titleInfo, it.getTitle)
+            if (it.getDescription != null)
+                result.putAnnotation(descriptionInfo,
+                        v.Lambda(v.Irreversible(),
+                                 v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), 'it), true),
+                                 fromExpression(it.getDescription)))
+            result
         }
 
     def fromTypeExpression(it: TypeExpression): v.Expression =
@@ -309,7 +348,7 @@ class Converter {
             case tv =>
                 v.Variable(v.VariableIdentity.setName(new v.VariableIdentity, Symbol(tv.getName)), true).
                     putAnnotation(source, tv)
-            }:_*)
+            }:_*).putAnnotation(source, it)
 
 }
 

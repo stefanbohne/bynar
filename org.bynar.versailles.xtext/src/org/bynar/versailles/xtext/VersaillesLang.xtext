@@ -12,7 +12,8 @@ Sep hidden (WS, ML_COMMENT, SL_COMMENT):
 	NL | ";"
 ;
 
-Name: ID_LOWER | "pass" | "fail" | "let" | "forget" | "remember" | "def" | "type" |  "if" | "else" | "end" | "case" | "match" | "in" |
+Name: ID_LOWER | "pass" | "fail" | "let" | "forget" | "remember" | "def" | "letdef" | "type" | "lettype" |
+	  "if" | "else" | "end" | "case" | "match" | "in" |
 	  "int" | "boolean" | "module" | ID_BACKTICK
 ;
 TypeName: ID_UPPER | ID_FORWARDTICK;
@@ -28,12 +29,11 @@ Statement:
 	|	{IfStmt} "if" condition=Expression "then" then=Statements (=> "else" else=Statements)? ("fi" assertion=Expression)?
 	|   {LoopStmt} ("from" assertion=Expression)? ("do" do=Statements)? ("loop" loop=Statements)? "until" condition=Expression
 	|	{CaseStmt} "case" case=LambdaExpr
-	|	{DefStmt} "def" name=Name
+	|	{DefStmt} ("def"|let?="letdef") name=Name
 					    ((typeArguments=TupleTypeTypeExpr)? (arguments+=TupleExpr)+ (title=STRING)? (description=InterpolatedString)?
-						    ("=" expression = Expression |
-				            janusClass=JanusClassExpression (name2=Name)? results=TupleExpr (title2=STRING)? (description2=InterpolatedString)? ("{" statements=Statements "}" | "=" expression=Expression))
+						    janusClass=JanusClassExpression results=Expression (title2=STRING)? (description2=InterpolatedString)? ("{" statements=Statements "}")?
 				        | ":" valueType=TypeExpression (title=STRING)? (description=InterpolatedString)? "=" value=Expression)
-	|	{TypeStmt} (let?="let")? "type" name=TypeName typeArguments=TupleTypeTypeExpr? valueArguments=TupleTypeExpr? (title=STRING)? (description=InterpolatedString)? "=" type=TypeExpression
+	|	{TypeStmt} ("type"|let?="lettype") name=TypeName typeArguments=TupleTypeTypeExpr? valueArguments=TupleTypeExpr? (title=STRING)? (description=InterpolatedString)? "=" type=TypeExpression
 	|   {ModuleStmt} "module" path=TypeNamePath (title=STRING)? (description=InterpolatedString)? "{" statements=Statements "}"
 ;
 Statements:

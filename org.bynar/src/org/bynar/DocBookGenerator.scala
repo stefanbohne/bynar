@@ -56,6 +56,19 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
         item match {
         case d@Def(id, t: BitTypeExpression) =>
             generateMainTypeDefinition(d)
+        case d@Def(id, v) =>
+            val path = d.identity.annotation(pathInfo).get :+ VariableIdentity.getName(d.identity)
+            val title = d.annotation(titleInfo).getOrElse(niceTitle(path(path.size - 1)))
+            val descr = d.annotation(descriptionInfo).map{ d =>
+                XML.loadString("<root>" + pp.prettyPrint(simp.simplify(
+                        Block(root, Application(d, StringLiteral("it"))),
+                        false, defaultContext
+                )._1) + "</root>").child }.getOrElse(Seq())
+            Seq(<section id={ path.map{ _.name }.mkString(".") }>
+				<title>{ title }</title>
+			    { descr }
+			    <para>{ term2Xml(v) }</para>
+				</section>)
         case _ => super.generateMainDefinitions(item)
         }
 
@@ -73,7 +86,7 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
 			{ generateMainTypeDescription(d.value.asInstanceOf[BitTypeExpression]) }
 		</section>)
     }
-    
+
     def generateTypeDescription(t: Expression): Seq[Node] =
         t match {
         case BitFieldType(_) => Seq()
@@ -122,14 +135,16 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
                         term2Xml(simp.simplify(Block(root, Application(a, Variable(it, false))), false, defaultContext)._1)
                     },
 			        Seq())
-            if (entries.nonEmpty) 
+            if (entries.nonEmpty)
     			<para>Bit width: { term2Xml(simp.simplify(Block(root, Application(bw, Variable(it, false))), true, defaultContext)._1) }</para>
                 <table>
             		<thead><tr><td>Offset</td><td>Name</td><td>Description</td></tr></thead>
 					<tbody>{ entries }</tbody>
 				</table>
             else
-                <para>Empty record.</para>                
+                <para>Empty record.</para>
+        case BitFieldType(bw) =>
+            <para>A bit field of { term2Xml(simp.simplify(Block(root, bw), true, defaultContext)._1) } bits.</para>
         case WrittenType(t2, _) =>
             generateMainTypeDescription(t2) ++ generateTypeDescription(t)
         case ConvertedType(t2, _) =>
