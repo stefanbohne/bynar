@@ -101,6 +101,11 @@ class Converter {
         case it: MemberAccessExpr =>
             v.Application(v.Member(Symbol(it.getMemberName)).putAnnotation(source, it),
                           fromExpression(it.getBase)).putAnnotation(source, it)
+        case it: SliceExpr =>
+            v.Application(fromIndexExpr(it.getIndex),
+                          fromExpression(it.getSeq)).
+                  putAnnotation(source, it).
+                  putAnnotation(applicationInfo, ApplicationAsSlice)
         case it: ApplicationExpr =>
             v.Application(fromExpression(it.getFunction),
                           fromExpression(it.getArgument)).

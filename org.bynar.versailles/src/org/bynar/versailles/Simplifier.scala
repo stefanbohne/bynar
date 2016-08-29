@@ -14,14 +14,15 @@ class Simplifier {
         case Tuple(cs@_*) => cs.forall(isLiteral(_))
         case Application(SingletonIndex(), i) => isLiteral(i)
         case Application(Application(RangeIndex(), f), t) => isLiteral(f) && isLiteral(t)
-        case Application(Application(ConcatIndex(), f), s) => isLiteral(f) && isLiteral(s)
+        case Application(InfiniteIndex(), f) => isLiteral(f)
+        case Application(Application(IndexConcatenation(), f), s) => isLiteral(f) && isLiteral(s)
         case _ => false
         }
-    def literalLessOrEquals(l1: Expression, l2: Expression): Option[Boolean] = 
+    def literalLessOrEquals(l1: Expression, l2: Expression): Option[Boolean] =
         (l1, l2) match {
         case (Tuple(cs1@_*), Tuple(cs2@_*)) if cs1.size == cs2.size =>
             ((Some(true): Option[Boolean]) /: cs1.zip(cs2)){
-                case (acc, (c1, c2)) => 
+                case (acc, (c1, c2)) =>
                     for (acc <- acc;
                          le <- literalLessOrEquals(c1, c2))
                         yield acc && le
@@ -226,13 +227,38 @@ class Simplifier {
                 (BooleanLiteral(true), ctx2)
             case (Not(), BooleanLiteral(b)) =>
                 (BooleanLiteral(!b), ctx2)
-                
+
             case (Application(Concat(), StringLiteral(l1)), StringLiteral(l2)) =>
                 (StringLiteral(l1 + l2), ctx2)
 
             case (Application(Typed(), t), v) =>
                 // TODO: proper type check
                 (v, ctx2)
+
+            case (Application(IndexConcatenation(), Application(SingletonIndex(), n1@NumberLiteral(i))), Application(SingletonIndex(), n2@NumberLiteral(i2))) if i + 1 == i2 =>
+                (Application(Application(RangeIndex(), n1), n2), ctx2)
+            case (Application(IndexConcatenation(), Application(Application(RangeIndex(), n1), NumberLiteral(i))), Application(SingletonIndex(), n2@NumberLiteral(i2))) if i + 1 == i2 =>
+                (Application(Application(RangeIndex(), n1), n2), ctx2)
+            case (Application(IndexConcatenation(), Application(SingletonIndex(), n1@NumberLiteral(i))), Application(Application(RangeIndex(), NumberLiteral(i2)), n2)) if i + 1 == i2 =>
+                (Application(Application(RangeIndex(), n1), n2), ctx2)
+            case (Application(IndexConcatenation(), Application(Application(RangeIndex(), n1), NumberLiteral(i))), Application(Application(RangeIndex(), NumberLiteral(i2)), n2)) if i + 1 == i2 =>
+                (Application(Application(RangeIndex(), n1), n2), ctx2)
+            case (Application(IndexConcatenation(), Application(SingletonIndex(), n1@NumberLiteral(i))), Application(InfiniteIndex(), NumberLiteral(i2))) if i + 1 == i2 =>
+                (Application(InfiniteIndex(), n1), ctx2)
+            case (Application(IndexConcatenation(), Application(Application(RangeIndex(), n1), NumberLiteral(i))), Application(InfiniteIndex(), NumberLiteral(i2))) if i + 1 == i2 =>
+                (Application(InfiniteIndex(), n1), ctx2)
+            case (Application(IndexComposition(), Application(SingletonIndex(), n1)), Application(InfiniteIndex(), n2)) =>
+                simplify(Application(SingletonIndex(), Application(Application(Plus(), n1), n2)), forward, ctx2)
+            case (Application(IndexComposition(), Application(Application(RangeIndex(), n1), n2)), Application(InfiniteIndex(), n3)) =>
+                simplify(Application(Application(RangeIndex(), Application(Application(Plus(), n1), n3)), Application(Application(Plus(), n2), n3)), forward, ctx2)
+            case (Application(IndexComposition(), Application(InfiniteIndex(), n1)), Application(InfiniteIndex(), n2)) =>
+                simplify(Application(InfiniteIndex(), Application(Application(Plus(), n1), n2)), forward, ctx2)
+            case (Application(IndexComposition(), Application(Application(IndexConcatenation(), n1), n2)), n3) =>
+                simplify(Application(Application(IndexConcatenation(), Application(Application(IndexComposition(), n1), n3)),
+                        Application(Application(IndexComposition(), n2), n3)), forward, ctx2)
+            case (Application(IndexComposition(), n1), Application(Application(IndexConcatenation(), n2), n3)) =>
+                simplify(Application(Application(IndexConcatenation(), Application(Application(IndexComposition(), n1), n2)),
+                        Application(Application(IndexComposition(), n1), n3)), forward, ctx2)
 
             case (Application(Application(Janus(), f), _), a1) =>
                 simplify(Application(f, a1), forward, ctx2)
@@ -279,6 +305,8 @@ class Simplifier {
             val (v1, ctx1) = simplify(v, true, context)
             val (p2, ctx2) = simplify(p, false, ctx1)
             (p2, v1) match {
+            case (Undefined(), _) =>
+                (Sequence(), context)
             case (Variable(id, true), value) =>
                 (Sequence(), context + (id -> value))
             case (l1, l2) if isLiteral(l1) && isLiteral(l2) =>
@@ -315,8 +343,8 @@ class Simplifier {
                 while (j > 0 && (ss2(j) match { case Let(BooleanLiteral(true), _) => false; case _ => true }))
                     j -= 1
                 while (j > i) {
-                    ss2(i) match { 
-                    case Let(BooleanLiteral(true), c1) => 
+                    ss2(i) match {
+                    case Let(BooleanLiteral(true), c1) =>
                         ss2(j) match {
                         case cond@Let(BooleanLiteral(true), c2) =>
                             ss2 = ss2.take(i) ++ ss2.drop(i + 1).take(j - i - 1) ++
@@ -325,7 +353,7 @@ class Simplifier {
                             j -= 1
                             i -= 1
                         }
-                    case _ =>                         
+                    case _ =>
                     }
                     i += 1
                 }

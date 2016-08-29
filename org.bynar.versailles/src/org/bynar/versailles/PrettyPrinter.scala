@@ -149,6 +149,24 @@ class PrettyPrinter {
         case Application(Application(Divide(), r), l)
             if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
                 binOpLeft(" / ", l, r, 20)
+        case Application(SingletonIndex(), i) =>
+            paren("[", "]", 0, {
+                doPrettyPrint(i)
+            })
+        case Application(Application(RangeIndex(), f), t) =>
+            paren("[", "]", 0, {
+                doPrettyPrint(f)
+                append(" .. ")
+                doPrettyPrint(t)
+            })
+        case Application(InfiniteIndex(), f) =>
+            paren("[", "]", 0, {
+                doPrettyPrint(f)
+                append(" .. ")
+            })
+        case Application(Application(IndexComposition(), r), l)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
+                binOpLeft(" *..* ", l, r, 15)
         case Application(Application(Equals(), l), r)
             if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
                 binOpNone(" == ", l, r, 5)
@@ -193,6 +211,23 @@ class PrettyPrinter {
                 doPrettyPrint(a)
                 if (!a.isInstanceOf[TupleType])
                     append("]>")
+            })
+        case Application(f, a)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsApplication) == ApplicationAsSlice ||
+                (f match {
+                case Application(SingletonIndex(), _) => true
+                case Application(Application(RangeIndex(), _), _) => true
+                case Application(InfiniteIndex(), _) => true
+                case Application(Application(IndexConcatenation(), _), _) => true
+                case Application(Application(IndexComposition(), _), _) => true
+                case _ => false
+                }) =>
+            paren(15, {
+                doPrettyPrint(a)
+                precedence = -1
+                append("[")
+                doPrettyPrint(f)
+                append("]")
             })
         case Application(f, a) =>
             paren(40, {
@@ -332,6 +367,7 @@ object PrettyPrinter {
     case object ApplicationAsTypeApplication extends ApplicationInfo
     case object ApplicationAsOperator extends ApplicationInfo
     case object ApplicationAsMatch extends ApplicationInfo
+    case object ApplicationAsSlice extends ApplicationInfo
     val applicationInfo = new AnnotationKey[ApplicationInfo]()
 
     trait LetInfo

@@ -176,10 +176,6 @@ case class Not() extends Literal {
     override def toString = "`!`"
 }
 
-case class Index() extends Literal {
-    type SelfTerm = Index
-    override def toString = "index"
-}
 case class SingletonIndex() extends Literal {
     type SelfTerm = SingletonIndex
     override def toString = "singleton_index"
@@ -188,17 +184,17 @@ case class RangeIndex() extends Literal {
     type SelfTerm = RangeIndex
     override def toString = "range_index"
 }
-case class ConcatIndex() extends Literal {
-    type SelfTerm = ConcatIndex
-    override def toString = "concat_index"
-}
 case class InfiniteIndex() extends Literal {
     type SelfTerm = InfiniteIndex
     override def toString = "infinite_index"
 }
-case class IndexMultiply() extends Literal {
-    type SelfTerm = IndexMultiply
-    override def toString = "index_multiply"
+case class IndexConcatenation() extends Literal {
+    type SelfTerm = IndexConcatenation
+    override def toString = "index_concatenation"
+}
+case class IndexComposition() extends Literal {
+    type SelfTerm = IndexComposition
+    override def toString = "index_composition"
 }
 
 case class Fail() extends ZeroaryStatement {
