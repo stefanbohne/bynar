@@ -163,7 +163,7 @@ class Converter {
                     fromExpression(it.getFrom.getIndex)).putAnnotation(source, it),
                     fromExpression(it.getTo)).putAnnotation(source, it)
         case it: SequenceIndexExpr =>
-            v.Application(v.Application(v.ConcatIndex().putAnnotation(source, it),
+            v.Application(v.Application(v.IndexConcatenation().putAnnotation(source, it),
                     fromIndexExpr(it.getFirst)).putAnnotation(source, it),
                     fromIndexExpr(it.getSecond)).putAnnotation(source, it)
         }

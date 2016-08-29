@@ -35,6 +35,16 @@ class VariableAnalyzer extends org.bynar.versailles.VariableAnalyzer {
                     case (_, ContextEntry(v, l)) => !l || context.containsVariable(v)
                 }))
             }
+        case it@BitRegisterType(bw, b) =>
+            if (pattern || janusClass != Irreversible())
+                (Messages.add(it, IllegalUseOfType), context)
+            else {
+                val (bw1, ctx1) = analyze(bw, pattern, janusClass, context)
+                val (b2, ctx2) = analyze(b, pattern, janusClass, context)
+                (it.copy(bw1, b2), Context(ctx2.variables.filter{
+                    case (_, ContextEntry(v, l)) => !l || context.containsVariable(v)
+                }))
+            }
         case it@BitUnionType(b) =>
             if (pattern || janusClass != Irreversible())
                 (Messages.add(it, IllegalUseOfType), context)
@@ -83,6 +93,10 @@ class VariableAnalyzer extends org.bynar.versailles.VariableAnalyzer {
         case it@BitRecordComponent(n, t) =>
             val (t1, ctx1) = analyze(t, pattern, janusClass, context)
             (it.copy(`type` = t1), ctx1 + (VariableIdentity.setName(new VariableIdentity(), n), false))
+        case it@BitRegisterComponent(n, p, t) =>
+            val (p1, ctx1) = analyze(p, pattern, janusClass, context)
+            val (t2, ctx2) = analyze(t, pattern, janusClass, context)
+            (it.copy(position = p1, `type` = t2), ctx2 + (VariableIdentity.setName(new VariableIdentity(), n), false))
         case it@BitUnionVariant(n, t) =>
             val (t1, ctx1) = analyze(t, pattern, janusClass, context)
             (it.copy(`type` = t1), ctx1 + (VariableIdentity.setName(new VariableIdentity(), n), false))

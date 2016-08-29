@@ -20,6 +20,14 @@ class PrettyPrinter extends org.bynar.versailles.PrettyPrinter {
                 doPrettyPrintStatement(b)
                 indent -= 1
             })
+        case BitRegisterType(bw, b) =>
+            paren("register ", indentText*indent + "}", 0, {
+                indent += 1
+                doPrettyPrint(bw)
+                append(" {\n")
+                doPrettyPrintStatement(b)
+                indent -= 1
+            })
         case BitUnionType(b) =>
             paren("union {\n", indentText*indent + "}", 0, {
                 indent += 1
@@ -59,6 +67,15 @@ class PrettyPrinter extends org.bynar.versailles.PrettyPrinter {
         case it@BitRecordComponent(n, t) =>
             result.append(indentText * indent)
             result.append("component ")
+            doPrettyPrintName(n)
+            result.append(" = ")
+            doPrettyPrint(t)
+            result.append(";\n")
+        case it@BitRegisterComponent(n, p, t) =>
+            result.append(indentText * indent)
+            result.append("component ")
+            doPrettyPrint(p)
+            result.append(" ")
             doPrettyPrintName(n)
             result.append(" = ")
             doPrettyPrint(t)

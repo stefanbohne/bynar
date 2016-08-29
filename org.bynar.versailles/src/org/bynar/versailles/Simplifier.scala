@@ -253,12 +253,17 @@ class Simplifier {
                 simplify(Application(Application(RangeIndex(), Application(Application(Plus(), n1), n3)), Application(Application(Plus(), n2), n3)), forward, ctx2)
             case (Application(IndexComposition(), Application(InfiniteIndex(), n1)), Application(InfiniteIndex(), n2)) =>
                 simplify(Application(InfiniteIndex(), Application(Application(Plus(), n1), n2)), forward, ctx2)
+            case (Application(IndexComposition(), Application(SingletonIndex(), n1)), Application(Application(RangeIndex(), n2), n3)) =>
+                simplify(Block(Let(BooleanLiteral(true), Application(Application(Less(), n1.deepCopy()), Application(Application(Minus(), n2.deepCopy()), n3))),
+                        Application(SingletonIndex(), Application(Application(Plus(), n1), n2))), forward, ctx2)
+            case (Application(IndexComposition(), Application(Application(RangeIndex(), n1), n2)), Application(Application(RangeIndex(), n3), n4)) =>
+                simplify(Block(Let(BooleanLiteral(true), Application(Application(And(), 
+                                Application(Application(Less(), n1.deepCopy()), Application(Application(Minus(), n3.deepCopy()), n4.deepCopy()))),
+                                Application(Application(LessOrEquals(), n2.deepCopy()), Application(Application(Minus(), n3.deepCopy()), n4)))),
+                        Application(Application(RangeIndex(), Application(Application(Plus(), n1), n3.deepCopy())), Application(Application(Plus(), n2), n3))), forward, ctx2)
             case (Application(IndexComposition(), Application(Application(IndexConcatenation(), n1), n2)), n3) =>
-                simplify(Application(Application(IndexConcatenation(), Application(Application(IndexComposition(), n1), n3)),
+                simplify(Application(Application(IndexConcatenation(), Application(Application(IndexComposition(), n1), n3.deepCopy())),
                         Application(Application(IndexComposition(), n2), n3)), forward, ctx2)
-            case (Application(IndexComposition(), n1), Application(Application(IndexConcatenation(), n2), n3)) =>
-                simplify(Application(Application(IndexConcatenation(), Application(Application(IndexComposition(), n1), n2)),
-                        Application(Application(IndexComposition(), n1), n3)), forward, ctx2)
 
             case (Application(Application(Janus(), f), _), a1) =>
                 simplify(Application(f, a1), forward, ctx2)

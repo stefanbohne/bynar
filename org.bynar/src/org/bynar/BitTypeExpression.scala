@@ -119,6 +119,58 @@ case class BitRecordType(val body: Statement) extends BitTypeExpression {
         f('b, body, a)
 }
 
+case class BitRegisterComponent(val name: Symbol, val position: Expression, val `type`: Expression) extends Statement {
+
+    override type SelfTerm = BitRegisterComponent
+
+    def copy(name: Symbol = name, position: Expression = position, `type`: Expression = `type`) =
+        BitRegisterComponent(name, position, `type`).copyAnnotationsFrom(this)
+    override def copy(children: PartialFunction[Symbol, Term]) =
+        copy(position = children.lift('p).getOrElse(position).asInstanceOf[Expression],
+             `type` = children.lift('t).getOrElse(`type`).asInstanceOf[Expression])
+    override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) =
+        f('t, `type`, f('p, position, a))
+
+}
+case class BitRegisterType(val bitWidth: Expression, val body: Statement) extends BitTypeExpression {
+
+    override type SelfTerm = BitRegisterType
+
+    def foldComponents[T](a: T)(f: (BitRegisterComponent, T) => T): T = {
+        def foldStatements(a: T, s: Statement): T =
+            s match {
+            case s@Sequence(ss@_*) =>
+                (a /: ss)(foldStatements _)
+            case s: BitRegisterComponent =>
+                f(s, a)
+            case s => a
+            }
+        foldStatements(a, body)
+    }
+    def mapComponents(f: BitRegisterComponent => Statement): Statement = {
+        def mapStatements(s: Statement): Statement =
+            s match {
+            case s@Sequence(ss@_*) =>
+                s.copy(ss.map{ mapStatements(_) }:_*)
+            case s: BitRegisterComponent =>
+                f(s)
+            case s => s
+            }
+        mapStatements(body)
+    }
+    lazy val components: Seq[BitRegisterComponent] =
+        foldComponents[Seq[BitRegisterComponent]](Seq()){ case (brc, s) => s :+ brc }
+
+    override def dependentBitWidth(base: Expression) = bitWidth
+    def copy(bitWidth: Expression = bitWidth, body: Statement = body) =
+        BitRegisterType(bitWidth, body).copyAnnotationsFrom(this)
+    override def copy(children: PartialFunction[Symbol, Term]) =
+        copy(children.lift('bw).getOrElse(bitWidth).asInstanceOf[Expression],
+             children.lift('b).getOrElse(body).asInstanceOf[Statement])
+    override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) =
+        f('b, body, f('bw, bitWidth, a))
+}
+
 case class BitUnionVariant(val name: Symbol, val `type`: Expression) extends Statement {
 
     override type SelfTerm = BitUnionVariant

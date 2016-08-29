@@ -26,6 +26,8 @@ import org.bynar.versailles.xtext.versaillesLang.Statement
 import org.bynar.xtext.bynarLang.UnionTypeExpr
 import org.bynar.versailles.AnnotationKey
 import org.eclipse.emf.ecore.EObject
+import org.bynar.xtext.bynarLang.RegisterComponent
+import org.bynar.xtext.bynarLang.RegisterTypeExpr
 
 class Converter extends org.bynar.versailles.xtext.Converter {
     import org.bynar.versailles.xtext.Converter._
@@ -59,6 +61,12 @@ class MemberConverter(val path: Seq[Symbol]) extends Converter {
         case it: RecordComponent =>
             b.BitRecordComponent(
                     Symbol(it.getName),
+                    new MemberConverter(path :+ Symbol(it.getName)).fromTypeExpression(it.getType)).
+                    putAnnotation(source, it)
+        case it: RegisterComponent =>
+            b.BitRegisterComponent(
+                    Symbol(it.getName),
+                    fromIndexExpr(it.getBitPosition),
                     new MemberConverter(path :+ Symbol(it.getName)).fromTypeExpression(it.getType)).
                     putAnnotation(source, it)
         case it: UnionVariant =>
@@ -96,6 +104,9 @@ class MemberConverter(val path: Seq[Symbol]) extends Converter {
                 putAnnotation(source, it)
         case it: RecordTypeExpr =>
             b.BitRecordType(fromStatements(it.getStatements)).putAnnotation(source, it)
+        case it: RegisterTypeExpr =>
+            b.BitRegisterType(fromExpression(it.getBitWidth),
+                              fromStatements(it.getStatements)).putAnnotation(source, it)
         case it: UnionTypeExpr =>
             b.BitUnionType(fromStatements(it.getStatements)).putAnnotation(source, it)
         case it =>

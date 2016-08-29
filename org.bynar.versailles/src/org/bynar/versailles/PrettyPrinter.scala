@@ -164,6 +164,13 @@ class PrettyPrinter {
                 doPrettyPrint(f)
                 append(" .. ")
             })
+        case Application(Application(IndexConcatenation(), l), r) =>
+            paren("[", "]", 0, {
+                precedence = -1
+                doPrettyPrint(l)
+                append(", ")
+                doPrettyPrint(r)
+            })
         case Application(Application(IndexComposition(), r), l)
             if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
                 binOpLeft(" *..* ", l, r, 15)
