@@ -176,6 +176,10 @@ case class Not() extends Literal {
     override def toString = "`!`"
 }
 
+case class Length() extends Literal {
+    type SelfTerm = Length
+    override def toString = "length"
+}
 case class SingletonIndex() extends Literal {
     type SelfTerm = SingletonIndex
     override def toString = "singleton_index"

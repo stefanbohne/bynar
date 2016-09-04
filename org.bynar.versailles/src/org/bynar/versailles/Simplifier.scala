@@ -5,6 +5,8 @@ import java.math.MathContext
 import java.math.RoundingMode
 
 class Simplifier {
+    
+    import TermImplicits._
 
     def defaultContext = org.bynar.versailles.defaultContext
 
@@ -12,10 +14,10 @@ class Simplifier {
         expr match {
         case expr: Literal => true
         case Tuple(cs@_*) => cs.forall(isLiteral(_))
-        case Application(SingletonIndex(), i) => isLiteral(i)
-        case Application(Application(RangeIndex(), f), t) => isLiteral(f) && isLiteral(t)
-        case Application(InfiniteIndex(), f) => isLiteral(f)
-        case Application(Application(IndexConcatenation(), f), s) => isLiteral(f) && isLiteral(s)
+        case singletonIndex(i) => isLiteral(i)
+        case rangeIndex(f, t) => isLiteral(f) && isLiteral(t)
+        case infiniteIndex(f) => isLiteral(f)
+        case f ++ s => isLiteral(f) && isLiteral(s)
         case _ => false
         }
     def literalLessOrEquals(l1: Expression, l2: Expression): Option[Boolean] =
@@ -104,10 +106,10 @@ class Simplifier {
             val (b2, ctx3) = simplify(b, forward, ctx2)
             (expr.copy(pattern = p2, body = b2), context)
         case expr@Lambda(jc, p, b) =>
-            simplify(Application(Application(Janus(), expr.copy(janusClass = Irreversible())),
-                                 expr.copy(janusClass = Irreversible(),
-                                           pattern = b,
-                                           body = p)),
+            simplify(Janus()(expr.copy(janusClass = Irreversible()))(
+                             expr.copy(janusClass = Irreversible(),
+                                       pattern = b,
+                                       body = p)),
                      forward,
                      context)
         case expr@OrElseValue(a, b) =>
@@ -131,17 +133,17 @@ class Simplifier {
         app match {
         case Application(f2, a1) =>
             (f2, a1) match {
-            case (Lambda(Irreversible(), p, b), a1) =>
+            case (lam(p, b), a1) =>
                 simplify(Block(Let(p, a1), b), forward, ctx2)
             case (Reverse(), Reverse()) =>
                 (Reverse(), ctx2)
-            case (Reverse(), Application(Reverse(), f)) =>
+            case (Reverse(), reverse(f)) =>
                 (f, ctx2)
 
             case (Minus(), r: NumberLiteral) =>
                 (Application(Plus(), r.copy(-r.value)), ctx2)
             case (Minus(), r) =>
-                (Application(Plus(), Application(Application(Times(), NumberLiteral(-1)), r)), ctx2)
+                (Application(Plus(), r * NumberLiteral(-1)), ctx2)
             case (Reverse(), Application(Plus(), x)) =>
                 (Application(Minus(), x), ctx2)
             case (Reverse(), Application(Minus(), x)) =>
@@ -235,35 +237,50 @@ class Simplifier {
                 // TODO: proper type check
                 (v, ctx2)
 
-            case (Application(IndexConcatenation(), Application(SingletonIndex(), n1@NumberLiteral(i))), Application(SingletonIndex(), n2@NumberLiteral(i2))) if i + 1 == i2 =>
-                (Application(Application(RangeIndex(), n1), n2), ctx2)
-            case (Application(IndexConcatenation(), Application(Application(RangeIndex(), n1), NumberLiteral(i))), Application(SingletonIndex(), n2@NumberLiteral(i2))) if i + 1 == i2 =>
-                (Application(Application(RangeIndex(), n1), n2), ctx2)
-            case (Application(IndexConcatenation(), Application(SingletonIndex(), n1@NumberLiteral(i))), Application(Application(RangeIndex(), NumberLiteral(i2)), n2)) if i + 1 == i2 =>
-                (Application(Application(RangeIndex(), n1), n2), ctx2)
-            case (Application(IndexConcatenation(), Application(Application(RangeIndex(), n1), NumberLiteral(i))), Application(Application(RangeIndex(), NumberLiteral(i2)), n2)) if i + 1 == i2 =>
-                (Application(Application(RangeIndex(), n1), n2), ctx2)
-            case (Application(IndexConcatenation(), Application(SingletonIndex(), n1@NumberLiteral(i))), Application(InfiniteIndex(), NumberLiteral(i2))) if i + 1 == i2 =>
-                (Application(InfiniteIndex(), n1), ctx2)
-            case (Application(IndexConcatenation(), Application(Application(RangeIndex(), n1), NumberLiteral(i))), Application(InfiniteIndex(), NumberLiteral(i2))) if i + 1 == i2 =>
-                (Application(InfiniteIndex(), n1), ctx2)
-            case (Application(IndexComposition(), Application(SingletonIndex(), n1)), Application(InfiniteIndex(), n2)) =>
-                simplify(Application(SingletonIndex(), Application(Application(Plus(), n1), n2)), forward, ctx2)
-            case (Application(IndexComposition(), Application(Application(RangeIndex(), n1), n2)), Application(InfiniteIndex(), n3)) =>
-                simplify(Application(Application(RangeIndex(), Application(Application(Plus(), n1), n3)), Application(Application(Plus(), n2), n3)), forward, ctx2)
+            case (Application(IndexConcatenation(), Application(Application(RangeIndex(), NumberLiteral(n1)), NumberLiteral(n2))), n3) if n1 == n2 =>
+                (n3, ctx2)
+            case (Application(IndexConcatenation(), n1), Application(Application(RangeIndex(), NumberLiteral(n2)), NumberLiteral(n3))) if n2 == n3 =>
+                (n1, ctx2)
+            case (Application(IndexConcatenation(), Application(Application(RangeIndex(), n1), NumberLiteral(i))), Application(Application(RangeIndex(), NumberLiteral(i2)), n2)) if i == i2 =>
+                (rangeIndex(n1)(n2), ctx2)
+            case (Application(IndexConcatenation(), Application(Application(RangeIndex(), n1), NumberLiteral(i))), Application(InfiniteIndex(), NumberLiteral(i2))) if i == i2 =>
+                (infiniteIndex(n1), ctx2)
             case (Application(IndexComposition(), Application(InfiniteIndex(), n1)), Application(InfiniteIndex(), n2)) =>
-                simplify(Application(InfiniteIndex(), Application(Application(Plus(), n1), n2)), forward, ctx2)
-            case (Application(IndexComposition(), Application(SingletonIndex(), n1)), Application(Application(RangeIndex(), n2), n3)) =>
-                simplify(Block(Let(BooleanLiteral(true), Application(Application(Less(), n1.deepCopy()), Application(Application(Minus(), n2.deepCopy()), n3))),
-                        Application(SingletonIndex(), Application(Application(Plus(), n1), n2))), forward, ctx2)
+                simplify(infiniteIndex(n2 + n1), forward, ctx2)
+            case (Application(IndexComposition(), singletonIndex(n1)), Application(InfiniteIndex(), n2)) =>
+                simplify(singletonIndex(n2 + n1), forward, ctx2)
+            case (Application(IndexComposition(), singletonIndex(n1)), Application(Application(RangeIndex(), n2), n3)) =>
+                simplify(Block(Let(true, n1.deepCopy() < n3 - n2.deepCopy()),
+                               singletonIndex(n2 + n1)), forward, ctx2)
+            case (Application(IndexComposition(), singletonIndex(n1)), n2 ++ n3) =>
+                simplify(OrElseValue(
+                    n2.deepCopy() o singletonIndex(n1),
+                    n3 o singletonIndex(n1.deepCopy() - length(n2))), forward, ctx2)
+            case (Application(IndexComposition(), Application(Application(RangeIndex(), n1), n2)), Application(InfiniteIndex(), n3)) =>
+                simplify(rangeIndex(n1 + n3.deepCopy())(n2 + n3), forward, ctx2)
             case (Application(IndexComposition(), Application(Application(RangeIndex(), n1), n2)), Application(Application(RangeIndex(), n3), n4)) =>
-                simplify(Block(Let(BooleanLiteral(true), Application(Application(And(), 
-                                Application(Application(Less(), n1.deepCopy()), Application(Application(Minus(), n3.deepCopy()), n4.deepCopy()))),
-                                Application(Application(LessOrEquals(), n2.deepCopy()), Application(Application(Minus(), n3.deepCopy()), n4)))),
-                        Application(Application(RangeIndex(), Application(Application(Plus(), n1), n3.deepCopy())), Application(Application(Plus(), n2), n3))), forward, ctx2)
+                simplify(Block(Let(true,  
+                                n1.deepCopy() <= n4.deepCopy() - n3.deepCopy() &&
+                                n2.deepCopy() <= n4 - n3.deepCopy()),
+                        rangeIndex(n1 + n3.deepCopy())(n2 + n3)), forward, ctx2)
+            case (Application(IndexComposition(), Application(Application(RangeIndex(), n1), n2)), Application(Application(IndexConcatenation(), n3), n4)) =>
+                simplify({
+                    val x = VariableIdentity.setName(new VariableIdentity, 'l)
+                    Block(Let(Variable(x, true), length(n3.deepCopy())),
+                        (n3 o rangeIndex(min(n1)(Variable(x, false)))(min(n2)(Variable(x, false)))) ++
+                        (n4 o rangeIndex(max(n1.deepCopy() - Variable(x, false))(0))(max(n2.deepCopy() - Variable(x, false))(0))))
+                }, forward, ctx2)                          
             case (Application(IndexComposition(), Application(Application(IndexConcatenation(), n1), n2)), n3) =>
-                simplify(Application(Application(IndexConcatenation(), Application(Application(IndexComposition(), n1), n3.deepCopy())),
-                        Application(Application(IndexComposition(), n2), n3)), forward, ctx2)
+                simplify((n3.deepCopy() o n1) ++ (n3 o n2), forward, ctx2)
+                
+            case (Length(), Application(Application(RangeIndex(), n1), n2)) =>
+                simplify(n2 - n1, forward, ctx2)
+            case (Length(), Application(Application(IndexConcatenation(), n1), n2)) =>
+                simplify(length(n1) + length(n2), forward, ctx2)
+            case (Application(Plus(), _), l@Application(Length(), Application(InfiniteIndex(), _))) =>
+                (l, ctx2)
+            case (Application(Plus(), l@Application(Length(), Application(InfiniteIndex(), _))), _) =>
+                (l, ctx2)
 
             case (Application(Application(Janus(), f), _), a1) =>
                 simplify(Application(f, a1), forward, ctx2)

@@ -102,7 +102,7 @@ class Converter {
             v.Application(v.Member(Symbol(it.getMemberName)).putAnnotation(source, it),
                           fromExpression(it.getBase)).putAnnotation(source, it)
         case it: SliceExpr =>
-            v.Application(fromIndexExpr(it.getIndex),
+            v.Application(fromIndexExpr(it.getIndex, false),
                           fromExpression(it.getSeq)).
                   putAnnotation(source, it).
                   putAnnotation(applicationInfo, ApplicationAsSlice)
@@ -153,19 +153,29 @@ class Converter {
                           fromExpression(it.getBase)).putAnnotation(source, it).putAnnotation(v.PrettyPrinter.applicationInfo, v.PrettyPrinter.ApplicationAsOperator)
         }
 
-    def fromIndexExpr(it: IndexExpr): v.Expression =
+    def fromIndexExpr(it: IndexExpr, rangeOnly: Boolean): v.Expression =
         it match {
         case it: SingletonIndexExpr =>
-            v.Application(v.SingletonIndex().putAnnotation(source, it),
-                          fromExpression(it.getIndex)).putAnnotation(source, it)
+            if (rangeOnly) {
+                val i = v.VariableIdentity.setName(new v.VariableIdentity, 'i)
+                v.Block(v.Let(v.Variable(i, true).putAnnotation(source, it), fromExpression(it.getIndex)).putAnnotation(source, it),
+                        v.Application(v.Application(
+                                v.RangeIndex().putAnnotation(source, it), 
+                                v.Variable(i, false).putAnnotation(source, it)).putAnnotation(source, it),
+                            v.Application(v.Application(v.Plus().putAnnotation(source, it), 
+                                    v.NumberLiteral(1).putAnnotation(source, it)).putAnnotation(source, it), 
+                                    v.Variable(i, false).putAnnotation(source, it)).putAnnotation(source, it)).putAnnotation(source, it)).putAnnotation(source, it) 
+            } else
+                v.Application(v.SingletonIndex().putAnnotation(source, it),
+                              fromExpression(it.getIndex)).putAnnotation(source, it)
         case it: RangeIndexExpr =>
             v.Application(v.Application(v.RangeIndex().putAnnotation(source, it),
                     fromExpression(it.getFrom.getIndex)).putAnnotation(source, it),
                     fromExpression(it.getTo)).putAnnotation(source, it)
         case it: SequenceIndexExpr =>
             v.Application(v.Application(v.IndexConcatenation().putAnnotation(source, it),
-                    fromIndexExpr(it.getFirst)).putAnnotation(source, it),
-                    fromIndexExpr(it.getSecond)).putAnnotation(source, it)
+                    fromIndexExpr(it.getFirst, true)).putAnnotation(source, it),
+                    fromIndexExpr(it.getSecond, true)).putAnnotation(source, it)
         }
 
     def fromCaseStatements(it: Statements): v.Expression =

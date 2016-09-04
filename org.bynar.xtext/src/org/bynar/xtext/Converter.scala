@@ -66,7 +66,7 @@ class MemberConverter(val path: Seq[Symbol]) extends Converter {
         case it: RegisterComponent =>
             b.BitRegisterComponent(
                     Symbol(it.getName),
-                    fromIndexExpr(it.getBitPosition),
+                    fromIndexExpr(it.getBitPosition, true),
                     new MemberConverter(path :+ Symbol(it.getName)).fromTypeExpression(it.getType)).
                     putAnnotation(source, it)
         case it: UnionVariant =>
