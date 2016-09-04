@@ -160,16 +160,14 @@ class Converter {
                 val i = v.VariableIdentity.setName(new v.VariableIdentity, 'i)
                 v.Block(v.Let(v.Variable(i, true).putAnnotation(source, it), fromExpression(it.getIndex)).putAnnotation(source, it),
                         v.Application(v.Application(
-                                v.RangeIndex().putAnnotation(source, it), 
+                                v.RangeIndexInclusive().putAnnotation(source, it), 
                                 v.Variable(i, false).putAnnotation(source, it)).putAnnotation(source, it),
-                            v.Application(v.Application(v.Plus().putAnnotation(source, it), 
-                                    v.NumberLiteral(1).putAnnotation(source, it)).putAnnotation(source, it), 
-                                    v.Variable(i, false).putAnnotation(source, it)).putAnnotation(source, it)).putAnnotation(source, it)).putAnnotation(source, it) 
+                                v.Variable(i, false).putAnnotation(source, it)).putAnnotation(source, it)).putAnnotation(source, it) 
             } else
                 v.Application(v.SingletonIndex().putAnnotation(source, it),
                               fromExpression(it.getIndex)).putAnnotation(source, it)
         case it: RangeIndexExpr =>
-            v.Application(v.Application(v.RangeIndex().putAnnotation(source, it),
+            v.Application(v.Application((if (it.isInclusive) v.RangeIndexInclusive() else v.RangeIndex()).putAnnotation(source, it),
                     fromExpression(it.getFrom.getIndex)).putAnnotation(source, it),
                     fromExpression(it.getTo)).putAnnotation(source, it)
         case it: SequenceIndexExpr =>

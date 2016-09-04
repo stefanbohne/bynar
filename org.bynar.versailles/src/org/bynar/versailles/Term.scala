@@ -16,6 +16,16 @@ trait Term extends Annotated { self =>
 
     def map(f: Term => Term): SelfTerm =
         mapWithNames{ (_, t) => f(t) }
+    
+    def treeMapWithNames[T](rootName: Symbol, f: (Symbol, Term) => Term): Term =
+        f(rootName, mapWithNames{
+        case (n, t) => t.treeMapWithNames(n, f)    
+        })
+
+    def treeMap[T](f: Term => Term): Term =
+        f(map{
+        case t => t.treeMap(f)    
+        })
 
     lazy val children: Map[Symbol, Term] =
         foldWithNames[Map[Symbol, Term]](Map()){
@@ -187,6 +197,10 @@ case class SingletonIndex() extends Literal {
 case class RangeIndex() extends Literal {
     type SelfTerm = RangeIndex
     override def toString = "range_index"
+}
+case class RangeIndexInclusive() extends Literal {
+    type SelfTerm = RangeIndexInclusive
+    override def toString = "range_index_inclusive"
 }
 case class InfiniteIndex() extends Literal {
     type SelfTerm = InfiniteIndex

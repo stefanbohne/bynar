@@ -161,10 +161,18 @@ object TermImplicits {
         }
     }    
     object rangeIndex {
-        def apply(a: Expression)(b: Expression) =
+        def apply(a: Expression, b: Expression) =
             Application(Application(RangeIndex(), a), b)
         def unapply(t: Term) = t match {
             case Application(Application(RangeIndex(), a), b) => Some(a, b)
+            case _ => None
+        }
+    }        
+    object rangeIndexInclusive {
+        def apply(a: Expression, b: Expression) =
+            Application(Application(RangeIndexInclusive(), a), b)
+        def unapply(t: Term) = t match {
+            case Application(Application(RangeIndexInclusive(), a), b) => Some(a, b)
             case _ => None
         }
     }        
@@ -185,15 +193,15 @@ object TermImplicits {
         }
     }
     object `if` {
-        def apply(a: Expression)(b: Expression)(c: Expression) =
+        def apply(a: Expression, b: Expression, c: Expression) =
             Application(Application(Application(Variable(defaultContextByName('if), false), a), b), c)
     }
     object min {
-        def apply(a: Expression)(b: Expression) =
+        def apply(a: Expression, b: Expression) =
             Application(Application(Variable(defaultContextByName('min), false), a), b)
     }
     object max {
-        def apply(a: Expression)(b: Expression) =
+        def apply(a: Expression, b: Expression) =
             Application(Application(Variable(defaultContextByName('max), false), a), b)
     }
   

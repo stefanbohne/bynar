@@ -25,11 +25,12 @@ import org.bynar.versailles.Member
 import org.bynar.versailles.BooleanLiteral
 import org.bynar.versailles.InfiniteIndex
 import org.bynar.versailles.IndexComposition
-import org.bynar.versailles.RangeIndex
 import scala.xml.Text
 
 class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGenerator(root) {
     import org.bynar.versailles.DocBookGenerator._
+    import org.bynar.versailles.TermImplicits._
+    import TermImplicits._
 
     val simp = new Simplifier()
     val pp = new TextPrettyPrinter()
@@ -147,7 +148,7 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
                 <para>Empty record.</para>
         case BitRegisterType(bw, b) =>
             val it = VariableIdentity.setName(new VariableIdentity, 'it)
-            val (entries, _) = generateTableEntries(t, Lambda(Irreversible(), Undefined(), Application(Application(RangeIndex(), NumberLiteral(0)), bw)), Seq())
+            val (entries, _) = generateTableEntries(t, Lambda(Irreversible(), Undefined(), rangeIndexInclusive(NumberLiteral(0), bw - 1)), Seq())
             if (entries.nonEmpty)
     			<para>Bit width: { term2Xml(simp.simplify(Block(root, bw), true, defaultContext)._1) }</para>
                 <table>
@@ -174,7 +175,7 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
     def bitRange(bitWidth: Expression): Expression = {
         val x = VariableIdentity.setName(new VariableIdentity, 'it)
         Lambda(Irreversible(), Variable(x, true),
-            Application(Application(RangeIndex(), NumberLiteral(0)), Application(bitWidth, Variable(x, false))))
+            rangeIndexInclusive(0, bitWidth(Variable(x, false)) - 1))
     }
     
     def bitPermutationText(bitPermutation: Expression, bitPositions: Expression): Seq[Node] =
@@ -213,8 +214,7 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
             val bp = {
                 val x = VariableIdentity.setName(new VariableIdentity, '_)
                 Lambda(Irreversible(), Variable(x, true),
-                    Application(Application(IndexComposition(), Application(Application(RangeIndex(), NumberLiteral(0)), t.bitWidth)),
-                        Application(bitPermutation, Variable(x, false))))
+                    bitPermutation(Variable(x, false)) o rangeIndexInclusive(NumberLiteral(0), t.bitWidth - 1))
             }
             (t.foldComponents(Seq[Node]()){
                 case (c, rows) =>

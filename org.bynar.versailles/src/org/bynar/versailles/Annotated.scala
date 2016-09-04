@@ -13,6 +13,10 @@ trait Annotated { self =>
         annotations += key -> value
         this
     }
+    def removeAnnotation(key: AnnotationKey[_]): self.type = {
+        annotations -= key
+        this
+    }
     def copyAnnotationsFrom(that: Annotated): self.type = {
         this.annotations ++= that.annotations
         this
