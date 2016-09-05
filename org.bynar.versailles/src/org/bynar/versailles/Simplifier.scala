@@ -5,7 +5,7 @@ import java.math.MathContext
 import java.math.RoundingMode
 
 class Simplifier {
-    
+
     import TermImplicits._
 
     def defaultContext = org.bynar.versailles.defaultContext
@@ -66,9 +66,9 @@ class Simplifier {
         case stmt@Let(p, v) => stmt.copy(v, p)
         case stmt@Sequence(ss@_*) => stmt.copy(ss.reverse.map{ reverseStatement(_) }:_*)
         }
-    
+
     val wasRangeIndexExclusive = new AnnotationKey[Unit]
-    
+
     def preSimplify(term: Term): Term =
         term.treeMap{
         case term@rangeIndexInclusive(f, t) =>
@@ -82,11 +82,11 @@ class Simplifier {
         case term@rangeIndex(f, t) =>
             if (term.annotation(wasRangeIndexExclusive).isEmpty)
                 rangeIndexInclusive(f, simplify1(t - 1, true, Map())._1).copyAnnotationsFrom(term)
-            else 
+            else
                 term.removeAnnotation(wasRangeIndexExclusive)
         case term => term
         }
-    
+
     def simplify(expr: Expression, forward: Boolean, context: Map[VariableIdentity, Expression] = defaultContext): (Expression, Map[VariableIdentity, Expression]) = {
         val (e, ctx) = simplify1(preSimplify(expr).asInstanceOf[Expression], forward, context)
         (postSimplify(e).asInstanceOf[Expression], ctx)
@@ -191,6 +191,14 @@ class Simplifier {
                 simplify1(Application(f3, Application(f1, y)), forward, ctx2)
             case (f1@Application(Plus(), f2@Application(f3@Application(Plus(), r: NumberLiteral), x)), y) =>
                 simplify1(Application(f3, Application(Application(f1.function, x), y)), forward, ctx2)
+            case (Application(Plus(), x), y) if x == y =>
+                simplify1(x * 2, forward, ctx2)
+            case (Application(Plus(), x * k), y) if x == y =>
+                simplify1(x * (k + 1), forward, ctx2)
+            case (Application(Plus(), x), y * k) if x == y =>
+                simplify1(x * (k + 1), forward, ctx2)
+            case (Application(Plus(), x * k), y * l) if x == y =>
+                simplify1(x * (k + l), forward, ctx2)
 
             case (Divide(), l: NumberLiteral) if ((1 / l.value) * l.value == 1) =>
                 simplify1(Application(Times(), NumberLiteral(1 / l.value)), forward, ctx2)
@@ -202,6 +210,10 @@ class Simplifier {
                 (Application(Times(), x), ctx2)
             case (Application(Times(), NumberLiteral(r)), NumberLiteral(l)) =>
                 (NumberLiteral(l * r), ctx2)
+            case (Application(Times(), x), NumberLiteral(o)) if o == 0 =>
+                (0, ctx2)
+            case (Application(Times(), NumberLiteral(o)), x) if o == 0 =>
+                (0, ctx2)
             case (Application(Times(), x), NumberLiteral(o)) if o == 1 =>
                 (x, ctx2)
             case (Application(Times(), NumberLiteral(o)), x) if o == 1 =>
@@ -244,6 +256,8 @@ class Simplifier {
                 (BooleanLiteral(false), ctx2)
             case (Application(And(), _), BooleanLiteral(false)) =>
                 (BooleanLiteral(false), ctx2)
+            case (Application(And(), a), b) if a == b =>
+                (a, ctx2)
             case (Application(And(), BooleanLiteral(b1)), BooleanLiteral(b2)) =>
                 (BooleanLiteral(b1 && b2), ctx2)
             case (Application(Or(), BooleanLiteral(b1)), BooleanLiteral(b2)) =>
@@ -252,8 +266,12 @@ class Simplifier {
                 (BooleanLiteral(true), ctx2)
             case (Application(Or(), _), BooleanLiteral(true)) =>
                 (BooleanLiteral(true), ctx2)
+            case (Application(Or(), a), b) if a == b =>
+                (a, ctx2)
             case (Not(), BooleanLiteral(b)) =>
                 (BooleanLiteral(!b), ctx2)
+            case (Application(And(), a == l1), b == l2) if isLiteral(l1) && isLiteral(l2) && a == b =>
+                (BooleanLiteral(l1 == l2), ctx2)
 
             case (Application(Concat(), StringLiteral(l1)), StringLiteral(l2)) =>
                 (StringLiteral(l1 + l2), ctx2)
@@ -286,7 +304,7 @@ class Simplifier {
             case (Application(IndexComposition(), r@Application(r2@Application(RangeIndex(), n1), n2)), Application(InfiniteIndex(), n3)) =>
                 simplify1(r.copy(r2.copy(argument=n1 + n3.deepCopy()), n2 + n3), forward, ctx2)
             case (Application(IndexComposition(), r@Application(r2@Application(RangeIndex(), n1), n2)), Application(Application(RangeIndex(), n3), n4)) =>
-                simplify1(Block(Let(true,  
+                simplify1(Block(Let(true,
                                 n1.deepCopy() <= n4.deepCopy() - n3.deepCopy() &&
                                 n2.deepCopy() <= n4 - n3.deepCopy()),
                         r.copy(r2.copy(argument=n1 + n3.deepCopy()), n2 + n3)), forward, ctx2)
@@ -296,10 +314,10 @@ class Simplifier {
                     Block(Let(Variable(x, true), length(n3.deepCopy())),
                         (n3 o r.copy(r2.copy(argument=min(n1, Variable(x, false))), min(n2, Variable(x, false)))) ++
                         (n4 o r.copy(r2.copy(argument=max(n1.deepCopy() - Variable(x, false), 0)), max(n2.deepCopy() - Variable(x, false), 0))))
-                }, forward, ctx2)                          
+                }, forward, ctx2)
             case (Application(IndexComposition(), Application(Application(IndexConcatenation(), n1), n2)), n3) =>
                 simplify1((n3.deepCopy() o n1) ++ (n3 o n2), forward, ctx2)
-                
+
             case (Length(), Application(Application(RangeIndex(), n1), n2)) =>
                 simplify1(n2 - n1, forward, ctx2)
             case (Length(), Application(Application(IndexConcatenation(), n1), n2)) =>
