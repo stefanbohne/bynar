@@ -75,6 +75,7 @@ class Converter {
             case "-" => swapped(v.Minus())
             case "*" => swapped(v.Times())
             case "/" => swapped(v.Divide())
+            case "++" => swapped(v.Concat())
             case "==" => normal(v.Equals())
             case "!=" => normal(v.NotEquals())
             case "<" => normal(v.Less())
@@ -160,9 +161,9 @@ class Converter {
                 val i = v.VariableIdentity.setName(new v.VariableIdentity, 'i)
                 v.Block(v.Let(v.Variable(i, true).putAnnotation(source, it), fromExpression(it.getIndex)).putAnnotation(source, it),
                         v.Application(v.Application(
-                                v.RangeIndexInclusive().putAnnotation(source, it), 
+                                v.RangeIndexInclusive().putAnnotation(source, it),
                                 v.Variable(i, false).putAnnotation(source, it)).putAnnotation(source, it),
-                                v.Variable(i, false).putAnnotation(source, it)).putAnnotation(source, it)).putAnnotation(source, it) 
+                                v.Variable(i, false).putAnnotation(source, it)).putAnnotation(source, it)).putAnnotation(source, it)
             } else
                 v.Application(v.SingletonIndex().putAnnotation(source, it),
                               fromExpression(it.getIndex)).putAnnotation(source, it)

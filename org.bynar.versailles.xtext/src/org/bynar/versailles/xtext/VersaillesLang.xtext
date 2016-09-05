@@ -75,7 +75,11 @@ ExpressionComp returns Expression:
 	ExpressionTyped ({BinaryExpr.left=current} op=ComparisionOp => right=ExpressionAdd)*
 ;
 ExpressionTyped returns Expression:
-	ExpressionAdd ({TypedExpr.base=current} => ":" type=TypeExpression)?
+	ExpressionConcat ({TypedExpr.base=current} => ":" type=TypeExpression)?
+;
+ConcatOp returns Operator: {Operator} op=("++");
+ExpressionConcat returns Expression:
+	ExpressionAdd ({BinaryExpr.left=current} => op=ConcatOp right=ExpressionMul)*
 ;
 AddOp returns Operator: {Operator} op=("+" | "-");
 ExpressionAdd returns Expression:
