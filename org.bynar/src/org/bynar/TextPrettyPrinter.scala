@@ -24,6 +24,7 @@ class TextPrettyPrinter extends PrettyPrinter {
 
     override def append(text: Any) {
         result.append(Text(text.toString).toString.
+                replace(" * ", " ⋅ ").
                 replace(" == ", " = ").
                 replace(" != ", " &#x2260; ").
                 replace(" &lt;= ", " &#x2264; ").
