@@ -28,6 +28,8 @@ import org.bynar.versailles.AnnotationKey
 import org.eclipse.emf.ecore.EObject
 import org.bynar.xtext.bynarLang.RegisterComponent
 import org.bynar.xtext.bynarLang.RegisterTypeExpr
+import org.bynar.versailles.DocBookGenerator
+import org.bynar.versailles.Term
 
 class Converter extends org.bynar.versailles.xtext.Converter {
     import org.bynar.versailles.xtext.Converter._
@@ -55,30 +57,46 @@ class Converter extends org.bynar.versailles.xtext.Converter {
 
 class MemberConverter(val path: Seq[Symbol]) extends Converter {
     import org.bynar.versailles.xtext.Converter._
+    import DocBookGenerator._
+
+    def putDocs[T <: Term](it: T, title: String, description: Expression): T = {
+        if (title != null)
+            it.putAnnotation(titleInfo, title)
+        if (description != null)
+            it.putAnnotation(descriptionInfo, fromExpression(description))
+        it
+    }
 
     override def fromStatement(it: Statement): v.Statement =
         it match {
         case it: RecordComponent =>
-            b.BitRecordComponent(
-                    Symbol(it.getName),
+            putDocs(b.BitRecordComponent(Symbol(it.getName),
                     new MemberConverter(path :+ Symbol(it.getName)).fromTypeExpression(it.getType)).
-                    putAnnotation(source, it)
+                    putAnnotation(source, it),
+                    it.getTitle,
+                    it.getDescription)
         case it: RegisterComponent =>
-            b.BitRegisterComponent(
+            putDocs(b.BitRegisterComponent(
                     Symbol(it.getName),
                     fromIndexExpr(it.getBitPosition, true),
                     new MemberConverter(path :+ Symbol(it.getName)).fromTypeExpression(it.getType)).
-                    putAnnotation(source, it)
+                    putAnnotation(source, it),
+                    it.getTitle,
+                    it.getDescription)
         case it: UnionVariant =>
-            b.BitUnionVariant(
+            putDocs(b.BitUnionVariant(
                     Symbol(it.getName),
                     new MemberConverter(path :+ Symbol(it.getName)).fromTypeExpression(it.getType)).
-                    putAnnotation(source, it)
+                    putAnnotation(source, it),
+                    it.getTitle,
+                    it.getDescription)
         case it: EnumValue =>
-            b.EnumValue(
+            putDocs(b.EnumValue(
                     Symbol(it.getName),
                     new MemberConverter(path :+ Symbol(it.getName)).fromExpression(it.getValue)).
-                    putAnnotation(source, it)
+                    putAnnotation(source, it),
+                    it.getTitle,
+                    it.getDescription)
         case _ => super.fromStatement(it)
         }
 

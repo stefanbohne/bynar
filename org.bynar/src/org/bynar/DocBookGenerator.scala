@@ -114,7 +114,7 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
             <para>Converted via { term2Xml(simp.simplify(Block(root, Application(c, Variable(VariableIdentity.setName(new VariableIdentity, 'it), false))), true, defaultContext)._1) }.</para>
         case WrittenType(t, w) =>
             generateTypeDescription(t) :+
-            <para>Written as { term2Xml(simp.simplify(Block(root, Application(w, Variable(VariableIdentity.setName(new VariableIdentity, 'it), false))), true, defaultContext)._1) }.</para>
+            <para>Written as { term2Xml(simp.simplify(Block(root, Application(w, Variable(VariableIdentity.setName(new VariableIdentity, 'x), false))), true, defaultContext)._1) }.</para>
         case InterpretedBitType(t, i: EnumInterpretation) =>
             generateTypeDescription(t) :+
             <para>May contain one of the following values:
@@ -122,10 +122,27 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
 				{ i.foldValues(Seq[Node]()){
 				    case (v, ns) =>
 				        ns :+
-				        <varlistentry><term>{ v.name.name }</term><listitem>{ term2Xml(v.value) }</listitem></varlistentry>
+				        <varlistentry><term>{ v.name.name } = { term2Xml(v.value) }</term>
+                        <listitem>{ val d = term2Xml(v.annotation(descriptionInfo).getOrElse(StringLiteral("")))
+					           v.annotation(titleInfo).map{ t => <formalpara><title>{ t }</title>{ d }</formalpara> }.getOrElse(d)
+					         }</listitem></varlistentry>
 				    }
 				}
 				</variablelist>
+			</para>
+        case InterpretedBitType(t, i: UnitInterpretation) =>
+            generateTypeDescription(t) :+
+            <para>Values are in {i.unit}.</para>
+        case InterpretedBitType(t, i: FixedInterpretation) =>
+            generateTypeDescription(t) :+
+            <para>Must contain the following value: {
+                val it = VariableIdentity.setName(new VariableIdentity, 'it)
+                term2Xml(simp.simplify(Block(root, Application(i.fixedValue, Variable(it, false))), true, defaultContext)._1)
+            }</para>
+        case InterpretedBitType(t, i: ContainingInterpretation) =>
+            generateTypeDescription(t) :+
+            <para>Values are of the following structure.
+				{ generateMainTypeDescription(i.containedType) }
 			</para>
         case Variable(id, _) =>
             <para>A { term2Xml(t) }.</para>
@@ -177,7 +194,7 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
         Lambda(Irreversible(), Variable(x, true),
             rangeIndexInclusive(0, bitWidth(Variable(x, false)) - 1))
     }
-    
+
     def bitPermutationText(bitPermutation: Expression, bitPositions: Expression): Seq[Node] =
         term2Xml(simp.simplify(Block(root, {
             val it = VariableIdentity.setName(new VariableIdentity, 'it)
@@ -204,7 +221,9 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
                     (rows ++ <tr>
 					     <td>{ bitPermutationText(bp, bitRange(bw)) }</td>
 						 <td>{ (tablePath :+ c.name).map{ _.name }.mkString(".") }</td>
-					     <td>{ term2Xml(c.annotation(descriptionInfo).getOrElse(StringLiteral(""))) }{ generateTypeDescription(c.`type`) }</td>
+					     <td>{ val d = term2Xml(c.annotation(descriptionInfo).getOrElse(StringLiteral("")))
+					           c.annotation(titleInfo).map{ t => <formalpara><title>{ t }</title>{ d }</formalpara> }.getOrElse(d)
+					         }{ generateTypeDescription(c.`type`) }</td>
 				     </tr> ++ rows2, {
                         val x = VariableIdentity.setName(new VariableIdentity, '_)
                         Lambda(Irreversible(), Variable(x, true), Application(Application(Plus(), Application(ofs, Variable(x, false))), Application(bw, Variable(x, false))))
@@ -226,7 +245,9 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
                     rows ++ <tr>
 					     <td>{ bitPermutationText(bp, Lambda(Irreversible(), Undefined(), c.position)) }</td>
 						 <td>{ (tablePath :+ c.name).map{ _.name }.mkString(".") }</td>
-					     <td>{ term2Xml(c.annotation(descriptionInfo).getOrElse(StringLiteral(""))) }{ generateTypeDescription(c.`type`) }</td>
+					     <td>{ val d = term2Xml(c.annotation(descriptionInfo).getOrElse(StringLiteral("")))
+					           c.annotation(titleInfo).map{ t => <formalpara><title>{ t }</title>{ d }</formalpara> }.getOrElse(d)
+					         }{ generateTypeDescription(c.`type`) }</td>
 				    </tr> ++ rows2
             }, Lambda(Irreversible(), Undefined(), t.bitWidth))
         case t: BitUnionType =>
@@ -236,7 +257,9 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
                     (rows ++ <tr>
 					     <td>{ bitPermutationText(bitPermutation, bitRange(bw2)) }</td>
 						 <td>{ (tablePath :+ v.name).map{ _.name }.mkString(".") }</td>
-					     <td>{ term2Xml(v.annotation(descriptionInfo).getOrElse(StringLiteral(""))) }{ generateTypeDescription(v.`type`) }</td>
+					     <td>{ val d = term2Xml(v.annotation(descriptionInfo).getOrElse(StringLiteral("")))
+					           v.annotation(titleInfo).map{ t => <formalpara><title>{ t }</title>{ d }</formalpara> }.getOrElse(d)
+					         }{ generateTypeDescription(v.`type`) }</td>
 				     </tr> ++ rows2, Application(Application(OrElse(), bw), bw2))
             }
         case WrittenType(t, _) =>
