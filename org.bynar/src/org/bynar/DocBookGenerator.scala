@@ -107,43 +107,13 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
             else
                 Seq()
         case WhereType(t, w) =>
-            generateTypeDescription(t) :+
-            <para>Valid if { term2Xml(simp.simplify(Block(root, Application(w, Variable(VariableIdentity.setName(new VariableIdentity, 'it), false))), true, defaultContext)._1) }.</para>
+            generateTypeDescription(t) ++ whereTypeDescription(w)
         case ConvertedType(t, c) =>
-            generateTypeDescription(t) :+
-            <para>Converted via { term2Xml(simp.simplify(Block(root, Application(c, Variable(VariableIdentity.setName(new VariableIdentity, 'it), false))), true, defaultContext)._1) }.</para>
+            generateTypeDescription(t) ++ convertedTypeDescription(c)
         case WrittenType(t, w) =>
-            generateTypeDescription(t) :+
-            <para>Written as { term2Xml(simp.simplify(Block(root, Application(w, Variable(VariableIdentity.setName(new VariableIdentity, 'x), false))), true, defaultContext)._1) }.</para>
-        case InterpretedBitType(t, i: EnumInterpretation) =>
-            generateTypeDescription(t) :+
-            <para>May contain one of the following values:
-				<variablelist>
-				{ i.foldValues(Seq[Node]()){
-				    case (v, ns) =>
-				        ns :+
-				        <varlistentry><term>{ v.name.name } = { term2Xml(v.value) }</term>
-                        <listitem>{ val d = term2Xml(v.annotation(descriptionInfo).getOrElse(StringLiteral("")))
-					           v.annotation(titleInfo).map{ t => <formalpara><title>{ t }</title>{ d }</formalpara> }.getOrElse(d)
-					         }</listitem></varlistentry>
-				    }
-				}
-				</variablelist>
-			</para>
-        case InterpretedBitType(t, i: UnitInterpretation) =>
-            generateTypeDescription(t) :+
-            <para>Values are in {i.unit}.</para>
-        case InterpretedBitType(t, i: FixedInterpretation) =>
-            generateTypeDescription(t) :+
-            <para>Must contain the following value: {
-                val it = VariableIdentity.setName(new VariableIdentity, 'it)
-                term2Xml(simp.simplify(Block(root, Application(i.fixedValue, Variable(it, false))), true, defaultContext)._1)
-            }</para>
-        case InterpretedBitType(t, i: ContainingInterpretation) =>
-            generateTypeDescription(t) :+
-            <para>Values are of the following structure.
-				{ generateMainTypeDescription(i.containedType) }
-			</para>
+            generateTypeDescription(t) ++ writtenTypeDescription(w)            
+        case InterpretedBitType(t, i) =>
+            generateTypeDescription(t) ++ interpretedTypeDescription(i)
         case Variable(id, _) =>
             <para>A { term2Xml(t) }.</para>
         case Application(MemberContextedType(_), t) =>
@@ -176,14 +146,14 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
                 <para>Empty register.</para>
         case BitFieldType(bw) =>
             <para>A bit field of { term2Xml(simp.simplify(Block(root, bw), true, defaultContext)._1) } bits.</para>
-        case WrittenType(t2, _) =>
-            generateMainTypeDescription(t2) ++ generateTypeDescription(t)
-        case ConvertedType(t2, _) =>
-            generateMainTypeDescription(t2) ++ generateTypeDescription(t)
-        case WhereType(t2, _) =>
-            generateMainTypeDescription(t2) ++ generateTypeDescription(t)
-        case InterpretedBitType(t2, _) =>
-            generateMainTypeDescription(t2) ++ generateTypeDescription(t)
+        case WrittenType(t2, w) =>
+            generateMainTypeDescription(t2) ++ writtenTypeDescription(w)
+        case ConvertedType(t2, c) =>
+            generateMainTypeDescription(t2) ++ convertedTypeDescription(c)
+        case WhereType(t2, w) =>
+            generateMainTypeDescription(t2) ++ whereTypeDescription(w)
+        case InterpretedBitType(t2, i) =>
+            generateMainTypeDescription(t2) ++ interpretedTypeDescription(i)
         case Variable(id, _) =>
             <para>Alias for { term2Xml(t) }.</para>
         case _ => Seq()
@@ -288,5 +258,40 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
             })
         case _ =>
             (Seq(), Application(BitWidth(), `type`))
+        }
+    
+    def whereTypeDescription(where: Expression): Seq[Node] =
+        <para>Valid if { term2Xml(simp.simplify(Block(root, Application(where, Variable(VariableIdentity.setName(new VariableIdentity, 'it), false))), true, defaultContext)._1) }.</para>
+    def convertedTypeDescription(converted: Expression): Seq[Node] = 
+            <para>Converted via { term2Xml(simp.simplify(Block(root, Application(converted, Variable(VariableIdentity.setName(new VariableIdentity, 'it), false))), true, defaultContext)._1) }.</para>
+    def writtenTypeDescription(written: Expression): Seq[Node] =
+        <para>Written as { term2Xml(simp.simplify(Block(root, Application(written, Variable(VariableIdentity.setName(new VariableIdentity, 'x), false))), true, defaultContext)._1) }.</para>
+    def interpretedTypeDescription(interpretation: BitTypeInterpretation): Seq[Node] =
+        interpretation match {
+        case i: EnumInterpretation =>
+            <para>May contain one of the following values:
+				<variablelist>
+				{ i.foldValues(Seq[Node]()){
+				    case (v, ns) =>
+				        ns :+
+				        <varlistentry><term>{ v.name.name } = { term2Xml(v.value) }</term>
+                        <listitem>{ val d = term2Xml(v.annotation(descriptionInfo).getOrElse(StringLiteral("")))
+					           v.annotation(titleInfo).map{ t => <formalpara><title>{ t }</title>{ d }</formalpara> }.getOrElse(d)
+					         }</listitem></varlistentry>
+				    }
+				}
+				</variablelist>
+			</para>
+        case i: UnitInterpretation =>
+            <para>Values are in {i.unit}.</para>
+        case i: FixedInterpretation =>
+            <para>Must contain the following value: {
+                val it = VariableIdentity.setName(new VariableIdentity, 'it)
+                term2Xml(simp.simplify(Block(root, Application(i.fixedValue, Variable(it, false))), true, defaultContext)._1)
+            }</para>
+        case i: ContainingInterpretation =>
+            <para>Values are of the following structure.
+				{ generateMainTypeDescription(i.containedType) }
+			</para>
         }
 }
