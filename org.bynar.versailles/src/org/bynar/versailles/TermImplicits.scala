@@ -206,5 +206,13 @@ object TermImplicits {
         def apply(a: Expression, b: Expression) =
             Application(Application(Variable(defaultContextByName('max), false), a), b)
     }
+    object pow {
+        def apply(a: Expression, b: Expression) =
+            Application(Application(Power(), b), a)
+        def unapply(t: Term) = t match {
+            case Application(Application(Power(), b), a) => Some(a, b)
+            case _ => None
+        }
+    }
   
 }

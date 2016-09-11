@@ -239,6 +239,11 @@ class Simplifier {
                 simplify1(Application(f3.copy(f3.function, NumberLiteral(l * r.value)), Application(f1.copy(f1.function, r), x)), forward, ctx2)
             case (IntegerDivide(), Tuple(l: NumberLiteral, r: NumberLiteral)) =>
                 (NumberLiteral(((l.value - (l.value % r.value)) / r.value)), ctx2)
+                
+            case (Application(Power(), NumberLiteral(o)), a) if o == 1 =>
+                (a, ctx2)
+            case (Application(Power(), l), pow(a, r)) =>
+                simplify1(pow(a, r * l), forward, ctx2)
 
             case (Application(Equals(), l1), l2) if isLiteral(l1) && isLiteral(l2) =>
                 (BooleanLiteral(l1 == l2), ctx2)

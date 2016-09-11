@@ -9,7 +9,7 @@ package object versailles {
             '* -> Times(),
             '/ -> Divide(),
             'div -> IntegerDivide(),
-            '^ -> Power(),
+            'pow -> Power(),
             '== -> Equals(),
             'identity -> Identity(),
             'fix -> Fix(),

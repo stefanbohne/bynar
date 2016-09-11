@@ -143,7 +143,7 @@ case class IntegerDivide() extends Literal {
 }
 case class Power() extends Literal {
     type SelfTerm = Power
-    override def toString = "`^`"
+    override def toString = "pow"
 }
 case class Concat() extends Literal {
     type SelfTerm = Concat
