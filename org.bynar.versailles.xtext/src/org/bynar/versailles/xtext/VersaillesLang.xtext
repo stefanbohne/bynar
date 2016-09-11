@@ -138,7 +138,7 @@ TypeExpression:
 	TypeFun
 ;
 TypeFun returns TypeExpression:
-	TypeModifiers ({FunctionTypeExpr.argumentType=current} => functionClass=JanusClass resultType=TypeExpression)?
+	TypeModifiers ({FunctionTypeExpr.argumentType=current} => functionClass=JanusClassExpression resultType=TypeExpression)?
 ;
 TypeModifiers returns TypeExpression:
 	TypeExtension
