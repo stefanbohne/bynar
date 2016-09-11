@@ -65,7 +65,10 @@ class TextPrettyPrinter extends PrettyPrinter {
                 result.append("\">")
             }
             result.append("<emphasis>")
-            result.append(VariableIdentity.getName(id).name)
+            id.annotation(versailles.DocBookGenerator.titleInfo) match {
+                case Some(t) => result.append(t)
+                case None => result.append(VariableIdentity.getName(id).name)
+            }            
             result.append("</emphasis>")
             if (id.annotation(versailles.DocBookGenerator.pathInfo).nonEmpty) {
                 result.append("</link>")

@@ -270,17 +270,18 @@ class Converter {
                 v.Lambda(v.Irreversible(), fromTupleTypeType(it.getTypeArguments), t)
             else
                 t
+            val id = v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName))
             val result = if (it.isLet)
-                    v.Let(v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName)), true).putAnnotation(source, it), t2).
+                    v.Let(v.Variable(id, true).putAnnotation(source, it), t2).
                         putAnnotation(source, it).
                         putAnnotation(letInfo, LetAsType)
                 else
-                    v.Def(v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName)), t2).
+                    v.Def(id, t2).
                         putAnnotation(source, it)
             if (it.getTitle != null)
-                result.putAnnotation(titleInfo, it.getTitle)
+                id.putAnnotation(titleInfo, it.getTitle)
             if (it.getDescription != null)
-                result.putAnnotation(descriptionInfo,
+                id.putAnnotation(descriptionInfo,
                         v.Lambda(v.Irreversible(),
                                  v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), 'it), true),
                                  fromExpression(it.getDescription)))
