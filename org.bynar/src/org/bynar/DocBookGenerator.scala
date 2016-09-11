@@ -59,8 +59,8 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
             generateMainTypeDefinition(d)
         case d@Def(id, v) =>
             val path = d.identity.annotation(pathInfo).get :+ VariableIdentity.getName(d.identity)
-            val title = d.annotation(titleInfo).getOrElse(niceTitle(path(path.size - 1)))
-            val descr = d.annotation(descriptionInfo).map{ d =>
+            val title = d.identity.annotation(titleInfo).getOrElse(niceTitle(path(path.size - 1)))
+            val descr = d.identity.annotation(descriptionInfo).map{ d =>
                 XML.loadString("<root>" + pp.prettyPrint(simp.simplify(
                         Block(root, Application(d, StringLiteral("it"))),
                         false, defaultContext
@@ -75,8 +75,8 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
 
     def generateMainTypeDefinition(d: Def): Seq[Node] = {
         val path = d.identity.annotation(pathInfo).get :+ VariableIdentity.getName(d.identity)
-        val title = d.annotation(titleInfo).getOrElse(niceTitle(path(path.size - 1)))
-        val descr = d.annotation(descriptionInfo).map{ d =>
+        val title = d.identity.annotation(titleInfo).getOrElse(niceTitle(path(path.size - 1)))
+        val descr = d.identity.annotation(descriptionInfo).map{ d =>
             XML.loadString("<root>" + pp.prettyPrint(simp.simplify(
                     Block(root, Application(d, StringLiteral("it"))),
                     false, defaultContext

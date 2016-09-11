@@ -67,36 +67,36 @@ class MemberConverter(val path: Seq[Symbol]) extends Converter {
         it
     }
 
-    override def fromStatement(it: Statement): v.Statement =
+    override def fromStatement(it: Statement): Seq[v.Statement] =
         it match {
         case it: RecordComponent =>
-            putDocs(b.BitRecordComponent(Symbol(it.getName),
-                    new MemberConverter(path :+ Symbol(it.getName)).fromTypeExpression(it.getType)).
-                    putAnnotation(source, it),
-                    it.getTitle,
-                    it.getDescription)
+            Seq(putDocs(b.BitRecordComponent(Symbol(it.getName),
+                        new MemberConverter(path :+ Symbol(it.getName)).fromTypeExpression(it.getType)).
+                        putAnnotation(source, it),
+                        it.getTitle,
+                        it.getDescription))
         case it: RegisterComponent =>
-            putDocs(b.BitRegisterComponent(
-                    Symbol(it.getName),
-                    fromIndexExpr(it.getBitPosition, true),
-                    new MemberConverter(path :+ Symbol(it.getName)).fromTypeExpression(it.getType)).
-                    putAnnotation(source, it),
-                    it.getTitle,
-                    it.getDescription)
+            Seq(putDocs(b.BitRegisterComponent(
+                        Symbol(it.getName),
+                        fromIndexExpr(it.getBitPosition, true),
+                        new MemberConverter(path :+ Symbol(it.getName)).fromTypeExpression(it.getType)).
+                        putAnnotation(source, it),
+                        it.getTitle,
+                        it.getDescription))
         case it: UnionVariant =>
-            putDocs(b.BitUnionVariant(
-                    Symbol(it.getName),
-                    new MemberConverter(path :+ Symbol(it.getName)).fromTypeExpression(it.getType)).
-                    putAnnotation(source, it),
-                    it.getTitle,
-                    it.getDescription)
+            Seq(putDocs(b.BitUnionVariant(
+                        Symbol(it.getName),
+                        new MemberConverter(path :+ Symbol(it.getName)).fromTypeExpression(it.getType)).
+                        putAnnotation(source, it),
+                        it.getTitle,
+                        it.getDescription))
         case it: EnumValue =>
-            putDocs(b.EnumValue(
-                    Symbol(it.getName),
-                    new MemberConverter(path :+ Symbol(it.getName)).fromExpression(it.getValue)).
-                    putAnnotation(source, it),
-                    it.getTitle,
-                    it.getDescription)
+            Seq(putDocs(b.EnumValue(
+                        Symbol(it.getName),
+                        new MemberConverter(path :+ Symbol(it.getName)).fromExpression(it.getValue)).
+                        putAnnotation(source, it),
+                        it.getTitle,
+                        it.getDescription))
         case _ => super.fromStatement(it)
         }
 

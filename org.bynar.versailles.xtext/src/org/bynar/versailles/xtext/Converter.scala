@@ -203,38 +203,38 @@ class Converter {
         if (it == null)
             v.Sequence()
         else {
-            val ss = it.getStatements.map{ fromStatement(_) }
+            val ss = it.getStatements.flatMap{ fromStatement(_) }
             if (ss.size == 1)
                 ss(0)
             else
                 v.Sequence(ss:_*).putAnnotation(source, it)
         }
 
-    def fromStatement(it: Statement): v.Statement =
+    def fromStatement(it: Statement): Seq[v.Statement] =
         it match {
         case it: PassStmt =>
-            v.Sequence().putAnnotation(source, it)
+            Seq(v.Sequence().putAnnotation(source, it))
         case it: FailStmt =>
-            v.Sequence().putAnnotation(source, it)
+            Seq(v.Fail().putAnnotation(source, it))
         case it: LetStmt =>
             if (it.getValue() != null)
-                v.Let(fromExpression(it.getPattern),
-                      fromExpression(it.getValue)).putAnnotation(source, it)
+                Seq(v.Let(fromExpression(it.getPattern),
+                          fromExpression(it.getValue)).putAnnotation(source, it))
             else
-                v.Let(v.BooleanLiteral(true).putAnnotation(source, it),
-                      fromExpression(it.getPattern)).
-                          putAnnotation(source, it).
-                          putAnnotation(letInfo, LetAsAssert)
+                Seq(v.Let(v.BooleanLiteral(true).putAnnotation(source, it),
+                          fromExpression(it.getPattern)).
+                             putAnnotation(source, it).
+                             putAnnotation(letInfo, LetAsAssert))
         case it: IfStmt =>
-            v.IfStmt(fromExpression(it.getCondition),
-                     fromStatements(it.getThen),
-                     fromStatements(it.getElse),
-                     if (it.getAssertion == null)
-                         v.Undefined().putAnnotation(source, it)
-                     else
-                         fromExpression(it.getAssertion)).putAnnotation(source, it)
+            Seq(v.IfStmt(fromExpression(it.getCondition),
+                         fromStatements(it.getThen),
+                         fromStatements(it.getElse),
+                         if (it.getAssertion == null)
+                             v.Undefined().putAnnotation(source, it)
+                         else
+                             fromExpression(it.getAssertion)).putAnnotation(source, it))
         case it: ForgetStmt =>
-            v.Let(
+            Seq(v.Let(
                 v.Application(
                     v.Application(
                         v.Forget().putAnnotation(source, it),
@@ -246,9 +246,9 @@ class Converter {
                     ).putAnnotation(source, it),
                     v.Tuple().putAnnotation(source, it)
                 ).putAnnotation(source, it),
-                fromExpression(it.getPattern)).putAnnotation(source, it)
+                fromExpression(it.getPattern)).putAnnotation(source, it))
         case it: RememberStmt =>
-            v.Let(
+            Seq(v.Let(
                 fromExpression(it.getPattern),
                 v.Application(
                     v.Application(v.Reverse().putAnnotation(source, it),
@@ -263,7 +263,7 @@ class Converter {
                     ).putAnnotation(source, it),
                     v.Tuple().putAnnotation(source, it)
                 ).putAnnotation(source, it)
-            ).putAnnotation(source, it)
+            ).putAnnotation(source, it))
         case it: TypeStmt =>
             val t = fromTypeExpression(it.getType)
             val t2 = if (it.getTypeArguments != null)
@@ -284,19 +284,20 @@ class Converter {
                         v.Lambda(v.Irreversible(),
                                  v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), 'it), true),
                                  fromExpression(it.getDescription)))
-            result
+            Seq(result)
         case it: DefStmt =>
-            val value = if (it.getValueType != null) {
+            val args = (if (it.getTypeArguments != null) Seq(fromTupleTypeType(it.getTypeArguments)) else Seq()) ++
+                (for (a <- it.getArguments) yield fromExpression(a))
+            val (body, jc) = if (it.getValueType != null) {
                 // value with type
                 assert(it.getArguments == null || it.getArguments.size == 0)
                 val x = fromExpression(it.getValue)
                 val t = fromTypeExpression(it.getValueType)
-                v.Application(v.Application(v.Typed().putAnnotation(source, it), t).putAnnotation(source, it), x).putAnnotation(source, it)
+                (v.Application(v.Application(v.Typed().putAnnotation(source, it), t).putAnnotation(source, it), x).putAnnotation(source, it), 
+                        v.Irreversible().putAnnotation(source, it))
             } else {
                 assert(it.getValue == null && it.getValueType == null)
-                val args = (if (it.getTypeArguments != null) Seq(fromTupleTypeType(it.getTypeArguments)) else Seq()) ++
-                    (for (a <- it.getArguments) yield fromExpression(a))
-                val body = if (it.getStatements == null) {
+                val b = if (it.getStatements == null) {
                     // function with expression
                     fromExpression(it.getResults)
                 } else {
@@ -304,26 +305,50 @@ class Converter {
                             v.Block(fromStatements(it.getStatements),
                                     fromExpression(it.getResults)).putAnnotation(source, it)
                 }
-                (args.take(args.size - 1) :\ v.Lambda(
-                        fromJanusClassExpression(it.getJanusClass), args.last, body).putAnnotation(source, it)){
+                (b, fromJanusClassExpression(it.getJanusClass))
+            }
+            val value = if (args.isEmpty) body else 
+                (args.take(args.size - 1) :\ v.Lambda(jc, args.last, body).putAnnotation(source, it)){
                 case (a, b) => v.Lambda(v.Irreversible().putAnnotation(source, it), a, b).putAnnotation(source, it)
                 }
-            }
+
+            val id = v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName))
             val result = if (it.isLet)
-                    v.Let(v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName)), true).putAnnotation(source, it), value).
+                    v.Let(v.Variable(id, true).putAnnotation(source, it), value).
                         putAnnotation(source, it).
                         putAnnotation(letInfo, LetAsLet)
                 else
-                    v.Def(v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName)), value).
+                    v.Def(id, value).
                         putAnnotation(source, it)
             if (it.getTitle != null)
-                result.putAnnotation(titleInfo, it.getTitle)
+                id.putAnnotation(titleInfo, it.getTitle)
             if (it.getDescription != null)
-                result.putAnnotation(descriptionInfo,
-                        v.Lambda(v.Irreversible(),
-                                 v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), 'it), true),
-                                 fromExpression(it.getDescription)))
-            result
+                id.putAnnotation(descriptionInfo,
+                        v.Lambda(v.Irreversible().putAnnotation(source, it),
+                                 v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), 'it), true).putAnnotation(source, it),
+                                 fromExpression(it.getDescription).putAnnotation(source, it)))
+            val result2: Seq[v.Statement] = if (it.getName2 == null) Seq(result) else {
+                val v2 = ((v.Variable(id, false): v.Expression).putAnnotation(source, it) /: args.take(args.size - 1)){
+                         case (a, b) => v.Application(a, b.treeMap{ case x@v.Variable(_, true) => x.copy(linear=false); case x => x }.asInstanceOf[v.Expression]).putAnnotation(source, it)
+                         }
+                val v3 = (args.take(args.size - 1) :\ (v.Application(v.Reverse().putAnnotation(source, it), v2).putAnnotation(source, it): v.Expression)){
+                         case (a, b) => v.Lambda(v.Irreversible().putAnnotation(source, it), a.deepCopy(), b).putAnnotation(source, it)
+                         }
+                val id2 = v.VariableIdentity.setName(new v.VariableIdentity, Symbol(it.getName2))
+                val r2 = if (it.isLet)
+                    v.Let(v.Variable(id2, true).putAnnotation(source, it), v3).putAnnotation(source, it)
+                else
+                    v.Def(id2, v3).putAnnotation(source, it)
+                if (it.getTitle2 != null)
+                    id2.putAnnotation(titleInfo, it.getTitle2)
+                if (it.getDescription2 != null)
+                    id2.putAnnotation(descriptionInfo,
+                            v.Lambda(v.Irreversible().putAnnotation(source, it),
+                                     v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), 'it), true).putAnnotation(source, it),
+                                     fromExpression(it.getDescription2).putAnnotation(source, it)))
+                Seq(result, r2)
+            }
+            result2
         }
 
     def fromTypeExpression(it: TypeExpression): v.Expression =

@@ -1,5 +1,7 @@
 package org.bynar.versailles
 
+import scala.language.implicitConversions
+
 object TermImplicits {
     
     implicit class RichExpression(term: Expression) {

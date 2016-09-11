@@ -246,7 +246,7 @@ class PrettyPrinter {
             })
         case Application(f, a) =>
             paren(40, {
-                precedence = 40
+                precedence = 39
                 doPrettyPrint(f)
                 if (!a.isInstanceOf[Tuple])
                     append("(")

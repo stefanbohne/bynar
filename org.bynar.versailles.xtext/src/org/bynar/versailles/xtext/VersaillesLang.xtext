@@ -29,10 +29,9 @@ Statement:
 	|	{IfStmt} "if" condition=Expression "then" then=Statements (=> "else" else=Statements)? ("fi" assertion=Expression)?
 	|   {LoopStmt} ("from" assertion=Expression)? ("do" do=Statements)? ("loop" loop=Statements)? "until" condition=Expression
 	|	{CaseStmt} "case" case=LambdaExpr
-	|	{DefStmt} ("def"|let?="letdef") name=Name
-					    ((typeArguments=TupleTypeTypeExpr)? (arguments+=TupleExpr)+ (title=STRING)? (description=InterpolatedString)?
-						    janusClass=JanusClassExpression results=Expression (title2=STRING)? (description2=InterpolatedString)? ("{" statements=Statements "}")?
-				        | ":" valueType=TypeExpression (title=STRING)? (description=InterpolatedString)? "=" value=Expression)
+	|	{DefStmt} ("def"|let?="letdef") name=Name (typeArguments=TupleTypeTypeExpr)? (arguments+=TupleExpr)* (title=STRING)? (description=InterpolatedString)?
+					    ( janusClass=JanusClassExpression name2=Name? results=TupleExpr (title2=STRING)? (description2=InterpolatedString)? ("{" statements=Statements "}")?
+				        | ":" valueType=TypeExpression "=" value=Expression)
 	|	{TypeStmt} ("type"|let?="lettype") name=TypeName typeArguments=TupleTypeTypeExpr? valueArguments=TupleTypeExpr? (title=STRING)? (description=InterpolatedString)? "=" type=TypeExpression
 	|   {ModuleStmt} "module" path=TypeNamePath (title=STRING)? (description=InterpolatedString)? "{" statements=Statements "}"
 ;
