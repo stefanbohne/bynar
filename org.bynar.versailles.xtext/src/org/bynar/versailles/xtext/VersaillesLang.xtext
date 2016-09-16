@@ -183,8 +183,24 @@ terminal ID_UPPER:
 terminal ID_FORWARDTICK:
 '´' (!("\n"|'´'))* '´'
 ;
+terminal fragment DEC:
+	('0'..'9')
+;
+terminal fragment OCT:
+	('0'..'7')
+;
+terminal fragment HEX:
+	('0'..'9' | 'a'..'f' | 'A'..'F')
+;
+terminal fragment BIN:
+	('0'..'1')
+;
 terminal NUMBER returns ecore::EBigDecimal:
-('0'..'9')('0'..'9'|'_')* ('.' ('0'..'9'|'_')*)? (('e'|'E') ('+' | '-')? ('0'..'9')('0'..'9'|'_')*)?;
+		DEC(DEC|'_')* ('.' (DEC|'_')*)? (('e'|'E'|'p'|'P') ('+' | '-')? DEC(DEC|'_')*)?
+	|	('0d'|'0D') DEC(DEC|'_')* ('.' (DEC|'_')*)? (('p'|'P') ('+' | '-')? DEC(DEC|'_')*)?
+	|	('0x'|'0X') HEX(HEX|'_')* ('.' (HEX|'_')*)? (('p'|'P') ('+' | '-')? HEX(HEX|'_')*)?
+	|	('0b'|'0B') BIN(BIN|'_')* ('.' (BIN|'_')*)? (('p'|'P') ('+' | '-')? BIN(BIN|'_')*)?
+	|	('0o'|'0O') OCT(OCT|'_')* ('.' (OCT|'_')*)? (('p'|'P') ('+' | '-')? OCT(OCT|'_')*)?;
 
 terminal STRING:
 '"' ( '\\'('b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\') | !('\\'|'"') )* '"';
