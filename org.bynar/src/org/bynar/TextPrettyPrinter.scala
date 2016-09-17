@@ -19,6 +19,7 @@ import org.bynar.versailles.LessOrEquals
 import org.bynar.versailles.GreaterOrEquals
 import org.bynar.versailles.And
 import org.bynar.versailles.Or
+import org.bynar.versailles.Member
 
 class TextPrettyPrinter extends PrettyPrinter {
 
@@ -57,6 +58,8 @@ class TextPrettyPrinter extends PrettyPrinter {
         case Application(Application(Concat(), l), r) =>
             doPrettyPrint(l)
             doPrettyPrint(r)
+        case Application(Member(n), b) =>
+            suffixOp(".​" + n.name, b, 60)
         case Variable(id, false) =>
             if (id.annotation(versailles.DocBookGenerator.pathInfo).nonEmpty) {
                 val path = id.annotation(versailles.DocBookGenerator.pathInfo).get :+ VariableIdentity.getName(id)
@@ -86,6 +89,7 @@ class TextPrettyPrinter extends PrettyPrinter {
                             doPrettyPrint(v)
                             append(" if ")
                             doPrettyPrint(c)
+                            if (!last) append(", or ")
                         })
                         result.append("</member>")
                     case OrElseValue(f, s) =>
@@ -94,7 +98,10 @@ class TextPrettyPrinter extends PrettyPrinter {
                             printIfThenElse(s, last)
                         })
                     case term =>
+                        result.append("<member>")
                         doPrettyPrint(term)
+                        if (!last) append(", or ")
+                        result.append("</member>")
                 }
             }
             result.append("<simplelist>")

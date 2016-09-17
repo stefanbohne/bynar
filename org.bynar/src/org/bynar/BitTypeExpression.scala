@@ -32,7 +32,8 @@ case class BitFieldType(val bitWidth: Expression) extends BitTypeExpression {
 
     override type SelfTerm = BitFieldType
 
-    override def dependentBitWidth(base: Expression) = bitWidth
+    override def dependentBitWidth(base: Expression) = 
+        Application(bitWidth, base)
     def copy(bitWidth: Expression) =
         BitFieldType(bitWidth).copyAnnotationsFrom(this)
     override def copy(children: PartialFunction[Symbol, Term]) =
