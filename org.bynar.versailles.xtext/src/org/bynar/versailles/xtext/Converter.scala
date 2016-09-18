@@ -1,5 +1,6 @@
 package org.bynar.versailles.xtext
 
+
 import scala.collection._
 import JavaConversions._
 
@@ -8,6 +9,7 @@ import org.bynar.versailles.xtext.versaillesLang._
 import org.eclipse.emf.ecore.EObject
 import org.bynar.versailles.PrettyPrinter
 import org.bynar.versailles.DocBookGenerator
+import org.bynar.versailles.TermImplicits._
 
 class Converter {
 
@@ -152,7 +154,14 @@ class Converter {
             v.Application(v.Application(v.Typed().putAnnotation(source, it),
                                         fromTypeExpression(it.getType)).putAnnotation(source, it),
                           fromExpression(it.getBase)).putAnnotation(source, it).putAnnotation(v.PrettyPrinter.applicationInfo, v.PrettyPrinter.ApplicationAsOperator)
-        }
+        case it: ListExpr =>
+            (it.getItems :\ (v.Nil().putAnnotation(source, it): v.Expression)){
+                case (i, l) => v.Cons().putAnnotation(source, it)(
+                        v.Tuple(fromExpression(i), l).putAnnotation(source, it)
+                    ).putAnnotation(source, it)
+            }.putAnnotation(applicationInfo, ApplicationAsList)
+            
+    }
 
     def fromIndexExpr(it: IndexExpr, rangeOnly: Boolean): v.Expression =
         it match {

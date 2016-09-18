@@ -54,6 +54,14 @@ class VariableAnalyzer extends org.bynar.versailles.VariableAnalyzer {
                     case (_, ContextEntry(v, l)) => !l || context.containsVariable(v)
                 }))
             }
+        case it@BitArrayType(et, u) =>
+            if (pattern || janusClass != Irreversible())
+                (Messages.add(it, IllegalUseOfType), context)
+            else {
+                val (et1, ctx1) = analyze(et, pattern, janusClass, context)
+                val (u2, ctx2) = analyze(u, pattern, janusClass, context)
+                (it.copy(et1, u2), ctx2)
+            }
         case it@WrittenType(t, w) =>
             val (t1, ctx1) = analyze(t, pattern, janusClass, context)
             val (w2, ctx2) = analyze(w, false, Irreversible(), context)

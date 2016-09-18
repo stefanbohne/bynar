@@ -186,6 +186,14 @@ case class Not() extends Literal {
     override def toString = "`!`"
 }
 
+case class Cons() extends Literal {
+    type SelfTerm = Cons
+    override def toString = "cons"
+}
+case class Nil() extends Literal {
+    type SelfTerm = Nil
+    override def toString = "nil"
+}
 case class Length() extends Literal {
     type SelfTerm = Length
     override def toString = "length"

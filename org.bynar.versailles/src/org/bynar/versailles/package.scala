@@ -4,6 +4,8 @@ package object versailles {
 
     val (defaultContext, defaultContextByName) = {
       val map1 = Map(
+            'true -> BooleanLiteral(true),
+            'false -> BooleanLiteral(false),
             '+ -> Plus(),
             '- -> Minus(),
             '* -> Times(),
@@ -18,6 +20,9 @@ package object versailles {
             '| -> OrElse(),
             'forget -> Forget(),
             'undefined -> Undefined(),
+            'cons -> Cons(),
+            'nil -> Nil(),
+            'length -> Length(),
             'if -> {
                 val t = VariableIdentity.setName(new VariableIdentity(), 't)
                 val e = VariableIdentity.setName(new VariableIdentity(), 'e)

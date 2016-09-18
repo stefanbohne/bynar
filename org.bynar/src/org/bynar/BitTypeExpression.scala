@@ -243,6 +243,23 @@ case class BitUnionType(val body: Statement) extends BitTypeExpression {
         f('b, body, a)
 }
 
+case class BitArrayType(val elementType: Expression, val until: Expression) extends BitTypeExpression {
+    
+    override type SelfTerm = BitArrayType
+    
+    override def dependentBitWidth(base: Expression) = {
+        Undefined()
+    }
+    def copy(elementType: Expression = elementType, until: Expression = until) =
+        BitArrayType(elementType, until).copyAnnotationsFrom(this)
+    override def copy(children: PartialFunction[Symbol, Term]) =
+        copy(children.lift('et).getOrElse(elementType).asInstanceOf[Expression], 
+             children.lift('u).getOrElse(until).asInstanceOf[Expression])
+    override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) =
+        f('u, until, f('et, elementType, a))
+    
+}
+
 case class WrittenType(val `type`: Expression, val written: Expression) extends BitTypeExpression {
 
     override type SelfTerm = WrittenType

@@ -69,6 +69,13 @@ class PrettyPrinter {
         })
 
     def doPrettyPrint(term: Term) {
+        def isList(term: Term): Boolean =
+            term match {
+            case Application(Cons(), Tuple(_, l)) => isList(l)
+            case Nil() => true
+            case _ => false
+            }
+        
         term match {
         case stmt: Statement => doPrettyPrintStatement(stmt)
         case expr: Literal =>
@@ -149,6 +156,21 @@ class PrettyPrinter {
         case Application(Application(Divide(), r), l)
             if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
                 binOpLeft(" / ", l, r, 20)
+        case term if term.annotation(applicationInfo).getOrElse(ApplicationAsApplication) == ApplicationAsList && isList(term) =>
+            paren("[", "]", 0, {
+                def ppList(term: Term) { 
+                    term match {
+                        case Application(Cons(), Tuple(i, Nil())) =>
+                            doPrettyPrint(i)
+                        case Application(Cons(), Tuple(i, l)) =>
+                            doPrettyPrint(i)
+                            append(", ")
+                            ppList(l)
+                        case Nil() => {}
+                    }
+                }
+                ppList(term)
+            })
         case Application(SingletonIndex(), i) =>
             paren("[", "]", 0, {
                 doPrettyPrint(i)
@@ -377,12 +399,13 @@ class PrettyPrinter {
 }
 
 object PrettyPrinter {
-    trait ApplicationInfo
+    sealed trait ApplicationInfo
     case object ApplicationAsApplication extends ApplicationInfo
     case object ApplicationAsTypeApplication extends ApplicationInfo
     case object ApplicationAsOperator extends ApplicationInfo
     case object ApplicationAsMatch extends ApplicationInfo
     case object ApplicationAsSlice extends ApplicationInfo
+    case object ApplicationAsList extends ApplicationInfo
     val applicationInfo = new AnnotationKey[ApplicationInfo]()
 
     trait LetInfo

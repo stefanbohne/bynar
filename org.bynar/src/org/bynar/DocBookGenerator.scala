@@ -107,6 +107,11 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
                 <para>An empty union.</para>
             else
                 Seq()
+        case BitArrayType(ct, u) =>
+            <para>Elements are parsed until {
+                val it = VariableIdentity.setName(new VariableIdentity, 'it)
+                term2Xml(simp.simplify(Block(root, Application(u, Variable(it, false))), true, defaultContext)._1)
+            }.</para>
         case WhereType(t, w) =>
             generateTypeDescription(t) ++ whereTypeDescription(w)
         case ConvertedType(t, c) =>
@@ -268,6 +273,8 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
 		                    Seq()
                     (rows ++ row3 ++ rows2, Application(Application(OrElse(), bw), bw2))
             }
+        case BitArrayType(et, u) =>
+            (Seq(), Lambda(Irreversible(), Undefined(), Undefined()))
         case WrittenType(t, _) =>
             generateTableEntries(t, bitPermutation, tablePath)
         case ConvertedType(t, _) =>

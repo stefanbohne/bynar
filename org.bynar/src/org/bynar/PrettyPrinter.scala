@@ -34,6 +34,12 @@ class PrettyPrinter extends org.bynar.versailles.PrettyPrinter {
                 doPrettyPrintStatement(b)
                 indent -= 1
             })
+        case BitArrayType(et, u) =>
+            paren("array of ", "", 0, {
+                doPrettyPrint(et)
+                append(" until ")
+                doPrettyPrint(u)
+            })
         case WrittenType(t, w) =>
             binOpRight(" written ", t, w, 10)
         case ConvertedType(t, c) =>

@@ -30,6 +30,8 @@ import org.bynar.xtext.bynarLang.RegisterComponent
 import org.bynar.xtext.bynarLang.RegisterTypeExpr
 import org.bynar.versailles.DocBookGenerator
 import org.bynar.versailles.Term
+import org.bynar.xtext.bynarLang.ArrayTypeExpr
+import org.bynar.versailles.TermImplicits._
 
 class Converter extends org.bynar.versailles.xtext.Converter {
     import org.bynar.versailles.xtext.Converter._
@@ -127,6 +129,23 @@ class MemberConverter(val path: Seq[Symbol]) extends Converter {
                               fromStatements(it.getStatements)).putAnnotation(source, it)
         case it: UnionTypeExpr =>
             b.BitUnionType(fromStatements(it.getStatements)).putAnnotation(source, it)
+        case it: ArrayTypeExpr =>
+            val u = if (it.getUntil != null)
+                fromExpression(it.getUntil)
+            else {
+                val x = v.VariableIdentity.setName(new v.VariableIdentity, '_)
+                v.Lambda(
+                    v.Irreversible().putAnnotation(source, it.getLength),
+                    v.Variable(x, true).putAnnotation(source, it.getLength),
+                    v.Application(v.Application(v.GreaterOrEquals().putAnnotation(source, it.getLength),
+                        v.Length().putAnnotation(source, it.getLength)(((v.Variable(x, false).putAnnotation(source, it.getLength): v.Expression) /: path){ 
+                            case (x, p) => v.Member(p).putAnnotation(source, it.getLength)(x).putAnnotation(source, it.getLength) 
+                        }).putAnnotation(source, it.getLength)).putAnnotation(source, it.getLength),
+                        v.Application(fromExpression(it.getLength), v.Variable(x, false).putAnnotation(source, it.getLength)).putAnnotation(source, it.getLength)).putAnnotation(source, it.getLength)
+                ).putAnnotation(source, it.getLength)
+            }
+                
+            b.BitArrayType(fromTypeExpression(it.getElementType), u).putAnnotation(source, it)
         case it =>
             if (path.size > 0)
                 v.Application(b.MemberContextedType(path).putAnnotation(source, it),
