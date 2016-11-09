@@ -375,6 +375,44 @@ case class Block(val block: Statement, val scope: Expression) extends Expression
 
 }
 
+case class Module(val body: Statement) extends Expression {
+    
+    type SelfTerm = Module
+    
+    def foldDefinitions[T](a: T)(f: (Def, T) => T): T = {
+        def foldStatements(a: T, s: Statement): T =
+            s match {
+            case s@Sequence(ss@_*) =>
+                (a /: ss)(foldStatements _)
+            case s: Def =>
+                f(s, a)
+            case s => a
+            }
+        foldStatements(a, body)
+    }
+    def mapDefinitions(f: Def => Statement): Statement = {
+        def mapStatements(s: Statement): Statement =
+            s match {
+            case s@Sequence(ss@_*) =>
+                s.copy(ss.map{ mapStatements(_) }:_*)
+            case s: Def =>
+                f(s)
+            case s => s
+            }
+        mapStatements(body)
+    }
+    lazy val definitions: Seq[Def] =
+        foldDefinitions[Seq[Def]](Seq()){ case (d, s) => s :+ d }
+
+    def copy(body: Statement = body) =
+        Module(body).copyAnnotationsFrom(this)
+    override def foldWithNames[T](a: T)(f: (Symbol, Term, T) => T) =
+        f('b, body, a)
+    def copy(children: PartialFunction[Symbol, Term]) =
+        copy(children.lift('b).getOrElse(body).asInstanceOf[Statement])
+    
+}
+
 case class Member(val name: Symbol) extends Literal {
 
     override type SelfTerm = Member

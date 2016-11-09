@@ -27,6 +27,8 @@ import org.bynar.versailles.InfiniteIndex
 import org.bynar.versailles.IndexComposition
 import scala.xml.Text
 import org.bynar.versailles.OrElseValue
+import org.bynar.versailles.RangeIndex
+import org.bynar.versailles.Module
 
 class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGenerator(root) {
     import org.bynar.versailles.DocBookGenerator._
@@ -58,6 +60,19 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
         item match {
         case d@Def(id, t: BitTypeExpression) =>
             generateMainTypeDefinition(d)
+        case d@Def(id, Module(b)) =>
+            val path = d.identity.annotation(pathInfo).get :+ VariableIdentity.getName(d.identity)
+            val title = d.identity.annotation(titleInfo).getOrElse(niceTitle(path(path.size - 1)))
+            val descr = d.identity.annotation(descriptionInfo).map{ d =>
+                XML.loadString("<root>" + pp.prettyPrint(simp.simplify(
+                        Block(root, Application(d, StringLiteral("it"))),
+                        false, defaultContext
+                )._1) + "</root>").child }.getOrElse(Seq())
+            Seq(<section id={ path.map{ _.name }.mkString(".") }>
+				<title>{ title }</title>
+			    { descr }
+			    { generateMainDefinitions(b) }
+				</section>)
         case d@Def(id, v) =>
             val path = d.identity.annotation(pathInfo).get :+ VariableIdentity.getName(d.identity)
             val title = d.identity.annotation(titleInfo).getOrElse(niceTitle(path(path.size - 1)))
@@ -89,7 +104,13 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
 		</section>)
     }
 
-    def generateTypeDescription(t: Expression): Seq[Node] =
+    def generateTypeDescription(t: Expression): Seq[Node] = {
+        def isName(t: Expression): Boolean =
+            t match {
+            case Variable(_, false) => true
+            case Application(Member(_), t2) => isName(t2)
+            case _ => false
+            }
         t match {
         case BitFieldType(_) => Seq()
         case t: BitRecordType =>
@@ -120,11 +141,12 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
             generateTypeDescription(t) ++ writtenTypeDescription(w)            
         case InterpretedBitType(t, i) =>
             generateTypeDescription(t) ++ interpretedTypeDescription(i)
-        case Variable(id, _) =>
+        case _ if isName(t) =>
             <para>A { term2Xml(t) }.</para>
         case Application(MemberContextedType(_), t) =>
             generateTypeDescription(t)
         }
+    }
 
     def generateMainTypeDescription(t: Expression, title: String): Seq[Node] =
         t match {
@@ -218,13 +240,14 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
                                 Application(bitPermutation, Variable(x, false))))
                     }
                     val (rows2, bw) = generateTableEntries(c.`type`, bp, tablePath :+ c.name)
-                    val row3 = if (c.annotation(descriptionInfo).nonEmpty || c.annotation(descriptionInfo).nonEmpty || rows2.isEmpty)
+                    val d = { val d = term2Xml(c.annotation(descriptionInfo).getOrElse(StringLiteral("")))
+    					              c.annotation(titleInfo).map{ t => <formalpara><title>{ t }</title>{ d }</formalpara> }.getOrElse(d)
+    					            } ++ generateTypeDescription(c.`type`)
+                    val row3 = if (d.nonEmpty || c.annotation(descriptionInfo).nonEmpty || rows2.isEmpty)
                             <row>
 					     		<entry>{ bitPermutationText(bp, bitRange(bw)) }</entry>
 						  	    <entry>{ (tablePath :+ c.name).map{ _.name }.mkString(".​") }</entry>
-					     		<entry>{ val d = term2Xml(c.annotation(descriptionInfo).getOrElse(StringLiteral("")))
-    					              c.annotation(titleInfo).map{ t => <formalpara><title>{ t }</title>{ d }</formalpara> }.getOrElse(d)
-    					            }{ generateTypeDescription(c.`type`) }</entry>
+					     		<entry>{ d }</entry>
 				     	    </row>
 				         else Seq()
                     (rows ++ row3 ++ rows2, {

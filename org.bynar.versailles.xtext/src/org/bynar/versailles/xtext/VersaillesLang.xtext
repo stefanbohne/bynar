@@ -100,15 +100,14 @@ ExpressionUn returns Expression:
 	|   ExpressionSub
 ;
 ExpressionSub returns Expression:
-	ExpressionSimple ( {MemberAccessExpr.base=current} => "." memberName=Name
-		             | {SliceExpr.seq=current} => "[" index=IndexExpr "]")*
+	ExpressionSimple ({MemberAccessExpr.base=current} => "." memberName=Name)*
 ;
 ExpressionSimple returns Expression:
 		Variable
 	|	{NumberLiteral} value=NUMBER
 	|	{StringLiteral} value=STRING
 	|	{BlockExpr} "{" statements=Statements ("return" scope=Expression)? Sep* "}"
-	|	{ListExpr} "[" (items+=Expression ("," items+=Expression)* ","?)? "]"
+	|	{ListExpr} "[" indices=IndexExpr "]"
 	|	InterpolatedString
 	|	TupleExpr
 	|	{TypeExpr} "@" type=TypeExpression
@@ -128,7 +127,7 @@ TupleExpr returns Expression:
 	|	{TupleExpr} "(" names+=Name "=" named+=Expression ("," names+=Name "=" named+=Expression)* (forceTuple?=",")?")"
 ;
 IndexExpr:
-		IndexExprSimple ({SequenceIndexExpr.first=current} "," second=IndexExprSimple)*
+		IndexExprSimple ({SequenceIndexExpr.first=current} "," second=IndexExprSimple)* ","?
 ;
 IndexExprSimple:
 		{SingletonIndexExpr} index=Expression ({RangeIndexExpr.from=current} (inclusive?=".."|"::") to=Expression)?
@@ -150,7 +149,10 @@ TypeValueConcretion returns TypeExpression:
 	TypeConcretion ({TypeValueConcretion.function=current} => argument=TupleExpr)*
 ;
 TypeConcretion returns TypeExpression:
-	TypeSimple ({TypeConcretion.base=current} => argument=TupleTypeExpr)?
+	TypeSub ({TypeConcretion.base=current} => argument=TupleTypeExpr)?
+;
+TypeSub returns TypeExpression:
+	TypeSimple ({TypeMemberAccessExpr.base=current} => "." memberName=(Name|TypeName))*
 ;
 TypeSimple returns TypeExpression:
 		{AbstractTypeExpr} "abstract"
@@ -165,12 +167,12 @@ TypeVariableDefinition:
 	variance=("+"|"-")? name=TypeName
 ;
 TupleTypeTypeExpr:
-		{TupleTypeTypeExpr} "<[" (arguments+=TypeVariableDefinition ("," arguments+=TypeVariableDefinition)*)? (forceTuple?=",")? "]>"
+		{TupleTypeTypeExpr} "[" (arguments+=TypeVariableDefinition ("," arguments+=TypeVariableDefinition)*)? (forceTuple?=",")? "]"
 ;
 TupleTypeExpr returns TypeExpression:
-		{TupleTypeExpr} "<[" "]>"
-	|	{TupleTypeExpr} "<[" => positional+=TypeExpression ("," positional+=TypeExpression)* ("," names+=Name ":" named+=TypeExpression)* (forceTuple?=",")? "]>"
-	|	{TupleTypeExpr} "<[" names+=Name ":" named+=TypeExpression => ("," names+=Name ":" named+=TypeExpression)* (forceTuple?=",")? "]>"
+		{TupleTypeExpr} "[" "]"
+	|	{TupleTypeExpr} "[" => positional+=TypeExpression ("," positional+=TypeExpression)* ("," names+=Name ":" named+=TypeExpression)* (forceTuple?=",")? "]"
+	|	{TupleTypeExpr} "[" names+=Name ":" named+=TypeExpression => ("," names+=Name ":" named+=TypeExpression)* (forceTuple?=",")? "]"
 ;
 
 terminal ID_LOWER:

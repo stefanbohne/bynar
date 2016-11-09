@@ -38,6 +38,9 @@ object TermImplicits {
             Application(Application(IndexConcatenation(), term), that)
         def o(that: Expression) =
             Application(Application(IndexComposition(), that), term)
+            
+        def orElse(r: Expression) =
+            TermImplicits.orElse(term, r)
     }
     
     implicit def number2Expression(number: Int) =
@@ -154,6 +157,14 @@ object TermImplicits {
             case _ => None
         }
     }    
+    object orElse {
+        def apply(l: Expression, r: Expression) =
+            Application(Application(OrElse(), l), r)
+        def unapply(t: Term) = t match {
+            case Application(Application(OrElse(), l), r) => Some(l, r)
+            case _ => None
+        }
+    }
     object singletonIndex {
         def apply(a: Expression) =
             Application(SingletonIndex(), a)

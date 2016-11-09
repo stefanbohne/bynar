@@ -308,6 +308,8 @@ class Simplifier {
                     n3 o singletonIndex(n1.deepCopy() - length(n2))), forward, ctx2)
             case (Application(IndexComposition(), r@Application(r2@Application(RangeIndex(), n1), n2)), Application(InfiniteIndex(), n3)) =>
                 simplify1(r.copy(r2.copy(argument=n1 + n3.deepCopy()), n2 + n3), forward, ctx2)
+            case (Application(IndexComposition(), Application(InfiniteIndex(), n3)), r@Application(r2@Application(RangeIndex(), n1), n2)) =>
+                simplify1(r.copy(r2.copy(argument=n3.deepCopy() + n1), n3 + n2), forward, ctx2)
             case (Application(IndexComposition(), r@Application(r2@Application(RangeIndex(), n1), n2)), Application(Application(RangeIndex(), n3), n4)) =>
                 simplify1(Block(Let(true,
                                 n1.deepCopy() <= n4.deepCopy() - n3.deepCopy() &&
@@ -359,6 +361,13 @@ class Simplifier {
             case (fix@Application(Fix(), f), a) if isLiteral(a) =>
                 simplify1(Application(Application(f, fix), a), forward, ctx2)
 
+            case (Member(n), m: Module) =>
+                m.definitions.find{ case d => d.identity.annotation(VariableIdentity.name).get == n } match {
+                case Some(d) =>
+                    (d.value, ctx2)
+                case None => (Undefined(), ctx2)
+                }
+                
             case (f, or@OrElseValue(l, r)) =>
                 simplify1(or.copy(Application(f, l), Application(f.deepCopy(), r)), forward, ctx2)
             case (or@OrElseValue(f1, f2), a) =>

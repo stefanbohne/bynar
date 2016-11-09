@@ -104,11 +104,6 @@ class Converter {
         case it: MemberAccessExpr =>
             v.Application(v.Member(Symbol(it.getMemberName)).putAnnotation(source, it),
                           fromExpression(it.getBase)).putAnnotation(source, it)
-        case it: SliceExpr =>
-            v.Application(fromIndexExpr(it.getIndex, false),
-                          fromExpression(it.getSeq)).
-                  putAnnotation(source, it).
-                  putAnnotation(applicationInfo, ApplicationAsSlice)
         case it: ApplicationExpr =>
             v.Application(fromExpression(it.getFunction),
                           fromExpression(it.getArgument)).
@@ -155,11 +150,7 @@ class Converter {
                                         fromTypeExpression(it.getType)).putAnnotation(source, it),
                           fromExpression(it.getBase)).putAnnotation(source, it).putAnnotation(v.PrettyPrinter.applicationInfo, v.PrettyPrinter.ApplicationAsOperator)
         case it: ListExpr =>
-            (it.getItems :\ (v.Nil().putAnnotation(source, it): v.Expression)){
-                case (i, l) => v.Cons().putAnnotation(source, it)(
-                        v.Tuple(fromExpression(i), l).putAnnotation(source, it)
-                    ).putAnnotation(source, it)
-            }.putAnnotation(applicationInfo, ApplicationAsList)
+            fromIndexExpr(it.getIndices, false).putAnnotation(applicationInfo, ApplicationAsList)
             
     }
 
@@ -276,7 +267,7 @@ class Converter {
         case it: TypeStmt =>
             val t = fromTypeExpression(it.getType)
             val t2 = if (it.getTypeArguments != null)
-                v.Lambda(v.Irreversible(), fromTupleTypeType(it.getTypeArguments), t)
+                v.Lambda(v.Irreversible().putAnnotation(source, it), fromTupleTypeType(it.getTypeArguments), t).putAnnotation(source, it)
             else
                 t
             val id = v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName))
@@ -359,6 +350,21 @@ class Converter {
                 Seq(result, r2)
             }
             result2
+        case it: ModuleStmt =>
+            val id = v.VariableIdentity.setName(new v.VariableIdentity, Symbol(it.getPath.getSteps.last))
+            if (it.getTitle != null)
+                id.putAnnotation(titleInfo, it.getTitle)
+            if (it.getDescription != null)
+                id.putAnnotation(descriptionInfo,
+                        v.Lambda(v.Irreversible().putAnnotation(source, it),
+                                 v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), 'it), true).putAnnotation(source, it),
+                                 fromExpression(it.getDescription).putAnnotation(source, it)))
+            val base = v.Def(id, v.Module(fromStatements(it.getStatements)).putAnnotation(source, it)).putAnnotation(source, it)
+            Seq((base /: it.getPath.getSteps.take(it.getPath.getSteps.size - 1)){
+            case (i, n) => 
+                v.Def(v.VariableIdentity.setName(new v.VariableIdentity, Symbol(n)), 
+                        v.Module(i).putAnnotation(source, it)).putAnnotation(source, it)
+            })
         }
 
     def fromTypeExpression(it: TypeExpression): v.Expression =
@@ -383,6 +389,9 @@ class Converter {
                 fromTypeExpression(it.getFunction),
                 fromExpression(it.getArgument)
             ).putAnnotation(source, it).putAnnotation(applicationInfo, ApplicationAsApplication)
+        case it: TypeMemberAccessExpr =>
+            v.Application(v.Member(Symbol(it.getMemberName)).putAnnotation(source, it),
+                          fromTypeExpression(it.getBase)).putAnnotation(source, it)
         case it: ValueType =>
             fromExpression(it.getValue)
         }

@@ -295,6 +295,13 @@ class PrettyPrinter {
                 append("\n")
                 indent -= 1
             })
+        case Module(s) =>
+            paren("module {\n", indentText * indent + "}", 0, {
+                indent += 1
+                doPrettyPrintStatement(s)
+                append("\n")
+                indent -= 1
+            })
         }
     }
 
@@ -342,6 +349,18 @@ class PrettyPrinter {
         case Sequence(ss@_*) =>
             for (s <- ss)
                 doPrettyPrintStatement(s)
+        case Def(id, Module(s)) =>
+            append(indentText * indent)
+            append("module ")
+            doPrettyPrintTypeName(VariableIdentity.getName(id))
+            append("_")
+            append(id.hashCode.toHexString)
+            paren(" {\n", indentText * indent + "};\n", 0, {
+                indent += 1
+                doPrettyPrintStatement(s)
+                append("\n")
+                indent -= 1
+            })
         case Def(id, t) =>
             append(indentText * indent)
             append("def ")

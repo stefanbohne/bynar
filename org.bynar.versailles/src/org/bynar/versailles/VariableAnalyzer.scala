@@ -131,6 +131,16 @@ class VariableAnalyzer {
                 val (b2, ctx2) = analyze(b, pattern, janusClass, ctx1)
                 (it.copy(b2, s1), ctx2)
             }
+        case it@Module(s) =>
+            if (pattern) 
+                (Messages.add(it, ModuleAsPattern), context)
+            else if (janusClass != Irreversible())
+                (Messages.add(it, ModuleLinearly), context)
+            else {
+                val ctx0 = analyzeDefinitions(s, context) 
+                val (s1, ctx1) = analyze(s, pattern, janusClass, ctx0)
+                (it.copy(s1), ctx1)
+            }
         }
 
     def analyze(it: Statement, pattern: Boolean, janusClass: JanusClass, context: Context): (Statement, Context) =
@@ -217,6 +227,14 @@ object VariableAnalyzer {
     }
     case object LambdaUsedLinearly extends Message {
         override def toString = "Lambda expression cannot be used linearly"
+        override def level = Messages.Error
+    }
+    case object ModuleAsPattern extends Message {
+        override def toString = "Modules cannot be used as a pattern"
+        override def level = Messages.Error
+    }
+    case object ModuleLinearly extends Message {
+        override def toString = "Modules must be used in a non-linear context"
         override def level = Messages.Error
     }
 }
