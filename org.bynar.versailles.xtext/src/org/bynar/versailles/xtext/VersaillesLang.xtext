@@ -86,21 +86,17 @@ ExpressionAdd returns Expression:
 ;
 MulOp returns Operator: {Operator} op=("*" | "/" | "%");
 ExpressionMul returns Expression:
-	ExpressionAppl ({BinaryExpr.left=current} => op=MulOp right=ExpressionAppl)*
-;
-ExpressionAppl returns Expression:
-	ExpressionTypeAppl ({ApplicationExpr.function=current} => argument=TupleExpr)*
-;
-ExpressionTypeAppl returns Expression:
-	ExpressionUn ({TypeApplicationExpr.function=current} => argument=TupleTypeExpr)*
+	ExpressionUn ({BinaryExpr.left=current} => op=MulOp right=ExpressionUn)*
 ;
 UnaryOp returns Operator: {Operator} op=("~" | "-" | "!");
 ExpressionUn returns Expression:
 		{UnaryExpr} => op=UnaryOp expr=ExpressionUn
-	|   ExpressionSub
+	|   ExpressionAppl
 ;
-ExpressionSub returns Expression:
-	ExpressionSimple ({MemberAccessExpr.base=current} => "." memberName=Name)*
+ExpressionAppl returns Expression:
+	ExpressionSimple ( {ApplicationExpr.function=current} => argument=TupleExpr
+		             | {TypeApplicationExpr.function=current} => argument=TupleTypeExpr 
+		             | {MemberAccessExpr.base=current} => "." memberName=Name)*
 ;
 ExpressionSimple returns Expression:
 		Variable
