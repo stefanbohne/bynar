@@ -291,7 +291,6 @@ class Converter {
                 (for (a <- it.getArguments) yield fromExpression(a))
             val (body, jc) = if (it.getValueType != null) {
                 // value with type
-                assert(it.getArguments == null || it.getArguments.size == 0)
                 val x = fromExpression(it.getValue)
                 val t = fromTypeExpression(it.getValueType)
                 (v.Application(v.Application(v.Typed().putAnnotation(source, it), t).putAnnotation(source, it), x).putAnnotation(source, it), 
