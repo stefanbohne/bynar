@@ -96,7 +96,7 @@ ExpressionUn returns Expression:
 ExpressionAppl returns Expression:
 	ExpressionSimple ( {ApplicationExpr.function=current} => argument=TupleExpr
 		             | {TypeApplicationExpr.function=current} => argument=TupleTypeExpr 
-		             | {MemberAccessExpr.base=current} => "." memberName=Name)*
+		             | {MemberAccessExpr.base=current} => "." memberName=(Name|TypeName))*
 ;
 ExpressionSimple returns Expression:
 		Variable
