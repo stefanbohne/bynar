@@ -139,7 +139,7 @@ class VariableAnalyzer {
             else {
                 val ctx0 = analyzeDefinitions(s, context) 
                 val (s1, ctx1) = analyze(s, pattern, janusClass, ctx0)
-                (it.copy(s1), ctx1)
+                (it.copy(s1), context)
             }
         }
 

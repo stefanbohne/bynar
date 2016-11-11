@@ -151,6 +151,11 @@ class Simplifier {
             val (a1, ctx1) = simplify1(a, forward, context)
             val (f2, ctx2) = simplify1(f, true, ctx1)
             simplifyApplication(expr.copy(f2, a1), forward, ctx1)
+            
+        case expr@Module(s) =>
+            val (s1, ctx1) = simplifyStatement(s, context, true)
+            (expr.copy(s1), ctx1)
+            
         case expr => (expr, context)
         }
 
@@ -380,7 +385,7 @@ class Simplifier {
             }
         }
 
-    def simplifyStatement(stmt: Statement, context: Map[VariableIdentity, Expression] = defaultContext): (Statement, Map[VariableIdentity, Expression]) =
+    def simplifyStatement(stmt: Statement, context: Map[VariableIdentity, Expression] = defaultContext, leaveDefs: Boolean = false): (Statement, Map[VariableIdentity, Expression]) =
         stmt match {
         case stmt@Let(p, v) =>
             val (v1, ctx1) = simplify1(v, true, context)
@@ -405,12 +410,16 @@ class Simplifier {
                 simplifyStatement(Let(a, value2), ctx2)
             case (p2, v1) => (stmt.copy(p2, v1), ctx2)
             }
-        case Def(id, v) =>
-            simplifyStatement(Let(Variable(id, true), v), context)
+        case stmt@Def(id, v) =>
+            if (leaveDefs) {
+                val (v1, ctx1) = simplify(v, true, context)
+                (stmt.copy(value = v1), ctx1 + (id -> v1))
+            } else
+                simplifyStatement(Let(Variable(id, true), v), context)
         case stmt@Sequence(ss@_*) =>
             val (ss1, ctx1) = ((Seq[Statement](), context) /: ss){
             case ((ss2, context2), s2) =>
-                simplifyStatement(s2, context2) match {
+                simplifyStatement(s2, context2, leaveDefs) match {
                 case (Sequence(ss3@_*), ctx3) => (ss2 ++ ss3, ctx3)
                 case (s3, ctx3) => (ss2 :+ s3, ctx3)
                 }
