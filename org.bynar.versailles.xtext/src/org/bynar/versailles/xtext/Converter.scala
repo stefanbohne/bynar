@@ -10,6 +10,7 @@ import org.eclipse.emf.ecore.EObject
 import org.bynar.versailles.PrettyPrinter
 import org.bynar.versailles.DocBookGenerator
 import org.bynar.versailles.TermImplicits._
+import org.eclipse.xtext.nodemodel.util.NodeModelUtils
 
 class Converter {
 
@@ -32,7 +33,10 @@ class Converter {
     def fromExpression(it: Expression): v.Expression =
         it match {
         case it: NumberLiteral =>
-            v.NumberLiteral(it.getValue).putAnnotation(source, it)
+            v.NumberLiteral(it.getValue).
+                    putAnnotation(source, it).
+                    putAnnotation(sourceRepresentationInfo, 
+                                 NodeModelUtils.getTokenText(NodeModelUtils.getNode(it)))
         case it: StringLiteral =>
             v.StringLiteral(it.getValue).putAnnotation(source, it)
         case it: InterpolatedString =>

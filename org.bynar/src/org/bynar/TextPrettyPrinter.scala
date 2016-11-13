@@ -25,7 +25,7 @@ class TextPrettyPrinter extends PrettyPrinter {
 
     override def append(text: Any) {
         result.append(Text(text.toString).toString.
-                replace(" * ", " ⋅ ").
+                replace(" * ", " <mml:math><mml:mo>⋅</mml:mo></mml:math> ").
                 replace(" == ", " = ").
                 replace(" != ", " &#x2260; ").
                 replace(" &lt;= ", " &#x2264; ").

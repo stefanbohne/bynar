@@ -270,6 +270,8 @@ class Simplifier {
                 (a, ctx2)
             case (Application(And(), BooleanLiteral(b1)), BooleanLiteral(b2)) =>
                 (BooleanLiteral(b1 && b2), ctx2)
+            case (Application(And(), a), Application(Application(And(), b), c)) =>
+                (And()(And()(a)(b))(c), ctx2)
             case (Application(Or(), BooleanLiteral(b1)), BooleanLiteral(b2)) =>
                 (BooleanLiteral(b1 || b2), ctx2)
             case (Application(Or(), BooleanLiteral(true)), _) =>
@@ -278,6 +280,8 @@ class Simplifier {
                 (BooleanLiteral(true), ctx2)
             case (Application(Or(), a), b) if a == b =>
                 (a, ctx2)
+            case (Application(Or(), a), Application(Application(Or(), b), c)) =>
+                (Or()(Or()(a)(b))(c), ctx2)
             case (Not(), BooleanLiteral(b)) =>
                 (BooleanLiteral(!b), ctx2)
             case (Application(And(), a == l1), b == l2) if isLiteral(l1) && isLiteral(l2) && a == b =>
@@ -430,6 +434,7 @@ class Simplifier {
                 var ss2 = ss1
                 var i = 0
                 var j = ss2.size - 1
+                var didMerge = false
                 while (j > 0 && (ss2(j) match { case Let(BooleanLiteral(true), _) => false; case _ => true }))
                     j -= 1
                 while (j > i) {
@@ -442,12 +447,15 @@ class Simplifier {
                                 ss2.drop(j + 1)
                             j -= 1
                             i -= 1
+                            didMerge = true
                         }
                     case _ =>
                     }
                     i += 1
                 }
-                if (ss2.size == 1)
+                if (didMerge)
+                    simplifyStatement(stmt.copy(ss2:_*), ctx1)
+                else if (ss2.size == 1)
                     (ss2(0), ctx1)
                 else
                     (stmt.copy(ss2:_*), ctx1)

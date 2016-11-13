@@ -55,6 +55,14 @@ class PrettyPrinter {
             precedence = opPrecedence
             doPrettyPrint(right)
         })
+    def binOpBoth(op: String, left: Term, right: Term, opPrecedence: Int) =
+        paren(opPrecedence, {
+            precedence = opPrecedence - 1
+            doPrettyPrint(left)
+            append(op)
+            precedence = opPrecedence - 1
+            doPrettyPrint(right)
+        })
     def prefixOp(op: String, operand: Term, opPrecedence: Int) =
         paren(opPrecedence, {
             append(op)
@@ -77,6 +85,8 @@ class PrettyPrinter {
             }
         
         term match {
+        case _ if term.annotation(sourceRepresentationInfo).nonEmpty =>
+            append(term.annotation(sourceRepresentationInfo).get)
         case stmt: Statement => doPrettyPrintStatement(stmt)
         case expr: Literal =>
             append(expr.toString)
@@ -432,4 +442,6 @@ object PrettyPrinter {
     case object LetAsAssert extends LetInfo
     case object LetAsType extends LetInfo
     val letInfo = new AnnotationKey[LetInfo]
+    
+    val sourceRepresentationInfo = new AnnotationKey[String]()
 }
