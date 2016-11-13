@@ -12,6 +12,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.eclipse.xtext.junit4.InjectWith
 import org.eclipse.xtext.junit4.XtextRunner
+import org.bynar.versailles.Statement
 
 @RunWith(classOf[XtextRunner])
 @InjectWith(classOf[BynarLangInjectorProvider])
@@ -24,10 +25,11 @@ class BynarVariableAnalyzerTest {
     @Inject
     val variableAnalyzer: VariableAnalyzer = null
 	
-	def doAnalyze(source: String, pattern: Boolean, janusClass: JanusClass, context: variableAnalyzer.Context): (Expression, variableAnalyzer.Context) = {
+	def doAnalyze(source: String, pattern: Boolean, janusClass: JanusClass, context: variableAnalyzer.Context): (Statement, variableAnalyzer.Context) = {
 	    val parsed = parseHelper.parse(source)
-	    val converted = converter.fromCompilationUnit(parsed)
-	    variableAnalyzer.analyze(converted, pattern, janusClass, context)
+	    val converted = converter.fromStatements(parsed.getStatements)
+	    val ctx0 = variableAnalyzer.analyzeDefinitions(converted, context)
+	    variableAnalyzer.analyze(converted, pattern, janusClass, ctx0)
 	}
 	
 	@Test

@@ -41,7 +41,7 @@ class VariableAnalyzer {
                     (Messages.add(it, UndefinedVariable), context)
             else
                 if (context.containsVariable(n))
-                    (Messages.add(it, VariableAlreadyDefined), context + (id, true))
+                    (Messages.add(it, VariableAlreadyDefined), context)
                 else
                     (it, context + (id, true))
         case it@Variable(id, false) =>

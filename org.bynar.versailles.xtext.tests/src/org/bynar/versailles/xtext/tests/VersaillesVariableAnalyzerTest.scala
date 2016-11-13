@@ -12,6 +12,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.eclipse.xtext.junit4.InjectWith
 import org.eclipse.xtext.junit4.XtextRunner
+import org.bynar.versailles.xtext.versaillesLang.Statements
+import org.bynar.versailles.Statement
 
 @RunWith(classOf[XtextRunner])
 @InjectWith(classOf[VersaillesLangInjectorProvider])
@@ -24,27 +26,31 @@ class VersaillesVariableAnalyzerTest {
     @Inject
     val variableAnalyzer: VariableAnalyzer = null
 	
-	def doAnalyze(source: String, pattern: Boolean, janusClass: JanusClass, context: variableAnalyzer.Context): (Expression, variableAnalyzer.Context) = {
+	def doAnalyze(source: String, pattern: Boolean, janusClass: JanusClass, context: variableAnalyzer.Context): (Statement, variableAnalyzer.Context) = {
 	    val parsed = parseHelper.parse(source)
-	    val converted = converter.fromCompilationUnit(parsed)
-	    variableAnalyzer.analyze(converted, pattern, janusClass, context)
+	    val converted = converter.fromStatements(parsed.getStatements)
+	    val ctx0 = variableAnalyzer.analyzeDefinitions(converted, context)
+	    variableAnalyzer.analyze(converted, pattern, janusClass, ctx0)
 	}
 	
 	@Test
 	def testLetLeak() {
-	    val (e, ctx) = doAnalyze("return { let ?x = 1; return x }", false, Irreversible(), variableAnalyzer.Context(Map.empty))
+	    val (e, ctx) = doAnalyze("let ?z = { let ?x = 1; return 0};", false, Irreversible(), variableAnalyzer.Context(Map.empty))
+	    assert(ctx.containsVariable('z))
 	    assert(!ctx.containsVariable('x))
 	}
 	
 	@Test
 	def testDefLeak() {
-	    val (e, ctx) = doAnalyze("return { def x: T = 1; return x }", false, Irreversible(), variableAnalyzer.Context(Map.empty))
+	    val (e, ctx) = doAnalyze("def z: T = { let ?x = 1; return 0};", false, Irreversible(), variableAnalyzer.Context(Map.empty))
+	    assert(ctx.containsVariable('z))
 	    assert(!ctx.containsVariable('x))
 	}
 
 	@Test
 	def testModuleLeak() {
 	    val (e, ctx) = doAnalyze("module M { let ?y = 1; def x: T = y };", false, Irreversible(), variableAnalyzer.Context(Map.empty))
+	    assert(ctx.containsVariable('M))
 	    assert(!ctx.containsVariable('x))
 	    assert(!ctx.containsVariable('y))
 	}

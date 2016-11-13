@@ -89,7 +89,9 @@ class VariableAnalyzer extends org.bynar.versailles.VariableAnalyzer {
         case it@EnumInterpretation(b) =>
             val ctx0 = analyzeDefinitions(b, context)
             val (b1, ctx1) = analyze(b, false, Irreversible(), ctx0)
-            (it.copy(b1), ctx1)
+            (it.copy(b1), Context(ctx1.variables.filter{
+                case (_, ContextEntry(v, l)) => !l || context.containsVariable(v)
+            }))
         case it@FixedInterpretation(fv) =>
             val (fv1, ctx1) = analyze(fv, false, Irreversible(), context)
             (it.copy(fv), ctx1)
@@ -104,17 +106,29 @@ class VariableAnalyzer extends org.bynar.versailles.VariableAnalyzer {
         it match {
         case it@BitRecordComponent(n, t) =>
             val (t1, ctx1) = analyze(t, pattern, janusClass, context)
-            (it.copy(`type` = t1), ctx1 + (VariableIdentity.setName(new VariableIdentity(), n), true))
+            if (context.containsVariable(n))
+                (Messages.add(it.copy(`type` = t1), VariableAlreadyDefined), ctx1)
+            else
+                (it.copy(`type` = t1), ctx1 + (VariableIdentity.setName(new VariableIdentity(), n), true))
         case it@BitRegisterComponent(n, p, t) =>
             val (p1, ctx1) = analyze(p, pattern, janusClass, context)
             val (t2, ctx2) = analyze(t, pattern, janusClass, context)
-            (it.copy(position = p1, `type` = t2), ctx2 + (VariableIdentity.setName(new VariableIdentity(), n), true))
+            if (context.containsVariable(n))
+                (Messages.add(it.copy(position = p1, `type` = t2), VariableAlreadyDefined), ctx2)
+            else
+                (it.copy(position = p1, `type` = t2), ctx2 + (VariableIdentity.setName(new VariableIdentity(), n), true))
         case it@BitUnionVariant(n, t) =>
             val (t1, ctx1) = analyze(t, pattern, janusClass, context)
-            (it.copy(`type` = t1), ctx1 + (VariableIdentity.setName(new VariableIdentity(), n), true))
+            if (context.containsVariable(n))
+                (Messages.add(it.copy(`type` = t1), VariableAlreadyDefined), ctx1)
+            else
+                (it.copy(`type` = t1), ctx1 + (VariableIdentity.setName(new VariableIdentity(), n), true))
         case it@EnumValue(n, v) =>
             val (v1, ctx1) = analyze(v, pattern, janusClass, context)
-            (it.copy(value = v1), ctx1 + (VariableIdentity.setName(new VariableIdentity(), n), true))
+            if (context.containsVariable(n))
+                (Messages.add(it.copy(value = v1), VariableAlreadyDefined), ctx1)
+            else
+                (it.copy(value = v1), ctx1 + (VariableIdentity.setName(new VariableIdentity(), n), true))
         case it => super.analyze(it, pattern, janusClass, context)
         }
 
