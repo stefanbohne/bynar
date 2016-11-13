@@ -30,7 +30,8 @@ class VariableAnalyzer extends org.bynar.versailles.VariableAnalyzer {
             if (pattern || janusClass != Irreversible())
                 (Messages.add(it, IllegalUseOfType), context)
             else {
-                val (b1, ctx1) = analyze(b, pattern, janusClass, context)
+                val ctx0 = analyzeDefinitions(b, context)
+                val (b1, ctx1) = analyze(b, pattern, janusClass, ctx0)
                 (it.copy(b1), Context(ctx1.variables.filter{
                     case (_, ContextEntry(v, l)) => !l || context.containsVariable(v)
                 }))
@@ -40,7 +41,8 @@ class VariableAnalyzer extends org.bynar.versailles.VariableAnalyzer {
                 (Messages.add(it, IllegalUseOfType), context)
             else {
                 val (bw1, ctx1) = analyze(bw, pattern, janusClass, context)
-                val (b2, ctx2) = analyze(b, pattern, janusClass, context)
+                val ctx0 = analyzeDefinitions(b, context)
+                val (b2, ctx2) = analyze(b, pattern, janusClass, ctx0)
                 (it.copy(bw1, b2), Context(ctx2.variables.filter{
                     case (_, ContextEntry(v, l)) => !l || context.containsVariable(v)
                 }))
@@ -49,7 +51,8 @@ class VariableAnalyzer extends org.bynar.versailles.VariableAnalyzer {
             if (pattern || janusClass != Irreversible())
                 (Messages.add(it, IllegalUseOfType), context)
             else {
-                val (b1, ctx1) = analyze(b, pattern, janusClass, context)
+                val ctx0 = analyzeDefinitions(b, context)
+                val (b1, ctx1) = analyze(b, pattern, janusClass, ctx0)
                 (it.copy(b1), Context(ctx1.variables.filter{
                     case (_, ContextEntry(v, l)) => !l || context.containsVariable(v)
                 }))
@@ -84,7 +87,8 @@ class VariableAnalyzer extends org.bynar.versailles.VariableAnalyzer {
     def analyze(it: BitTypeInterpretation, context: Context): (BitTypeInterpretation, Context) =
         it match {
         case it@EnumInterpretation(b) =>
-            val (b1, ctx1) = analyze(b, false, Irreversible(), context)
+            val ctx0 = analyzeDefinitions(b, context)
+            val (b1, ctx1) = analyze(b, false, Irreversible(), ctx0)
             (it.copy(b1), ctx1)
         case it@FixedInterpretation(fv) =>
             val (fv1, ctx1) = analyze(fv, false, Irreversible(), context)
@@ -100,17 +104,17 @@ class VariableAnalyzer extends org.bynar.versailles.VariableAnalyzer {
         it match {
         case it@BitRecordComponent(n, t) =>
             val (t1, ctx1) = analyze(t, pattern, janusClass, context)
-            (it.copy(`type` = t1), ctx1 + (VariableIdentity.setName(new VariableIdentity(), n), false))
+            (it.copy(`type` = t1), ctx1 + (VariableIdentity.setName(new VariableIdentity(), n), true))
         case it@BitRegisterComponent(n, p, t) =>
             val (p1, ctx1) = analyze(p, pattern, janusClass, context)
             val (t2, ctx2) = analyze(t, pattern, janusClass, context)
-            (it.copy(position = p1, `type` = t2), ctx2 + (VariableIdentity.setName(new VariableIdentity(), n), false))
+            (it.copy(position = p1, `type` = t2), ctx2 + (VariableIdentity.setName(new VariableIdentity(), n), true))
         case it@BitUnionVariant(n, t) =>
             val (t1, ctx1) = analyze(t, pattern, janusClass, context)
-            (it.copy(`type` = t1), ctx1 + (VariableIdentity.setName(new VariableIdentity(), n), false))
+            (it.copy(`type` = t1), ctx1 + (VariableIdentity.setName(new VariableIdentity(), n), true))
         case it@EnumValue(n, v) =>
             val (v1, ctx1) = analyze(v, pattern, janusClass, context)
-            (it.copy(value = v1), ctx1 + (VariableIdentity.setName(new VariableIdentity(), n), false))
+            (it.copy(value = v1), ctx1 + (VariableIdentity.setName(new VariableIdentity(), n), true))
         case it => super.analyze(it, pattern, janusClass, context)
         }
 

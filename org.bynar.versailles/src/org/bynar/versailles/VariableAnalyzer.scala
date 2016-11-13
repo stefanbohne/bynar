@@ -185,7 +185,7 @@ class VariableAnalyzer {
                 Messages.add(it, VariableAlreadyDefined)
                 context
             } else
-                context + (id, false)
+                context + (id, true)
         case Sequence(ss@_*) =>
                 (context /: ss){
                     case (ctx2, s) =>
