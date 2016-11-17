@@ -80,7 +80,7 @@ class Simplifier {
     def postSimplify(term: Term): Term =
         term.treeMap{
         case term@rangeIndex(f, t) =>
-            if (term.annotation(wasRangeIndexExclusive).isEmpty)
+            if (term.annotation(wasRangeIndexExclusive).isEmpty && isLiteral(f) && isLiteral(t) && f != t)
                 rangeIndexInclusive(f, simplify1(t - 1, true, Map())._1).copyAnnotationsFrom(term)
             else
                 term.removeAnnotation(wasRangeIndexExclusive)
