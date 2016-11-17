@@ -126,7 +126,7 @@ IndexExpr:
 		IndexExprSimple ({SequenceIndexExpr.first=current} "," second=IndexExprSimple)* ","?
 ;
 IndexExprSimple:
-		{SingletonIndexExpr} index=Expression ({RangeIndexExpr.from=current} (inclusive?=".."|"::") to=Expression)?
+		{SingletonIndexExpr} index=Expression ({RangeIndexExpr.from=current} (inclusive?=".."|"...") to=Expression)?
 ;
 
 TypeExpression:
