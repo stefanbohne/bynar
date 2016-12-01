@@ -188,16 +188,8 @@ class PrettyPrinter {
         case Application(Application(RangeIndex(), f), t) =>
             paren("[", "]", 0, {
                 doPrettyPrint(f)
-                append(" ... ")
+                append(" .. ")
                 doPrettyPrint(t)
-            })
-        case Application(Application(RangeIndexInclusive(), f), t) =>
-            paren("[", "]", 0, {
-                doPrettyPrint(f)
-                if (f != t) {
-                    append(" .. ")
-                    doPrettyPrint(t)
-                }
             })
         case Application(InfiniteIndex(), f) =>
             paren("[", "]", 0, {

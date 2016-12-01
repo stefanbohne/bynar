@@ -70,22 +70,9 @@ class Simplifier {
     val wasRangeIndexExclusive = new AnnotationKey[Unit]
 
     def preSimplify(term: Term): Term =
-        term.treeMap{
-        case term@rangeIndexInclusive(f, t) =>
-            rangeIndex(f, t + 1).copyAnnotationsFrom(term)
-        case term@rangeIndex(_, _) =>
-            term.putAnnotation(wasRangeIndexExclusive, ())
-        case term => term
-        }
+        term
     def postSimplify(term: Term): Term =
-        term.treeMap{
-        case term@rangeIndex(f, t) =>
-            if (term.annotation(wasRangeIndexExclusive).isEmpty && isLiteral(f) && isLiteral(t) && f != t)
-                rangeIndexInclusive(f, simplify1(t - 1, true, Map())._1).copyAnnotationsFrom(term)
-            else
-                term.removeAnnotation(wasRangeIndexExclusive)
-        case term => term
-        }
+        term
 
     def simplify(expr: Expression, forward: Boolean, context: Map[VariableIdentity, Expression] = defaultContext): (Expression, Map[VariableIdentity, Expression]) = {
         val (e, ctx) = simplify1(preSimplify(expr).asInstanceOf[Expression], forward, context)

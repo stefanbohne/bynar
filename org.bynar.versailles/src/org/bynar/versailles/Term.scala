@@ -206,10 +206,6 @@ case class RangeIndex() extends Literal {
     type SelfTerm = RangeIndex
     override def toString = "range_index"
 }
-case class RangeIndexInclusive() extends Literal {
-    type SelfTerm = RangeIndexInclusive
-    override def toString = "range_index_inclusive"
-}
 case class InfiniteIndex() extends Literal {
     type SelfTerm = InfiniteIndex
     override def toString = "infinite_index"

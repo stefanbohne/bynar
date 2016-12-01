@@ -181,14 +181,6 @@ object TermImplicits {
             case _ => None
         }
     }        
-    object rangeIndexInclusive {
-        def apply(a: Expression, b: Expression) =
-            Application(Application(RangeIndexInclusive(), a), b)
-        def unapply(t: Term) = t match {
-            case Application(Application(RangeIndexInclusive(), a), b) => Some(a, b)
-            case _ => None
-        }
-    }        
     object infiniteIndex {
         def apply(a: Expression) =
             Application(InfiniteIndex(), a)

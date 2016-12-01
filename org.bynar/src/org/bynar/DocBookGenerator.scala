@@ -169,7 +169,7 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
                 <para>Empty record.</para>
         case BitRegisterType(bw, b) =>
             val it = VariableIdentity.setName(new VariableIdentity, 'it)
-            val (entries, _) = generateTableEntries(t, Lambda(Irreversible(), Undefined(), rangeIndexInclusive(NumberLiteral(0), bw - 1)), Seq())
+            val (entries, _) = generateTableEntries(t, Lambda(Irreversible(), Undefined(), rangeIndex(NumberLiteral(0), bw)), Seq())
             if (entries.nonEmpty)
     			<para>Bit width: { term2Xml(simp.simplify(Block(root, bw), true, defaultContext)._1) }</para>
                 <table pgwide="1">
@@ -205,7 +205,7 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
     def bitRange(bitWidth: Expression): Expression = {
         val x = VariableIdentity.setName(new VariableIdentity, 'it)
         Lambda(Irreversible(), Variable(x, true),
-            rangeIndexInclusive(0, bitWidth(Variable(x, false)) - 1))
+            rangeIndex(0, bitWidth(Variable(x, false))))
     }
 
     def bitPermutationText(bitPermutation: Expression, bitPositions: Expression): Seq[Node] = {
@@ -259,7 +259,7 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
             val bp = {
                 val x = VariableIdentity.setName(new VariableIdentity, '_)
                 Lambda(Irreversible(), Variable(x, true),
-                    bitPermutation(Variable(x, false)) o rangeIndexInclusive(NumberLiteral(0), t.bitWidth - 1))
+                    bitPermutation(Variable(x, false)) o rangeIndex(NumberLiteral(0), t.bitWidth))
             }
             (t.foldComponents(Seq[Node]()){
                 case (c, rows) =>
