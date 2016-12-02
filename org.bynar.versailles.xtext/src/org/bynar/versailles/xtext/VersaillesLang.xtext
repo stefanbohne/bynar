@@ -13,8 +13,8 @@ Sep hidden (WS, ML_COMMENT, SL_COMMENT):
 ;
 
 Name: ID_LOWER | "pass" | "fail" | "let" | "forget" | "remember" | "def" | "letdef" | "type" | "lettype" |
-	  "if" | "else" | "end" | "case" | "match" | "in" |
-	  "int" | "boolean" | "module" | ID_BACKTICK
+	  "if" | "else" | "fi" | "case" | "match" | "in" | "from" | "loop" | "until" | "do" |
+	  "module" | "for" | ID_BACKTICK
 ;
 TypeName: ID_UPPER | ID_FORWARDTICK;
 TypeNamePath: steps+=TypeName ("." steps+=TypeName)*;
@@ -123,11 +123,13 @@ TupleExpr returns Expression:
 	|	{TupleExpr} "(" names+=Name "=" named+=Expression ("," names+=Name "=" named+=Expression)* (forceTuple?=",")?")"
 ;
 IndexExpr:
-		IndexExprSimple ({SequenceIndexExpr.first=current} "," second=IndexExprSimple)* ","?
+		IndexExprSimple ( {ComprehensionExpr.creator=current} (steps+=ComprehensionStep)+
+			            | ({SequenceIndexExpr.first=current} "," second=IndexExprSimple)* ","?)
 ;
 IndexExprSimple:
 		{SingletonIndexExpr} index=Expression ({RangeIndexExpr.from=current} ".." to=Expression)?
 ;
+ComprehensionStep: "for" pattern=Expression "from" list=Expression ("if" condition=Expression)?;
 
 TypeExpression:
 	TypeFun
