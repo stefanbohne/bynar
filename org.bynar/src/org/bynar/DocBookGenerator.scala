@@ -84,7 +84,7 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
             Seq(<section id={ path.map{ _.name }.mkString(".") }>
 				<title>{ title }</title>
 			    { descr }
-			    <para>{ term2Xml(v) }</para>
+			    <para>{ term2Xml(simp.simplify(Block(root, v), true, defaultContext)._1) }</para>
 				</section>)
         case _ => super.generateMainDefinitions(item)
         }
