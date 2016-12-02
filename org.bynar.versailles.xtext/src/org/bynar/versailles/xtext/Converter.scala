@@ -41,7 +41,8 @@ class Converter {
             v.StringLiteral(it.getValue).putAnnotation(source, it)
         case it: InterpolatedString =>
             def stringLit(index: Int): v.Expression =
-                v.StringLiteral(it.getStrings.get(index).substring(1, it.getStrings.get(index).length - 1)).putAnnotation(source, it)
+                v.StringLiteral(it.getStrings.get(index).substring(1, it.getStrings.get(index).length - 1).
+                        replace("''", "'").replace("$$", "$")).putAnnotation(source, it)
             (stringLit(0) /: (0 until it.getExpressions.size)){
             case (acc, i) =>
                 v.Application(
@@ -398,6 +399,8 @@ class Converter {
                           fromTypeExpression(it.getBase)).putAnnotation(source, it)
         case it: ValueType =>
             fromExpression(it.getValue)
+        case _ =>
+            v.Tuple().putAnnotation(source, it)
         }
 
     def fromTupleTypeType(it: TupleTypeTypeExpr): v.Expression =
