@@ -330,7 +330,7 @@ class Simplifier {
             case (Application(Plus(), l@Application(Length(), Application(InfiniteIndex(), _))), _) =>
                 (l, ctx2)
 
-            case (Application(Application(Janus(), f), _), a1) =>
+            case (Application(Application(Janus(), f), _), a1) if forward =>
                 simplify1(Application(f, a1), forward, ctx2)
             case (Reverse(), Application(Application(Janus(), f), b)) =>
                 (Application(Application(Janus(), b), f), ctx2)
