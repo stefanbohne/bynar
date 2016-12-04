@@ -251,23 +251,6 @@ class PrettyPrinter {
                 if (!a.isInstanceOf[TupleType])
                     append("]>")
             })
-        case Application(f, a)
-            if term.annotation(applicationInfo).getOrElse(ApplicationAsApplication) == ApplicationAsSlice ||
-                (f match {
-                case Application(SingletonIndex(), _) => true
-                case Application(Application(RangeIndex(), _), _) => true
-                case Application(InfiniteIndex(), _) => true
-                case Application(Application(IndexConcatenation(), _), _) => true
-                case Application(Application(IndexComposition(), _), _) => true
-                case _ => false
-                }) =>
-            paren(15, {
-                doPrettyPrint(a)
-                precedence = -1
-                append("[")
-                doPrettyPrint(f)
-                append("]")
-            })
         case Application(f, a) =>
             paren(40, {
                 precedence = 39
@@ -425,7 +408,6 @@ object PrettyPrinter {
     case object ApplicationAsTypeApplication extends ApplicationInfo
     case object ApplicationAsOperator extends ApplicationInfo
     case object ApplicationAsMatch extends ApplicationInfo
-    case object ApplicationAsSlice extends ApplicationInfo
     case object ApplicationAsList extends ApplicationInfo
     val applicationInfo = new AnnotationKey[ApplicationInfo]()
 
