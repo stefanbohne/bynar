@@ -232,7 +232,13 @@ class PrettyPrinter {
                 binOpRight(" || ", l, r, 3)
         case Application(Reverse(), a)
             if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
-                prefixOp("~", a, 50)
+                prefixOp("~", a, 35)
+        case Application(Not(), a)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
+                prefixOp("!", a, 35)
+        case Application(Application(Times(), NumberLiteral(mo)), a)
+            if mo == -1 && term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
+                prefixOp("-", a, 35)
         case Application(Application(Typed(), r), l)
             if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
                 binOpNone(": ", l, r, 8)
