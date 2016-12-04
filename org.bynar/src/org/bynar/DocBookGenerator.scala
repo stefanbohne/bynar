@@ -30,13 +30,13 @@ import org.bynar.versailles.OrElseValue
 import org.bynar.versailles.RangeIndex
 import org.bynar.versailles.Module
 
-class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGenerator(root) {
+class DocBookGenerator(root1: Statement) extends {
+    val simp = new Simplifier()
+    val pp = new TextPrettyPrinter()
+} with org.bynar.versailles.DocBookGenerator(simp.simplifyStatement(root1, defaultContext, true)._1) {
     import org.bynar.versailles.DocBookGenerator._
     import org.bynar.versailles.TermImplicits._
     import TermImplicits._
-
-    val simp = new Simplifier()
-    val pp = new TextPrettyPrinter()
 
     override def annotatePathInfo(item: Term, path: Seq[Symbol] = Seq()) {
         item match {
@@ -84,7 +84,7 @@ class DocBookGenerator(root: Statement) extends org.bynar.versailles.DocBookGene
             Seq(<section id={ path.map{ _.name }.mkString(".") }>
 				<title>{ title }</title>
 			    { descr }
-			    <para>{ term2Xml(simp.simplify(Block(root, v), true, defaultContext)._1) }</para>
+			    <literallayout>{ term2Xml(simp.simplify(Block(root, v), true, defaultContext)._1) }</literallayout>
 				</section>)
         case _ => super.generateMainDefinitions(item)
         }

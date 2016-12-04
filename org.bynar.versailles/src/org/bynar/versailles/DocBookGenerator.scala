@@ -3,7 +3,7 @@ package org.bynar.versailles
 import scala.xml.Elem
 import scala.xml.Node
 
-class DocBookGenerator(root: Statement) {
+class DocBookGenerator(val root: Statement) {
     import DocBookGenerator._
 
     def annotatePathInfo(item: Term, path: Seq[Symbol] = Seq()) {
