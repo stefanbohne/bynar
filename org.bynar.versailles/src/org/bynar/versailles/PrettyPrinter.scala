@@ -251,11 +251,11 @@ class PrettyPrinter {
                 precedence = 50
                 doPrettyPrint(f)
                 if (!a.isInstanceOf[TupleType])
-                    append("<[")
+                    append("[")
                 precedence = 0
                 doPrettyPrint(a)
                 if (!a.isInstanceOf[TupleType])
-                    append("]>")
+                    append("]")
             })
         case Application(f, a) =>
             paren(40, {
