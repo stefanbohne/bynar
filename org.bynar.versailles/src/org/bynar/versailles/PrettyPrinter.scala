@@ -85,8 +85,6 @@ class PrettyPrinter {
             }
         
         term match {
-        case _ if term.annotation(sourceRepresentationInfo).nonEmpty =>
-            append(term.annotation(sourceRepresentationInfo).get)
         case stmt: Statement => doPrettyPrintStatement(stmt)
         case expr: Literal =>
             append(expr.toString)
@@ -422,6 +420,4 @@ object PrettyPrinter {
     case object LetAsAssert extends LetInfo
     case object LetAsType extends LetInfo
     val letInfo = new AnnotationKey[LetInfo]
-    
-    val sourceRepresentationInfo = new AnnotationKey[String]()
 }

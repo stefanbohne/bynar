@@ -34,9 +34,7 @@ class Converter {
         it match {
         case it: NumberLiteral =>
             v.NumberLiteral(it.getValue).
-                    putAnnotation(source, it).
-                    putAnnotation(sourceRepresentationInfo, 
-                                 NodeModelUtils.getTokenText(NodeModelUtils.getNode(it)))
+                    putAnnotation(source, it)
         case it: StringLiteral =>
             v.StringLiteral(it.getValue).putAnnotation(source, it)
         case it: InterpolatedString =>

@@ -108,7 +108,11 @@ class Simplifier {
         case expr@Lambda(Irreversible(), block@Block(ss, s), b) =>
             simplify1(expr.copy(pattern = s, body = block.copy(reverseStatement(ss), b)), forward, context)
         case expr@Lambda(Irreversible(), app@Application(f, a), b) =>
-            val x = VariableIdentity.setName(new VariableIdentity(), '_)
+            val x = VariableIdentity.setName(new VariableIdentity(), 
+                        a match {
+                        case Variable(id, _) => VariableIdentity.getName(id)
+                        case _ => '_
+                        })            
             simplify1(expr.copy(pattern = Variable(x, true),
                                body = Block(Let(app, Variable(x, false)), b)),
                      forward,
