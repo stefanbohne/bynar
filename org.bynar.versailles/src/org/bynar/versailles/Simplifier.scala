@@ -383,22 +383,22 @@ class Simplifier {
             val (p2, ctx2) = simplify1(p, false, ctx1)
             (p2, v1) match {
             case (Undefined(), _) =>
-                (Sequence(), context)
+                (Sequence(), ctx2)
             case (Variable(id, true), value) =>
-                (Sequence(), context + (id -> value))
+                (Sequence(), ctx2 + (id -> value))
             case (l1, l2) if isLiteral(l1) && isLiteral(l2) =>
                 if (l1 == l2)
-                    (Sequence(), context)
+                    (Sequence(), ctx2)
                 else
-                    (Fail(), context)
+                    (Fail(), ctx2)
             case (Tuple(cs1@_*), Tuple(cs2@_*)) =>
                 if (cs1.size == cs2.size)
-                    simplifyStatement(Sequence((for ((c1, c2) <- cs1.zip(cs2)) yield Let(c1, c2)):_*), context)
+                    simplifyStatement(Sequence((for ((c1, c2) <- cs1.zip(cs2)) yield Let(c1, c2)):_*), ctx2)
                 else
                     (Fail(), context)
             case (Application(f, a), value) =>
-                val (value2, ctx2) = simplify1(Application(Application(Reverse(), f), value), true, context)
-                simplifyStatement(Let(a, value2), ctx2)
+                val (value3, ctx3) = simplify1(Application(Application(Reverse(), f), value), true, ctx2)
+                simplifyStatement(Let(a, value3), ctx3)
             case (p2, v1) => (stmt.copy(p2, v1), ctx2)
             }
         case stmt@Def(id, v) =>
