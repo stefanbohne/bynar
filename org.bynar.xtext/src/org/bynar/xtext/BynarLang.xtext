@@ -55,7 +55,7 @@ Name:
 		super
 	|   "component" | "align" | "at" | "offset" | "to" | "by" | "variant" | "value"
 	| 	"written" | "converted" | "where" | "is" | "bits" | "bytes" | "record" | "union"
-	|	"register" | "array" | "length" | "until" | "one" | "fixed" | "containing"
+	|	"register" | "array" | "length" | "one" | "fixed" | "containing"
 	| 	"bit" | "byte" | "kB" | "kilobytes" | "kilobyte" | "megabytes" | "megabyte"
 ;
 TypeName:
