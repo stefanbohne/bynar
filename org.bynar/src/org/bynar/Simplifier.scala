@@ -10,6 +10,7 @@ import org.bynar.versailles.Variable
 import org.bynar.versailles.Member
 import org.bynar.versailles.Tuple
 import org.bynar.versailles.Undefined
+import org.bynar.versailles.Statement
 
 class Simplifier extends org.bynar.versailles.Simplifier {
 
@@ -32,6 +33,56 @@ class Simplifier extends org.bynar.versailles.Simplifier {
             super.isDefined(expr)
         }
 
+    override def simplify1(expr: Expression, forward: Boolean, context: Map[VariableIdentity, Expression] = defaultContext): (Expression, Map[VariableIdentity, Expression]) =
+        expr match {
+        case expr@BitFieldType(bw) if forward =>
+            val (bw1, ctx1) = simplify1(bw, forward, context)
+            (expr.copy(bw1), ctx1)
+        case expr@BitRecordType(b) if forward =>
+            val (b1, ctx1) = simplifyStatement(b, context)
+            (expr.copy(b1), ctx1)
+        case expr@BitRegisterType(bw, b) if forward =>
+            val (bw1, ctx1) = simplify1(bw, forward, context)
+            val (b2, ctx2) = simplifyStatement(b, context)
+            (expr.copy(bw1, b2), ctx2)
+        case expr@BitUnionType(b) if forward =>
+            val (b1, ctx1) = simplifyStatement(b, context)
+            (expr.copy(b1), ctx1)
+        case expr@BitArrayType(et, u) if forward =>
+            val (et1, ctx1) = simplify1(et, forward, context)
+            val (u2, ctx2) = simplify1(u, forward, context)
+            (expr.copy(et1, u2), ctx1)
+        case expr@WrittenType(t, w) if forward =>
+            val (t1, ctx1) = simplify1(t, forward, context)
+            val (w2, ctx2) = simplify1(w, forward, context)
+            (expr.copy(t1, w2), ctx1)
+        case expr@ConvertedType(t, c) if forward =>
+            val (t1, ctx1) = simplify1(t, forward, context)
+            val (c2, ctx2) = simplify1(c, forward, context)
+            (expr.copy(t1, c2), ctx1)
+        case expr@WhereType(t, w) if forward =>
+            val (t1, ctx1) = simplify1(t, forward, context)
+            val (w2, ctx2) = simplify1(w, forward, context)
+            (expr.copy(t1, w2), ctx1)
+        case expr@InterpretedBitType(t, i) if forward =>
+            val (t1, ctx1) = simplify1(t, forward, context)
+            val (i2, ctx2) = i match {
+            case i@FixedInterpretation(f) =>
+                val (f2, ctx2) = simplify1(f, forward, ctx1)
+                (i.copy(f2), ctx2)
+            case UnitInterpretation(_) =>
+                (i, context)
+            case i@EnumInterpretation(b) =>
+                val (b2, ctx2) = simplifyStatement(b, ctx1)
+                (i.copy(b2), ctx2)
+            case i@ContainingInterpretation(ct) =>
+                val (ct2, ctx2) = simplify1(ct, forward, context)
+                (i.copy(ct2), ctx2)
+            }
+            (expr.copy(t1, i2), ctx1)
+        case expr => super.simplify1(expr, forward, context)
+        }
+    
     override def simplifyApplication(app: Application, forward: Boolean, context: Map[VariableIdentity, Expression]): (Expression, Map[VariableIdentity, Expression]) =
         (app.function, app.argument) match {
         case (MemberContextedType(Seq()), t) =>
@@ -75,4 +126,22 @@ class Simplifier extends org.bynar.versailles.Simplifier {
         case _ => super.simplifyApplication(app, forward, context)
         }
 
+    override def simplifyStatement(stmt: Statement, context: Map[VariableIdentity, Expression] = defaultContext, leaveDefs: Boolean = false): (Statement, Map[VariableIdentity, Expression]) =
+        stmt match {
+        case stmt@BitRecordComponent(_, t) =>
+            val (t1, ctx1) = simplify1(t, true, context)
+            (stmt.copy(`type` = t1), ctx1)
+        case stmt@BitRegisterComponent(_, p, t) =>
+            val (p1, ctx1) = simplify1(p, true, context)
+            val (t2, ctx2) = simplify1(t, true, ctx1)
+            (stmt.copy(position = p1, `type` = t2), ctx1)
+        case stmt@BitUnionVariant(_, t) =>
+            val (t1, ctx1) = simplify1(t, true, context)
+            (stmt.copy(`type` = t1), ctx1)
+        case stmt@EnumValue(_, v) =>
+            val (v1, ctx1) = simplify1(v, true, context)
+            (stmt.copy(value = v1), ctx1)
+        case stmt => super.simplifyStatement(stmt, context, leaveDefs)
+        }
+    
 }
