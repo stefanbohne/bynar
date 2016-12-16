@@ -242,7 +242,7 @@ class PrettyPrinter {
                 binOpNone(": ", l, r, 8)
         case Application(f, a)
             if term.annotation(applicationInfo).getOrElse(ApplicationAsApplication) == ApplicationAsMatch =>
-                binOpLeft(" match ", a, f, 2)
+                binOpLeft(" match ", a, f, 3)
         case Application(f, a)
             if term.annotation(applicationInfo).getOrElse(ApplicationAsApplication) == ApplicationAsTypeApplication =>
             paren(50, {
@@ -270,6 +270,8 @@ class PrettyPrinter {
             append("{}")
         case Lambda(jc, p, b) =>
             binOpRight(" " + jc.toString + " ", p, b, 1)
+        case Block(Let(BooleanLiteral(true), c), t) =>
+            binOpLeft(" where ", t, c, 2)
         case Block(Sequence(), s) =>
             paren("{ return ", " }", 0, {
                 doPrettyPrint(s)

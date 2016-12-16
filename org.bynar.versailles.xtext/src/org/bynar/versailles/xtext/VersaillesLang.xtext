@@ -14,7 +14,7 @@ Sep hidden (WS, ML_COMMENT, SL_COMMENT):
 
 Name: ID_LOWER | "pass" | "fail" | "let" | "forget" | "remember" | "def" | "letdef" | "type" | "lettype" |
 	  "if" | "else" | "fi" | "case" | "match" | "in" | "from" | "loop" | "until" | "do" |
-	  "module" | "for" | ID_BACKTICK
+	  "module" | "for" | "where" | ID_BACKTICK
 ;
 TypeName: ID_UPPER | ID_FORWARDTICK;
 TypeNamePath: steps+=TypeName ("." steps+=TypeName)*;
@@ -56,7 +56,7 @@ ExpressionLambda returns Expression:
 ;
 ExpressionIf returns Expression:
     ExpressionMatch ( {IfExpr.then=current} => "if" condition=Expression "else" else=ExpressionMatch
-    	            | {WhereExpr.then=current} => "so" "that" condition=ExpressionMatch)*
+    	            | {WhereExpr.then=current} => "where" condition=ExpressionMatch)*
 ;
 ExpressionMatch returns Expression:
 	ExpressionDisj ({MatchExpr.index=current} => "match" "{" statements=Statements "}")*

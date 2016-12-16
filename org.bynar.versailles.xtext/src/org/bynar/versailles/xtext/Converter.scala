@@ -154,6 +154,9 @@ class Converter {
                           fromExpression(it.getBase)).putAnnotation(source, it).putAnnotation(v.PrettyPrinter.applicationInfo, v.PrettyPrinter.ApplicationAsOperator)
         case it: ListExpr =>
             fromIndexExpr(it.getIndices, false).putAnnotation(applicationInfo, ApplicationAsList)
+        case it: WhereExpr =>
+            v.Block(v.Let(v.BooleanLiteral(true).putAnnotation(source, it), fromExpression(it.getCondition)).putAnnotation(source, it),
+                    fromExpression(it.getThen)).putAnnotation(source, it)
             
     }
 
