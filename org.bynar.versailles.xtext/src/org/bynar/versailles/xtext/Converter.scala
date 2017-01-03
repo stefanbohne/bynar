@@ -134,12 +134,12 @@ class Converter {
             else
                 v.Tuple(it.getPositional.map{ fromExpression(_) }:_*).putAnnotation(source, it)
         case it: BlockExpr =>
-            if (it.getScope == null && it.getStatements.getStatements.forall{ _.isInstanceOf[CaseStmt] })
-                fromCaseStatements(it.getStatements)
-            else if (it.getScope == null && it.getStatements.getStatements == null)
+            if (it.getScope == null && (it.getStatements.getStatements == null || it.getStatements.getStatements.isEmpty))
                 v.Lambda(v.Irreversible().putAnnotation(source, it),
                          v.Undefined().putAnnotation(source, it),
                          v.Undefined().putAnnotation(source, it)).putAnnotation(source, it)
+            else if (it.getScope == null && it.getStatements.getStatements.forall{ _.isInstanceOf[CaseStmt] })
+                fromCaseStatements(it.getStatements)
             else
                 v.Block(fromStatements(it.getStatements),
                         if (it.getScope == null)
