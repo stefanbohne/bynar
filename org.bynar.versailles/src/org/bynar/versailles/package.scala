@@ -3,7 +3,8 @@ package org.bynar
 package object versailles {
 
     val (defaultContext, defaultContextByName) = {
-      val map1 = Map(
+        import TermImplicits._ 
+        val map1 = Map(
             'true -> BooleanLiteral(true),
             'false -> BooleanLiteral(false),
             '+ -> Plus(),
@@ -58,6 +59,20 @@ package object versailles {
                     )
                 )
             },
+            'muladd -> {
+                val k = VariableIdentity.setName(new VariableIdentity(), 'k);
+                val a = VariableIdentity.setName(new VariableIdentity(), 'a);
+                val b = VariableIdentity.setName(new VariableIdentity(), 'b);
+                val w = VariableIdentity.setName(new VariableIdentity(), 'w);
+                val y = VariableIdentity.setName(new VariableIdentity(), 'y);
+                Lambda(Irreversible(), Variable(k, true),
+                       Lambda(Inverse(), Tuple(Variable(a, true), Variable(b, true)), Block(Sequence(
+                                 Let(Variable(y, true), Plus()(Times()(Variable(k, false))(Variable(a, false)))(Variable(b, true))),
+                                 Let(Tuple(), Forget()(Lambda(Irreversible(), Tuple(),
+                                         IntegerDivide()(Variable(y, false))(Variable(k, false)))))
+                             ),
+                             Variable(y, true))))
+            },
             'Number -> NumberType(),
             'String -> StringType(),
             'Boolean -> BooleanType()
@@ -87,9 +102,10 @@ package object versailles {
                                 Application(Application(GreaterOrEquals(), Variable(a, false)), Variable(b, false))),
                                 Lambda(Irreversible(), Tuple(), Variable(a, false))),
                                 Lambda(Irreversible(), Tuple(), Variable(b, false)))))
-            }
+            },
+            'divmod -> Reverse()(Variable(map1Ids('muladd), false))
         )
-      val map2Ids = Map(map2.keySet.toSeq.map{
+        val map2Ids = Map(map2.keySet.toSeq.map{
             case n =>
                 n -> VariableIdentity.setName(new VariableIdentity(), n)
         }:_*)
