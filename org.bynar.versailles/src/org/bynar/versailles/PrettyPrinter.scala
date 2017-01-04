@@ -104,11 +104,18 @@ class PrettyPrinter {
                 })
             case None => (0, "")
             }
-            val unscaled: BigInt = (value * BigDecimal(-base).pow(exponent)).underlying().unscaledValue()
-            val (prePoint, postPoint) = unscaled /% (BigInt(10).pow(value.underlying().scale()))
+            val deexponented = value / BigDecimal(base).pow(exponent)
+            val (prePoint, postPoint) = BigInt(deexponented.underlying().unscaledValue()) /% (BigInt(10).pow(deexponented.underlying().scale()))
             val pre = prePoint.toString(base)
-            // TODO: leading zeros of postPoint are missing  
-            append(prefix + "0" * Math.max(0, numDigits - pre.size) + pre + (if (postPoint == 0) "" else "." + postPoint.toString(base)) + suffix)
+            val postDigits = Math.ceil(deexponented.underlying().scale() * Math.log(10) / Math.log(base)).toInt
+            val post = if (postPoint != 0) 
+                    (postPoint.abs * BigInt(base).pow(postDigits) / BigInt(10).pow(deexponented.underlying().scale())).toString(base)
+                else 
+                    ""
+            append(prefix + 
+                    "0" * Math.max(0, numDigits - pre.size) + pre + 
+                    (if (postPoint == 0) "" else "." + "0" * (postDigits - post.size) + post) + 
+                    suffix)
         case expr: Literal =>
             append(expr.toString)
         case Variable(id, l) =>

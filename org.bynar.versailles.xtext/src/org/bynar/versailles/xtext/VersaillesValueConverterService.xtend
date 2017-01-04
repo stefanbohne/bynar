@@ -6,9 +6,6 @@ import org.eclipse.xtext.conversion.ValueConverter
 import org.eclipse.xtext.nodemodel.INode
 import org.eclipse.xtext.conversion.ValueConverterException
 import org.eclipse.xtext.util.Strings
-import java.math.BigDecimal
-import java.util.regex.Pattern
-import java.math.BigInteger
 
 class VersaillesValueConverterService extends DefaultTerminalConverters {
 	@ValueConverter(rule="Name")
