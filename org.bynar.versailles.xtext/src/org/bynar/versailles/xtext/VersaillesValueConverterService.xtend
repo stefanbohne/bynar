@@ -50,34 +50,4 @@ class VersaillesValueConverterService extends DefaultTerminalConverters {
 			}
 		}
 	}
-
-	@ValueConverter(rule="NUMBER")
-	def IValueConverter<BigDecimal> NUMBER() {
-		return new IValueConverter<BigDecimal> {
-			val regex = Pattern.compile("(0D|0X|0O|0B)?([0-9A-F]+)(?:\\.([0-9A-F]+))?(?:(?:E|P)((?:\\+|-)?[0-9A-F]+))?")
-			override def toValue(String string, INode node) {
-				val matcher = regex.matcher(string.replace("_", "").toUpperCase)
-				if (!matcher.find)
-					throw new ValueConverterException("Couldn't convert number", node, null)
-				val base =
-					if (matcher.group(1).nullOrEmpty) 10
-					else switch (matcher.group(1)) {
-						case "0X": 16
-						case "0O": 8
-						case "0B": 2
-						default: 10
-					}
-				var result = new BigDecimal(new BigInteger(matcher.group(2), base))
-				if (!matcher.group(3).nullOrEmpty)
-					result += new BigDecimal(new BigInteger(matcher.group(3), base)) /
-							new BigDecimal(base).pow(matcher.group(3).length)
-				if (!matcher.group(4).nullOrEmpty)
-					result *= new BigDecimal(base).pow(Integer.parseInt(matcher.group(4), base))
-				return result
-			}
-			override def toString(BigDecimal value) {
-				return value.toString
-			}
-		}
-	}
 }

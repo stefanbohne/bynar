@@ -11,6 +11,8 @@ import org.bynar.versailles.PrettyPrinter
 import org.bynar.versailles.DocBookGenerator
 import org.bynar.versailles.TermImplicits._
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils
+import java.util.regex.Pattern
+import java.math.BigInteger
 
 class Converter {
 
@@ -33,8 +35,7 @@ class Converter {
     def fromExpression(it: Expression): v.Expression =
         it match {
         case it: NumberLiteral =>
-            v.NumberLiteral(it.getValue).
-                    putAnnotation(source, it)
+            fromNumber(it)
         case it: StringLiteral =>
             v.StringLiteral(it.getValue).putAnnotation(source, it)
         case it: InterpolatedString =>
@@ -415,6 +416,33 @@ class Converter {
                 v.Variable(v.VariableIdentity.setName(new v.VariableIdentity, Symbol(tv.getName)), true).
                     putAnnotation(source, tv)
             }:_*).putAnnotation(source, it)
+            
+    val regex = Pattern.compile("(0D|0X|0O|0B)?([0-9A-F]+)(?:\\.([0-9A-F]+))?(?:(?:E|P)((?:\\+|-)?[0-9A-F]+))?")
+	def fromNumber(it: NumberLiteral): v.NumberLiteral = {
+		val matcher = regex.matcher(it.getValue.replace("_", "").toUpperCase)
+		matcher.matches()
+		val base =
+			if (matcher.group(1) == null || matcher.group(1).isEmpty) 10
+			else if (matcher.group(1) == "0X")  16
+			else if (matcher.group(1) == "0O") 8
+			else if (matcher.group(1) == "0B") 2
+			else 10
+		var result = BigDecimal.exact(new BigInteger(matcher.group(2), base))
+		if (matcher.group(3) != null && matcher.group(3).nonEmpty)
+			result += BigDecimal.exact(new BigInteger(matcher.group(3), base)) /
+					BigDecimal.exact(base).pow(matcher.group(3).length)
+		var exponent: Option[Int] = None
+		if (matcher.group(4) != null && matcher.group(4).nonEmpty) {
+		    exponent = Some(Integer.parseInt(matcher.group(4), base))
+			result *= BigDecimal.exact(base).pow(exponent.get)
+		}
+		return v.NumberLiteral(result).
+		        putAnnotation(source, it).
+		        putAnnotation(numberInfo, 
+		                NumberInfo(if (matcher.group(1) == null || matcher.group(1).isEmpty) None else Some(base),
+		                           matcher.group(2).size,
+		                           exponent))
+	}
 
 }
 

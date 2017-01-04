@@ -86,6 +86,29 @@ class PrettyPrinter {
         
         term match {
         case stmt: Statement => doPrettyPrintStatement(stmt)
+        case NumberLiteral(value) if term.annotation(numberInfo).nonEmpty => 
+            val (base, prefix) = term.annotation(numberInfo).get.base match {
+                case None => (10, "")
+                case Some(10) => (10, "0d")
+                case Some(16) => (16, "0x")
+                case Some(8) => (8, "0o")
+                case Some(2) => (2, "0b")
+            }
+            val numDigits = term.annotation(numberInfo).get.numDigits
+            val (exponent, suffix) = term.annotation(numberInfo).get.exponent match {
+            case Some(exponent) => (exponent, base match {
+                case 10 => "E" + exponent.toString
+                case 16 => "P" + exponent.toHexString
+                case 8 => "P" + exponent.toOctalString
+                case 2 => "P" + exponent.toBinaryString
+                })
+            case None => (0, "")
+            }
+            val unscaled: BigInt = (value * BigDecimal(-base).pow(exponent)).underlying().unscaledValue()
+            val (prePoint, postPoint) = unscaled /% (BigInt(10).pow(value.underlying().scale()))
+            val pre = prePoint.toString(base)
+            // TODO: leading zeros of postPoint are missing  
+            append(prefix + "0" * Math.max(0, numDigits - pre.size) + pre + (if (postPoint == 0) "" else "." + postPoint.toString(base)) + suffix)
         case expr: Literal =>
             append(expr.toString)
         case Variable(id, l) =>
@@ -422,4 +445,9 @@ object PrettyPrinter {
     case object LetAsAssert extends LetInfo
     case object LetAsType extends LetInfo
     val letInfo = new AnnotationKey[LetInfo]
+    
+    case class NumberInfo(val base: Option[Int],
+                          val numDigits: Int,
+                          val exponent: Option[Int])
+    val numberInfo = new AnnotationKey[NumberInfo]()
 }

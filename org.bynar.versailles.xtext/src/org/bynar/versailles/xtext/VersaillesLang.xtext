@@ -195,7 +195,7 @@ terminal fragment HEX:
 terminal fragment BIN:
 	('0'..'1')
 ;
-terminal NUMBER returns ecore::EBigDecimal:
+terminal NUMBER:
 		DEC(DEC|'_')* ('.' (DEC|'_')*)? (('e'|'E'|'p'|'P') ('+' | '-')? DEC(DEC|'_')*)?
 	|	('0d'|'0D') DEC(DEC|'_')* ('.' (DEC|'_')*)? (('p'|'P') ('+' | '-')? DEC(DEC|'_')*)?
 	|	('0x'|'0X') HEX(HEX|'_')* ('.' (HEX|'_')*)? (('p'|'P') ('+' | '-')? HEX(HEX|'_')*)?
