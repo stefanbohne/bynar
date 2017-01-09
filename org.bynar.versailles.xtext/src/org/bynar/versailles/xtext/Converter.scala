@@ -90,6 +90,7 @@ class Converter {
             case ">=" => normal(v.GreaterOrEquals())
             case "&&" => normal(v.And())
             case "||" => normal(v.Or())
+            case "in" => normal(v.In())
             }
         case it: UnaryExpr =>
             val a = fromExpression(it.getExpr)
