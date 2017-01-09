@@ -55,6 +55,8 @@ class TextPrettyPrinter extends PrettyPrinter {
         term match {
         case StringLiteral(s) =>
             result.append(s)
+        case Application(MemberContextedType(p), t) =>
+            doPrettyPrint(t)
         case Application(Application(Concat(), l), r) =>
             doPrettyPrint(l)
             doPrettyPrint(r)

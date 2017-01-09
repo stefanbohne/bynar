@@ -327,7 +327,7 @@ class DocBookGenerator(root1: Statement) extends {
         }
     
     def whereTypeDescription(where: Expression): Seq[Node] =
-        <para>Valid if { term2Xml(simp.simplify(Block(root, Application(where, Variable(VariableIdentity.setName(new VariableIdentity, 'it), false))), true, defaultContext)._1) }.</para>
+        <para>Only if { term2Xml(simp.simplify(Block(root, Application(where, Variable(VariableIdentity.setName(new VariableIdentity, 'it), false))), true, defaultContext)._1) }.</para>
     def convertedTypeDescription(converted: Expression): Seq[Node] = 
             <para>Converted via { term2Xml(simp.simplify(Block(root, Application(converted, Variable(VariableIdentity.setName(new VariableIdentity, 'it), false))), true, defaultContext)._1) }.</para>
     def writtenTypeDescription(written: Expression): Seq[Node] =
