@@ -273,11 +273,13 @@ class Converter {
                 ).putAnnotation(source, it)
             ).putAnnotation(source, it))
         case it: TypeStmt =>
+            val args = (if (it.getTypeArguments != null) Seq(fromTupleTypeType(it.getTypeArguments)) else Seq()) ++
+                (for (a <- it.getValueArguments) yield fromExpression(a))
             val t = fromTypeExpression(it.getType)
-            val t2 = if (it.getTypeArguments != null)
-                v.Lambda(v.Irreversible().putAnnotation(source, it), fromTupleTypeType(it.getTypeArguments), t).putAnnotation(source, it)
-            else
-                t
+            val t2 = if (args.isEmpty) t else 
+                (args.take(args.size - 1) :\ v.Lambda(v.Irreversible().putAnnotation(source, it), args.last, t).putAnnotation(source, it)){
+                case (a, b) => v.Lambda(v.Irreversible().putAnnotation(source, it), a, b).putAnnotation(source, it)
+                }
             val id = v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName))
             val result = if (it.isLet)
                     v.Let(v.Variable(id, true).putAnnotation(source, it), t2).

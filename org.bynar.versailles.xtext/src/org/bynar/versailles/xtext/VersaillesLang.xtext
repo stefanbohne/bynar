@@ -32,7 +32,7 @@ Statement:
 	|	{DefStmt} ("def"|let?="letdef") name=Name (typeArguments=TupleTypeTypeExpr)? (arguments+=TupleExpr)* (title=STRING)? (description=InterpolatedString)?
 					    ( janusClass=JanusClassExpression name2=Name? results=TupleExpr (title2=STRING)? (description2=InterpolatedString)? ("{" statements=Statements "}")?
 				        | ":" valueType=TypeExpression "=" value=Expression)
-	|	{TypeStmt} ("type"|let?="lettype") name=TypeName typeArguments=TupleTypeTypeExpr? valueArguments=TupleTypeExpr? (title=STRING)? (description=InterpolatedString)? "=" type=TypeExpression
+	|	{TypeStmt} ("type"|let?="lettype") name=TypeName typeArguments=TupleTypeTypeExpr? (valueArguments+=TupleExpr)* (title=STRING)? (description=InterpolatedString)? "=" type=TypeExpression
 	|   {ModuleStmt} "module" path=TypeNamePath (title=STRING)? (description=InterpolatedString)? "{" statements=Statements "}"
 ;
 Statements:
@@ -157,6 +157,7 @@ TypeSimple returns TypeExpression:
 	|	{ValueType} "type" value=Expression
 	|	TypeVariable
 	|	TupleTypeExpr
+	|	"(" TypeExpression ")"
 ;
 TypeVariable:
 	 name=TypeName
