@@ -81,10 +81,20 @@ class DocBookGenerator(root1: Statement) extends {
                         Block(root, Application(d, StringLiteral("it"))),
                         false, defaultContext
                 )._1) + "</root>").child }.getOrElse(Seq())
+            def functionDescr(t: Expression): (Seq[Seq[Node]], Seq[Node]) = 
+                t match {
+                case t: Lambda =>
+                    val (args, body) = functionDescr(t.body)
+                    (<listitem>{ term2Xml(t.pattern) }</listitem> ++ args, body) 
+                case t: BitTypeExpression => (Seq(), generateMainTypeDescription(t, title))
+                case t => (Seq(), <literallayout>{ term2Xml(simp.simplify(Block(root, t), true, defaultContext)._1) }</literallayout>)
+                }
+            val (args, body) = functionDescr(v)
             Seq(<section id={ path.map{ _.name }.mkString(".") }>
 				<title>{ title }</title>
 			    { descr }
-			    <literallayout>{ term2Xml(simp.simplify(Block(root, v), true, defaultContext)._1) }</literallayout>
+			    { if (args.nonEmpty) <para>Parameters:<orderedlist>{ args }</orderedlist></para> }
+			    { body }
 				</section>)
         case _ => super.generateMainDefinitions(item)
         }
@@ -145,6 +155,8 @@ class DocBookGenerator(root1: Statement) extends {
             <para>A { term2Xml(t) }.</para>
         case Application(MemberContextedType(_), t) =>
             generateTypeDescription(t)
+        case t@Application(_, _) =>
+            <para>A { term2Xml(t) }.</para>
         }
     }
 

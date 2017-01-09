@@ -174,7 +174,7 @@ class VariableAnalyzer {
         case it@Def(id, v) =>
             assert(context.containsVariable(id))
             val (v1, ctx1) = analyze(v, false, Irreversible(), context)
-            (it.copy(value = v1), ctx1)
+            (analyzeDescription[Def](it.copy(value = v1), _.identity, context), ctx1)
         }
 
     def analyzeDefinitions(it: Statement, context: Context): Context =
@@ -194,6 +194,13 @@ class VariableAnalyzer {
         case _ =>
             context
         }
+    
+    def analyzeDescription[T](x: T, part: T => Annotated, context: Context): T = {
+        if (part(x).annotation(DocBookGenerator.descriptionInfo).nonEmpty)
+            part(x).putAnnotation(DocBookGenerator.descriptionInfo,
+                    analyze(part(x).annotation(DocBookGenerator.descriptionInfo).get, false, Irreversible(), context)._1)
+        x
+    }
 }
 
 object VariableAnalyzer {

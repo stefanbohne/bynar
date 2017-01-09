@@ -135,6 +135,12 @@ class Simplifier {
             case (Undefined(), b2) => (b2, ctx3)
             case (a2, Undefined()) => (a2, ctx3)
             case (a2, _) if isDefined(a2) => (a2, ctx3)
+            case (a2@Block(Let(BooleanLiteral(true), c1), v1), Block(Let(BooleanLiteral(true), c2), v2)) if c1 == c2 =>
+                (a2, ctx3)
+            case (a2@Block(Let(BooleanLiteral(true), c1), v1), OrElseValue(Block(Let(BooleanLiteral(true), c2), v2), v3)) if c1 == c2 =>
+                (expr.copy(a2, v3), ctx3)
+            case (a2@OrElseValue(v0, Block(Let(BooleanLiteral(true), c1), v1)), Block(Let(BooleanLiteral(true), c2), v2)) if c1 == c2 =>
+                (a2, ctx3)
             case (a2, b2) => (expr.copy(a2, b2), ctx3)
             }
 
@@ -408,7 +414,7 @@ class Simplifier {
         case stmt@Def(id, v) =>
             if (leaveDefs) {
                 val (v1, ctx1) = simplify(v, true, context)
-                (stmt.copy(value = v1), ctx1 + (id -> v1))
+                (simplifyDescription[Def](stmt.copy(value = v1), _.identity, context), ctx1 + (id -> v1))
             } else
                 simplifyStatement(Let(Variable(id, true), v), context)
         case stmt@Sequence(ss@_*) =>
@@ -453,4 +459,11 @@ class Simplifier {
             }
         case stmt => (stmt, context)
         }
+    
+    def simplifyDescription[T](x: T, part: T => Annotated, context: Map[VariableIdentity, Expression]): T = {
+        if (part(x).annotation(DocBookGenerator.descriptionInfo).nonEmpty)
+                part(x).putAnnotation(DocBookGenerator.descriptionInfo, 
+                        simplify(part(x).annotation(DocBookGenerator.descriptionInfo).get, true, context)._1)
+        x
+    }
 }

@@ -130,17 +130,17 @@ class Simplifier extends org.bynar.versailles.Simplifier {
         stmt match {
         case stmt@BitRecordComponent(_, t) =>
             val (t1, ctx1) = simplify1(t, true, context)
-            (stmt.copy(`type` = t1), ctx1)
+            (simplifyDescription[BitRecordComponent](stmt.copy(`type` = t1), identity _, context), ctx1)
         case stmt@BitRegisterComponent(_, p, t) =>
             val (p1, ctx1) = simplify1(p, true, context)
             val (t2, ctx2) = simplify1(t, true, ctx1)
-            (stmt.copy(position = p1, `type` = t2), ctx1)
+            (simplifyDescription[BitRegisterComponent](stmt.copy(position = p1, `type` = t2), identity _, context), ctx1)
         case stmt@BitUnionVariant(_, t) =>
             val (t1, ctx1) = simplify1(t, true, context)
-            (stmt.copy(`type` = t1), ctx1)
+            (simplifyDescription[BitUnionVariant](stmt.copy(`type` = t1), identity _, context), ctx1)
         case stmt@EnumValue(_, v) =>
             val (v1, ctx1) = simplify1(v, true, context)
-            (stmt.copy(value = v1), ctx1)
+            (simplifyDescription[EnumValue](stmt.copy(value = v1), identity _, context), ctx1)
         case stmt => super.simplifyStatement(stmt, context, leaveDefs)
         }
     
