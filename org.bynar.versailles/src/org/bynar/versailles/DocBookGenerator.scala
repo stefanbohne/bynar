@@ -2,9 +2,12 @@ package org.bynar.versailles
 
 import scala.xml.Elem
 import scala.xml.Node
+import scala.xml.XML
 
-class DocBookGenerator(val root: Statement) {
+abstract class DocBookGenerator(val root: Statement) {
     import DocBookGenerator._
+    val pp: PrettyPrinter
+    val simp: Simplifier
 
     def annotatePathInfo(item: Term, path: Seq[Symbol] = Seq()) {
         item match {
@@ -18,14 +21,24 @@ class DocBookGenerator(val root: Statement) {
     }
     annotatePathInfo(root)
 
-    def generate(): Elem =
+    def generate(d: Def): Elem = {
+        val title = d.identity.annotation(titleInfo).getOrElse(niceTitle(VariableIdentity.getName(d.identity)))
+        val descr = d.identity.annotation(descriptionInfo).map{ d =>
+            XML.loadString("<root>" + pp.prettyPrint(simp.simplify(
+                    Block(root, Application(d, StringLiteral("it"))),
+                    false, defaultContext
+            )._1) + "</root>").child }.getOrElse(Seq())
         <article xmlns="http://docbook.org/ns/docbook" xmlns:mml="http://www.w3.org/1998/Math/MathML" version="5.0">
 			<info>
-				<title>Data Type Definition</title>
+				<title>{ title }</title>
 			</info>
-			{generateMainDefinitions(root)}
+			{ descr }
+			{ d.value match {
+			    case m: Module => generateMainDefinitions(m.body)
+		    }}
 	 	</article>
-
+    }
+    
     def generateMainDefinitions(item: Statement): Seq[Node] =
         item match {
         case Sequence(ss@_*) =>
