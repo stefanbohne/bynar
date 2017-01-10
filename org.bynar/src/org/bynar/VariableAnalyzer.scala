@@ -94,7 +94,7 @@ class VariableAnalyzer extends org.bynar.versailles.VariableAnalyzer {
             }))
         case it@FixedInterpretation(fv) =>
             val (fv1, ctx1) = analyze(fv, false, Irreversible(), context)
-            (it.copy(fv), ctx1)
+            (it.copy(fv1), ctx1)
         case it@UnitInterpretation(u) =>
             (it, context)
         case it@ContainingInterpretation(ct) =>
