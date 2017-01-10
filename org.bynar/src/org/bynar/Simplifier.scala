@@ -33,57 +33,57 @@ class Simplifier extends org.bynar.versailles.Simplifier {
             super.isDefined(expr)
         }
 
-    override def simplify1(expr: Expression, forward: Boolean, context: Map[VariableIdentity, Expression] = defaultContext): (Expression, Map[VariableIdentity, Expression]) =
+    override def simplify1(expr: Expression, forward: Boolean, context: Map[VariableIdentity, Expression], leaveDefs: Boolean): (Expression, Map[VariableIdentity, Expression]) =
         expr match {
         case expr@BitFieldType(bw) if forward =>
-            val (bw1, ctx1) = simplify1(bw, forward, context)
+            val (bw1, ctx1) = simplify1(bw, forward, context, leaveDefs)
             (expr.copy(bw1), ctx1)
         case expr@BitRecordType(b) if forward =>
-            val (b1, ctx1) = simplifyStatement(b, context)
+            val (b1, ctx1) = simplifyStatement(b, context, leaveDefs)
             (expr.copy(b1), ctx1)
         case expr@BitRegisterType(bw, b) if forward =>
-            val (bw1, ctx1) = simplify1(bw, forward, context)
-            val (b2, ctx2) = simplifyStatement(b, context)
+            val (bw1, ctx1) = simplify1(bw, forward, context, leaveDefs)
+            val (b2, ctx2) = simplifyStatement(b, context, leaveDefs)
             (expr.copy(bw1, b2), ctx2)
         case expr@BitUnionType(b) if forward =>
-            val (b1, ctx1) = simplifyStatement(b, context)
+            val (b1, ctx1) = simplifyStatement(b, context, leaveDefs)
             (expr.copy(b1), ctx1)
         case expr@BitArrayType(et, u) if forward =>
-            val (et1, ctx1) = simplify1(et, forward, context)
-            val (u2, ctx2) = simplify1(u, forward, context)
+            val (et1, ctx1) = simplify1(et, forward, context, leaveDefs)
+            val (u2, ctx2) = simplify1(u, forward, context, leaveDefs)
             (expr.copy(et1, u2), ctx1)
         case expr@WrittenType(t, w) if forward =>
-            val (t1, ctx1) = simplify1(t, forward, context)
-            val (w2, ctx2) = simplify1(w, forward, context)
+            val (t1, ctx1) = simplify1(t, forward, context, leaveDefs)
+            val (w2, ctx2) = simplify1(w, forward, context, leaveDefs)
             (expr.copy(t1, w2), ctx1)
         case expr@ConvertedType(t, c) if forward =>
-            val (t1, ctx1) = simplify1(t, forward, context)
-            val (c2, ctx2) = simplify1(c, forward, context)
+            val (t1, ctx1) = simplify1(t, forward, context, leaveDefs)
+            val (c2, ctx2) = simplify1(c, forward, context, leaveDefs)
             (expr.copy(t1, c2), ctx1)
         case expr@WhereType(t, w) if forward =>
-            val (t1, ctx1) = simplify1(t, forward, context)
-            val (w2, ctx2) = simplify1(w, forward, context)
+            val (t1, ctx1) = simplify1(t, forward, context, leaveDefs)
+            val (w2, ctx2) = simplify1(w, forward, context, leaveDefs)
             (expr.copy(t1, w2), ctx1)
         case expr@InterpretedBitType(t, i) if forward =>
-            val (t1, ctx1) = simplify1(t, forward, context)
+            val (t1, ctx1) = simplify1(t, forward, context, leaveDefs)
             val (i2, ctx2) = i match {
             case i@FixedInterpretation(f) =>
-                val (f2, ctx2) = simplify1(f, forward, ctx1)
+                val (f2, ctx2) = simplify1(f, forward, ctx1, leaveDefs)
                 (i.copy(f2), ctx2)
             case UnitInterpretation(_) =>
                 (i, context)
             case i@EnumInterpretation(b) =>
-                val (b2, ctx2) = simplifyStatement(b, ctx1)
+                val (b2, ctx2) = simplifyStatement(b, ctx1, leaveDefs)
                 (i.copy(b2), ctx2)
             case i@ContainingInterpretation(ct) =>
-                val (ct2, ctx2) = simplify1(ct, forward, context)
+                val (ct2, ctx2) = simplify1(ct, forward, context, leaveDefs)
                 (i.copy(ct2), ctx2)
             }
             (expr.copy(t1, i2), ctx1)
-        case expr => super.simplify1(expr, forward, context)
+        case expr => super.simplify1(expr, forward, context, leaveDefs)
         }
     
-    override def simplifyApplication(app: Application, forward: Boolean, context: Map[VariableIdentity, Expression]): (Expression, Map[VariableIdentity, Expression]) =
+    override def simplifyApplication(app: Application, forward: Boolean, context: Map[VariableIdentity, Expression], leaveDefs: Boolean): (Expression, Map[VariableIdentity, Expression]) =
         (app.function, app.argument) match {
         case (MemberContextedType(Seq()), t) =>
             (t, context)
@@ -93,13 +93,13 @@ class Simplifier extends org.bynar.versailles.Simplifier {
                    Variable(v, true),
                    Application(app.copy(argument = t),
                                (p :\ (Variable(v, false): Expression)){ case (n, x) => Application(Member(n), x) })),
-               forward, context)
+               forward, context, leaveDefs)
         case (BitWidth(), bt: BitTypeExpression) =>
             val x = VariableIdentity.setName(new VariableIdentity(), '_)
-            (Lambda(Irreversible(), Variable(x, true), simplify1(bt.dependentBitWidth(Variable(x, false)), true, context)._1), context)
+            (Lambda(Irreversible(), Variable(x, true), simplify1(bt.dependentBitWidth(Variable(x, false)), true, context, leaveDefs)._1), context)
         case (Application(Member(n), t: BitUnionType), a) =>
             t.variants.find(buv => buv.name == n) match {
-            case Some(buv) => simplify1(Application(buv.`type`, a), forward, context)
+            case Some(buv) => simplify1(Application(buv.`type`, a), forward, context, leaveDefs)
             case None => (Undefined(), context)
             }
         case (Member(n), t: BitRecordType) =>
@@ -123,23 +123,23 @@ class Simplifier extends org.bynar.versailles.Simplifier {
                 (ev.value, context)
             case None => (Undefined(), context)
             }
-        case _ => super.simplifyApplication(app, forward, context)
+        case _ => super.simplifyApplication(app, forward, context, leaveDefs)
         }
 
-    override def simplifyStatement(stmt: Statement, context: Map[VariableIdentity, Expression] = defaultContext, leaveDefs: Boolean = false): (Statement, Map[VariableIdentity, Expression]) =
+    override def simplifyStatement(stmt: Statement, context: Map[VariableIdentity, Expression], leaveDefs: Boolean): (Statement, Map[VariableIdentity, Expression]) =
         stmt match {
         case stmt@BitRecordComponent(_, t) =>
-            val (t1, ctx1) = simplify1(t, true, context)
+            val (t1, ctx1) = simplify1(t, true, context, leaveDefs)
             (simplifyDescription[BitRecordComponent](stmt.copy(`type` = t1), identity _, context), ctx1)
         case stmt@BitRegisterComponent(_, p, t) =>
-            val (p1, ctx1) = simplify1(p, true, context)
-            val (t2, ctx2) = simplify1(t, true, ctx1)
+            val (p1, ctx1) = simplify1(p, true, context, leaveDefs)
+            val (t2, ctx2) = simplify1(t, true, ctx1, leaveDefs)
             (simplifyDescription[BitRegisterComponent](stmt.copy(position = p1, `type` = t2), identity _, context), ctx1)
         case stmt@BitUnionVariant(_, t) =>
-            val (t1, ctx1) = simplify1(t, true, context)
+            val (t1, ctx1) = simplify1(t, true, context, leaveDefs)
             (simplifyDescription[BitUnionVariant](stmt.copy(`type` = t1), identity _, context), ctx1)
         case stmt@EnumValue(_, v) =>
-            val (v1, ctx1) = simplify1(v, true, context)
+            val (v1, ctx1) = simplify1(v, true, context, leaveDefs)
             (simplifyDescription[EnumValue](stmt.copy(value = v1), identity _, context), ctx1)
         case stmt => super.simplifyStatement(stmt, context, leaveDefs)
         }

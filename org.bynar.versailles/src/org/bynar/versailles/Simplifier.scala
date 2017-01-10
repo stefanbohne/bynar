@@ -74,12 +74,12 @@ class Simplifier {
     def postSimplify(term: Term): Term =
         term
 
-    def simplify(expr: Expression, forward: Boolean, context: Map[VariableIdentity, Expression] = defaultContext): (Expression, Map[VariableIdentity, Expression]) = {
-        val (e, ctx) = simplify1(preSimplify(expr).asInstanceOf[Expression], forward, context)
+    def simplify(expr: Expression, forward: Boolean, context: Map[VariableIdentity, Expression] = defaultContext, leaveDefs: Boolean = false): (Expression, Map[VariableIdentity, Expression]) = {
+        val (e, ctx) = simplify1(preSimplify(expr).asInstanceOf[Expression], forward, context, leaveDefs)
         (postSimplify(e).asInstanceOf[Expression], ctx)
     }
 
-    def simplify1(expr: Expression, forward: Boolean, context: Map[VariableIdentity, Expression] = defaultContext): (Expression, Map[VariableIdentity, Expression]) =
+    def simplify1(expr: Expression, forward: Boolean, context: Map[VariableIdentity, Expression], leaveDefs: Boolean): (Expression, Map[VariableIdentity, Expression]) =
         expr match {
         case expr@Variable(id, true) =>
             (if (forward) context.getOrElse(id, expr) else expr, context - id)
@@ -88,25 +88,30 @@ class Simplifier {
         case expr@Tuple(cs@_*) =>
             val (cs1, ctx1) = ((Seq[Expression](), context) /: cs){
             case ((cs2, ctx2), c) =>
-                val (c2, ctx3) = simplify1(c, forward, ctx2)
+                val (c2, ctx3) = simplify1(c, forward, ctx2, leaveDefs)
                 (cs2 :+ c2, ctx3)
             }
             (expr.copy(cs1:_*), ctx1)
         case expr@Block(b1, Block(b2, s)) =>
-            simplify1(Block(Sequence(b1, b2), s), forward, context)
+            simplify1(Block(Sequence(b1, b2), s), forward, context, leaveDefs)
         case expr@Block(b, s) =>
-            val (b2, ctx2) = simplifyStatement(b, context)
+            val (b2, ctx2) = simplifyStatement(b, context, leaveDefs)
             b2 match {
             case Fail() =>
                 (Undefined(), ctx2)
             case Sequence() =>
-                simplify1(s, forward, ctx2)
+                simplify1(s, forward, ctx2, leaveDefs)
             case b2 =>
-                val (s2, ctx3) = simplify1(s, forward, ctx2)
-                (expr.copy(b2, s2), ctx3)
+                val (s2, ctx3) = simplify1(s, forward, ctx2, leaveDefs)
+                (b2, s2) match {
+                case (Let(BooleanLiteral(true), c), v: OrElseValue) =>
+                    simplify1(v.copy(expr.copy(b2, v.first), expr.copy(b2.deepCopy(), v.second)), forward, ctx3, leaveDefs)
+                case (b2, s2) =>
+                    (expr.copy(b2, s2), ctx3)
+                }                
             }
         case expr@Lambda(Irreversible(), block@Block(ss, s), b) =>
-            simplify1(expr.copy(pattern = s, body = block.copy(reverseStatement(ss), b)), forward, context)
+            simplify1(expr.copy(pattern = s, body = block.copy(reverseStatement(ss), b)), forward, context, leaveDefs)
         case expr@Lambda(Irreversible(), app@Application(f, a), b) =>
             val x = VariableIdentity.setName(new VariableIdentity(), 
                         a match {
@@ -116,10 +121,11 @@ class Simplifier {
             simplify1(expr.copy(pattern = Variable(x, true),
                                body = Block(Let(app, Variable(x, false)), b)),
                      forward,
-                     context)
+                     context, 
+                     leaveDefs)
         case expr@Lambda(Irreversible(), p, b) =>
-            val (p2, ctx2) = simplify1(p, !forward, context)
-            val (b2, ctx3) = simplify1(b, forward, ctx2)
+            val (p2, ctx2) = simplify1(p, !forward, context, leaveDefs)
+            val (b2, ctx3) = simplify1(b, forward, ctx2, leaveDefs)
             (expr.copy(pattern = p2, body = b2), context)
         case expr@Lambda(jc, p, b) =>
             simplify1(Janus()(expr.copy(janusClass = Irreversible()))(
@@ -127,27 +133,28 @@ class Simplifier {
                                        pattern = b,
                                        body = p)),
                      forward,
-                     context)
+                     context, 
+                     leaveDefs)
         case expr@OrElseValue(a, b) =>
-            val (a2, ctx2) = simplify1(a, forward, context)
-            val (b2, ctx3) = simplify1(b, forward, ctx2)
+            val (a2, ctx2) = simplify1(a, forward, context, leaveDefs)
+            val (b2, ctx3) = simplify1(b, forward, ctx2, leaveDefs)
             (a2, b2) match {
             case (Undefined(), b2) => (b2, ctx3)
             case (a2, Undefined()) => (a2, ctx3)
             case (a2, _) if isDefined(a2) => (a2, ctx3)
-            case (a2@Block(Let(BooleanLiteral(true), c1), v1), Block(Let(BooleanLiteral(true), c2), v2)) if c1 == c2 =>
+            case (a2@Block(Let(BooleanLiteral(true), c1), v1), Block(Let(BooleanLiteral(true), c2), v2)) if isDefined(v1) && c1 == c2 =>
                 (a2, ctx3)
-            case (a2@Block(Let(BooleanLiteral(true), c1), v1), OrElseValue(Block(Let(BooleanLiteral(true), c2), v2), v3)) if c1 == c2 =>
+            case (a2@Block(Let(BooleanLiteral(true), c1), v1), OrElseValue(Block(Let(BooleanLiteral(true), c2), v2), v3)) if isDefined(v1) && c1 == c2 =>
                 (expr.copy(a2, v3), ctx3)
-            case (a2@OrElseValue(v0, Block(Let(BooleanLiteral(true), c1), v1)), Block(Let(BooleanLiteral(true), c2), v2)) if c1 == c2 =>
+            case (a2@OrElseValue(v0, Block(Let(BooleanLiteral(true), c1), v1)), Block(Let(BooleanLiteral(true), c2), v2)) if isDefined(v1) && c1 == c2 =>
                 (a2, ctx3)
             case (a2, b2) => (expr.copy(a2, b2), ctx3)
             }
 
         case expr@Application(f, a) =>
-            val (a1, ctx1) = simplify1(a, forward, context)
-            val (f2, ctx2) = simplify1(f, true, ctx1)
-            simplifyApplication(expr.copy(f2, a1), forward, ctx1)
+            val (a1, ctx1) = simplify1(a, forward, context, leaveDefs)
+            val (f2, ctx2) = simplify1(f, true, ctx1, leaveDefs)
+            simplifyApplication(expr.copy(f2, a1), forward, ctx1, leaveDefs)
             
         case expr@Module(s) =>
             val (s1, ctx1) = simplifyStatement(s, context, true)
@@ -156,12 +163,12 @@ class Simplifier {
         case expr => (expr, context)
         }
 
-    def simplifyApplication(app: Application, forward: Boolean, ctx2: Map[VariableIdentity, Expression]): (Expression, Map[VariableIdentity, Expression]) =
+    def simplifyApplication(app: Application, forward: Boolean, ctx2: Map[VariableIdentity, Expression], leaveDefs: Boolean): (Expression, Map[VariableIdentity, Expression]) =
         app match {
         case Application(f2, a1) =>
             (f2, a1) match {
             case (lam(p, b), a1) =>
-                simplify1(Block(Let(p, a1), b), forward, ctx2)
+                simplify1(Block(Let(p, a1), b), forward, ctx2, leaveDefs)
             case (Reverse(), Reverse()) =>
                 (Reverse(), ctx2)
             case (Reverse(), reverse(f)) =>
@@ -182,30 +189,30 @@ class Simplifier {
             case (Application(Plus(), NumberLiteral(z)), x) if z == 0 =>
                 (x, ctx2)
             case (Application(Plus(), Application(Application(op@Plus(), NumberLiteral(r)), x)), NumberLiteral(l)) =>
-                simplify1(Application(Application(op, NumberLiteral(l + r)), x), forward, ctx2)
+                simplify1(Application(Application(op, NumberLiteral(l + r)), x), forward, ctx2, leaveDefs)
             case (Application(Plus(), NumberLiteral(r)), Application(Application(op@Plus(), NumberLiteral(l)), x)) =>
-                simplify1(Application(Application(op, NumberLiteral(l + r)), x), forward, ctx2)
+                simplify1(Application(Application(op, NumberLiteral(l + r)), x), forward, ctx2, leaveDefs)
             case (Application(Plus(), Application(Application(op1@Plus(), NumberLiteral(r)), x)), f3@Application(Application(op2@Plus(), NumberLiteral(l)), y)) =>
-                simplify1(Application(Application(op1, Application(Application(op2, NumberLiteral(l + r)), x)), y), forward, ctx2)
+                simplify1(Application(Application(op1, Application(Application(op2, NumberLiteral(l + r)), x)), y), forward, ctx2, leaveDefs)
             case (Application(op@Plus(), r), l: NumberLiteral) =>
-                simplify1(Application(Application(op, l), r), forward, ctx2)
+                simplify1(Application(Application(op, l), r), forward, ctx2, leaveDefs)
             case (f1@Application(Plus(), x), Application(f3@Application(Plus(), l: NumberLiteral), y)) =>
-                simplify1(Application(f3, Application(f1, y)), forward, ctx2)
+                simplify1(Application(f3, Application(f1, y)), forward, ctx2, leaveDefs)
             case (f1@Application(Plus(), f2@Application(f3@Application(Plus(), r: NumberLiteral), x)), y) =>
-                simplify1(Application(f3, Application(Application(f1.function, x), y)), forward, ctx2)
+                simplify1(Application(f3, Application(Application(f1.function, x), y)), forward, ctx2, leaveDefs)
             case (Application(Plus(), x), y) if x == y =>
-                simplify1(x * 2, forward, ctx2)
+                simplify1(x * 2, forward, ctx2, leaveDefs)
             case (Application(Plus(), x * k), y) if x == y =>
-                simplify1(x * (k + 1), forward, ctx2)
+                simplify1(x * (k + 1), forward, ctx2, leaveDefs)
             case (Application(Plus(), x), y * k) if x == y =>
-                simplify1(x * (k + 1), forward, ctx2)
+                simplify1(x * (k + 1), forward, ctx2, leaveDefs)
             case (Application(Plus(), x * k), y * l) if x == y =>
-                simplify1(x * (k + l), forward, ctx2)
+                simplify1(x * (k + l), forward, ctx2, leaveDefs)
 
             case (Divide(), l: NumberLiteral) if ((1 / l.value) * l.value == 1) =>
-                simplify1(Application(Times(), NumberLiteral(1 / l.value)), forward, ctx2)
+                simplify1(Application(Times(), NumberLiteral(1 / l.value)), forward, ctx2, leaveDefs)
             case (Divide(), l) =>
-                simplify1(Application(Times(), Application(Application(Power(), NumberLiteral(-1)), l)), forward, ctx2)
+                simplify1(Application(Times(), Application(Application(Power(), NumberLiteral(-1)), l)), forward, ctx2, leaveDefs)
             case (Reverse(), Application(Times(), x)) =>
                 (Application(Divide(), x), ctx2)
             case (Reverse(), Application(Divide(), x)) =>
@@ -222,30 +229,30 @@ class Simplifier {
                 (x, ctx2)
             case (Application(Times(), f1@Application(f2@Application(Times(), NumberLiteral(r)), x)), NumberLiteral(l))
                 if (l * r / r == l && l * r / l == r) =>
-                simplify1(Application(Application(f2.function, NumberLiteral(l * r)), x), forward, ctx2)
+                simplify1(Application(Application(f2.function, NumberLiteral(l * r)), x), forward, ctx2, leaveDefs)
             case (Application(Times(), NumberLiteral(r)), f1@Application(f2@Application(Times(), NumberLiteral(l)), x))
                 if (l * r / r == l && l * r / l == r) =>
-                simplify1(Application(Application(f2.function, NumberLiteral(l * r)), x), forward, ctx2)
+                simplify1(Application(Application(f2.function, NumberLiteral(l * r)), x), forward, ctx2, leaveDefs)
             case (Application(Times(), NumberLiteral(r)), f1@Application(f2@Application(Times(), Application(Application(Power(), NumberLiteral(mo)), NumberLiteral(l))), x))
                 if (mo == -1 && (r / l) * l == r && r / (r / l) == l) =>
-                simplify1(Application(Application(f2.function, NumberLiteral(r / l)), x), forward, ctx2)
+                simplify1(Application(Application(f2.function, NumberLiteral(r / l)), x), forward, ctx2, leaveDefs)
             case (Application(Times(), f1@Application(f2@Application(Times(), NumberLiteral(r)), x)), f3@Application(f4@Application(Times(), NumberLiteral(l)), y)) =>
-                simplify1(Application(Application(f2.function, Application(Application(f4.function, NumberLiteral(l * r)), y)), x), forward, ctx2)
+                simplify1(Application(Application(f2.function, Application(Application(f4.function, NumberLiteral(l * r)), y)), x), forward, ctx2, leaveDefs)
             case (f1@Application(Times(), r), l: NumberLiteral) =>
-                simplify1(Application(Application(f1.function, l), r), forward, ctx2)
+                simplify1(Application(Application(f1.function, l), r), forward, ctx2, leaveDefs)
             case (f1@Application(Times(), x), f2@Application(f3@Application(Times(), l: NumberLiteral), y)) =>
-                simplify1(Application(f3, Application(f1, y)), forward, ctx2)
+                simplify1(Application(f3, Application(f1, y)), forward, ctx2, leaveDefs)
             case (f1@Application(Times(), f2@Application(f3@Application(Times(), r: NumberLiteral), x)), y) =>
-                simplify1(Application(f3, Application(Application(f1.function, x), y)), forward, ctx2)
+                simplify1(Application(f3, Application(Application(f1.function, x), y)), forward, ctx2, leaveDefs)
             case (f1@Application(Times(), r: NumberLiteral), f2@Application(f3@Application(Plus(), NumberLiteral(l)), x)) =>
-                simplify1(Application(f3.copy(f3.function, NumberLiteral(l * r.value)), Application(f1.copy(f1.function, r), x)), forward, ctx2)
+                simplify1(Application(f3.copy(f3.function, NumberLiteral(l * r.value)), Application(f1.copy(f1.function, r), x)), forward, ctx2, leaveDefs)
             case (IntegerDivide(), Tuple(l: NumberLiteral, r: NumberLiteral)) =>
                 (NumberLiteral(((l.value - (l.value % r.value)) / r.value)), ctx2)
                 
             case (Application(Power(), NumberLiteral(o)), a) if o == 1 =>
                 (a, ctx2)
             case (Application(Power(), l), pow(a, r)) =>
-                simplify1(pow(a, r * l), forward, ctx2)
+                simplify1(pow(a, r * l), forward, ctx2, leaveDefs)
 
             case (Application(Equals(), l1), l2) if isLiteral(l1) && isLiteral(l2) =>
                 (BooleanLiteral(l1 == l2), ctx2)
@@ -269,6 +276,10 @@ class Simplifier {
                 (BooleanLiteral(b1 && b2), ctx2)
             case (Application(And(), a), Application(Application(And(), b), c)) =>
                 (And()(And()(a)(b))(c), ctx2)
+            case (Application(And(), a1 >= NumberLiteral(n1)), a2 < NumberLiteral(n2)) if a1 == a2 && n2 < n1 =>
+                (false, ctx2)
+            case (Application(And(), a1 < NumberLiteral(n1)), a2 >= NumberLiteral(n2)) if a1 == a2 && n1 < n2 =>
+                (false, ctx2)
             case (Application(Or(), BooleanLiteral(b1)), BooleanLiteral(b2)) =>
                 (BooleanLiteral(b1 || b2), ctx2)
             case (Application(Or(), BooleanLiteral(true)), _) =>
@@ -302,70 +313,70 @@ class Simplifier {
             case (Application(IndexConcatenation(), Application(Application(RangeIndex(), n1), NumberLiteral(i))), Application(InfiniteIndex(), NumberLiteral(i2))) if i == i2 =>
                 (infiniteIndex(n1), ctx2)
             case (Application(IndexComposition(), infiniteIndex(n1)), infiniteIndex(n2)) =>
-                simplify1(infiniteIndex(n2 + n1), forward, ctx2)
+                simplify1(infiniteIndex(n2 + n1), forward, ctx2, leaveDefs)
             case (Application(IndexComposition(), singletonIndex(n1)), Application(InfiniteIndex(), n2)) =>
-                simplify1(singletonIndex(n2 + n1), forward, ctx2)
+                simplify1(singletonIndex(n2 + n1), forward, ctx2, leaveDefs)
             case (Application(IndexComposition(), singletonIndex(n1)), Application(Application(RangeIndex(), n2), n3)) =>
                 simplify1(Block(Let(true, n1.deepCopy() < n3 - n2.deepCopy()),
-                               singletonIndex(n2 + n1)), forward, ctx2)
+                               singletonIndex(n2 + n1)), forward, ctx2, leaveDefs)
             case (Application(IndexComposition(), singletonIndex(n1)), n2 ++ n3) =>
                 simplify1(OrElseValue(
                     n2.deepCopy() o singletonIndex(n1),
-                    n3 o singletonIndex(n1.deepCopy() - length(n2))), forward, ctx2)
+                    n3 o singletonIndex(n1.deepCopy() - length(n2))), forward, ctx2, leaveDefs)
             case (Application(IndexComposition(), r@Application(r2@Application(RangeIndex(), n1), n2)), Application(InfiniteIndex(), n3)) =>
-                simplify1(r.copy(r2.copy(argument=n1 + n3.deepCopy()), n2 + n3), forward, ctx2)
+                simplify1(r.copy(r2.copy(argument=n1 + n3.deepCopy()), n2 + n3), forward, ctx2, leaveDefs)
             case (Application(IndexComposition(), Application(InfiniteIndex(), n3)), r@Application(r2@Application(RangeIndex(), n1), n2)) =>
-                simplify1(r.copy(r2.copy(argument=n3.deepCopy() + n1), n3 + n2), forward, ctx2)
+                simplify1(r.copy(r2.copy(argument=n3.deepCopy() + n1), n3 + n2), forward, ctx2, leaveDefs)
             case (Application(IndexComposition(), r@Application(r2@Application(RangeIndex(), n1), n2)), Application(Application(RangeIndex(), n3), n4)) =>
                 simplify1(Block(Let(true,
                                 n1.deepCopy() <= n4.deepCopy() - n3.deepCopy() &&
                                 n2.deepCopy() <= n4 - n3.deepCopy()),
-                        r.copy(r2.copy(argument=n1 + n3.deepCopy()), n2 + n3)), forward, ctx2)
+                        r.copy(r2.copy(argument=n1 + n3.deepCopy()), n2 + n3)), forward, ctx2, leaveDefs)
             case (Application(IndexComposition(), r@Application(r2@Application(RangeIndex(), n1), n2)), Application(Application(IndexConcatenation(), n3), n4)) =>
                 simplify1({
                     val x = VariableIdentity.setName(new VariableIdentity, 'l)
                     Block(Let(Variable(x, true), length(n3.deepCopy())),
                         (n3 o r.copy(r2.copy(argument=min(n1, Variable(x, false))), min(n2, Variable(x, false)))) ++
                         (n4 o r.copy(r2.copy(argument=max(n1.deepCopy() - Variable(x, false), 0)), max(n2.deepCopy() - Variable(x, false), 0))))
-                }, forward, ctx2)
+                }, forward, ctx2, leaveDefs)
             case (Application(IndexComposition(), Application(Application(IndexConcatenation(), n1), n2)), n3) =>
-                simplify1((n3.deepCopy() o n1) ++ (n3 o n2), forward, ctx2)
+                simplify1((n3.deepCopy() o n1) ++ (n3 o n2), forward, ctx2, leaveDefs)
 
             case (Length(), Application(Application(RangeIndex(), n1), n2)) =>
-                simplify1(n2 - n1, forward, ctx2)
+                simplify1(n2 - n1, forward, ctx2, leaveDefs)
             case (Length(), Application(Application(IndexConcatenation(), n1), n2)) =>
-                simplify1(length(n1) + length(n2), forward, ctx2)
+                simplify1(length(n1) + length(n2), forward, ctx2, leaveDefs)
             case (Application(Plus(), _), l@Application(Length(), Application(InfiniteIndex(), _))) =>
                 (l, ctx2)
             case (Application(Plus(), l@Application(Length(), Application(InfiniteIndex(), _))), _) =>
                 (l, ctx2)
 
             case (Application(Application(Janus(), f), _), a1) if forward =>
-                simplify1(Application(f, a1), forward, ctx2)
+                simplify1(Application(f, a1), forward, ctx2, leaveDefs)
             case (Reverse(), Application(Application(Janus(), f), b)) =>
                 (Application(Application(Janus(), b), f), ctx2)
             case (Application(Forget(), _), _) if forward =>
                 (Tuple(), ctx2)
             case (Application(Reverse(), Application(Forget(), f)), Tuple()) if forward =>
-                simplify1(Application(f, Tuple()), forward, ctx2)
+                simplify1(Application(f, Tuple()), forward, ctx2, leaveDefs)
             case (rev@Reverse(), app1@Application(app2@Application(OrElse(), f1), f2)) =>
-                simplify1(app1.copy(app2.copy(argument = Application(rev.copy(), f1)), Application(rev.copy(), f2)), forward, ctx2)
+                simplify1(app1.copy(app2.copy(argument = Application(rev.copy(), f1)), Application(rev.copy(), f2)), forward, ctx2, leaveDefs)
             case (Application(OrElse(), Lambda(Irreversible(), _, Undefined())), f2) =>
                 (f2, ctx2)
             case (app1@Application(app2@Application(OrElse(), f1), f2), a) =>
-                val (v1, ctx3) = simplify1(Application(f1, a), forward, ctx2)
+                val (v1, ctx3) = simplify1(Application(f1, a), forward, ctx2, leaveDefs)
                 v1 match {
                 case Undefined() =>
-                    simplify1(Application(f2, a), forward, ctx3)
+                    simplify1(Application(f2, a), forward, ctx3, leaveDefs)
                 case v1 if isDefined(v1) =>
                     (v1, ctx3)
                 case v1 =>
-                    simplify1(OrElseValue(Application(f1, a.deepCopy()), Application(f2, a)), forward, ctx2)
+                    simplify1(OrElseValue(Application(f1, a.deepCopy()), Application(f2, a)), forward, ctx2, leaveDefs)
                 }
             case (rev@Reverse(), fix@Application(Fix(), lam@Lambda(Irreversible(), p, b))) =>
-                simplify1(fix.copy(argument = lam.copy(pattern = Application(rev.copy(), p), body = Application(rev.copy(), b))), forward, ctx2)
+                simplify1(fix.copy(argument = lam.copy(pattern = Application(rev.copy(), p), body = Application(rev.copy(), b))), forward, ctx2, leaveDefs)
             case (fix@Application(Fix(), f), a) if isLiteral(a) =>
-                simplify1(Application(Application(f, fix), a), forward, ctx2)
+                simplify1(Application(Application(f, fix), a), forward, ctx2, leaveDefs)
 
             case (Member(n), m: Module) =>
                 m.definitions.find{ case d => d.identity.annotation(VariableIdentity.name).get == n } match {
@@ -375,22 +386,22 @@ class Simplifier {
                 }
                 
             case (f, or@OrElseValue(l, r)) =>
-                simplify1(or.copy(Application(f, l), Application(f.deepCopy(), r)), forward, ctx2)
+                simplify1(or.copy(Application(f, l), Application(f.deepCopy(), r)), forward, ctx2, leaveDefs)
             case (or@OrElseValue(f1, f2), a) =>
-                simplify1(or.copy(Application(f1, a), Application(f2, a.deepCopy())), forward, ctx2)
+                simplify1(or.copy(Application(f1, a), Application(f2, a.deepCopy())), forward, ctx2, leaveDefs)
             case (f, b: Block) =>
-                simplify1(b.copy(scope=Application(f, b.scope)), forward, ctx2)
+                simplify1(b.copy(scope=Application(f, b.scope)), forward, ctx2, leaveDefs)
             case (b: Block, a) =>
-                simplify1(b.copy(scope=Application(b.scope, a)), forward, ctx2)
+                simplify1(b.copy(scope=Application(b.scope, a)), forward, ctx2, leaveDefs)
             case (f, a) => (app, ctx2)
             }
         }
 
-    def simplifyStatement(stmt: Statement, context: Map[VariableIdentity, Expression] = defaultContext, leaveDefs: Boolean = false): (Statement, Map[VariableIdentity, Expression]) =
+    def simplifyStatement(stmt: Statement, context: Map[VariableIdentity, Expression] = defaultContext, leaveDefs: Boolean): (Statement, Map[VariableIdentity, Expression]) =
         stmt match {
         case stmt@Let(p, v) =>
-            val (v1, ctx1) = simplify1(v, true, context)
-            val (p2, ctx2) = simplify1(p, false, ctx1)
+            val (v1, ctx1) = simplify1(v, true, context, leaveDefs)
+            val (p2, ctx2) = simplify1(p, false, ctx1, leaveDefs)
             (p2, v1) match {
             case (Undefined(), _) =>
                 (Sequence(), ctx2)
@@ -403,20 +414,20 @@ class Simplifier {
                     (Fail(), ctx2)
             case (Tuple(cs1@_*), Tuple(cs2@_*)) =>
                 if (cs1.size == cs2.size)
-                    simplifyStatement(Sequence((for ((c1, c2) <- cs1.zip(cs2)) yield Let(c1, c2)):_*), ctx2)
+                    simplifyStatement(Sequence((for ((c1, c2) <- cs1.zip(cs2)) yield Let(c1, c2)):_*), ctx2, leaveDefs)
                 else
                     (Fail(), context)
             case (Application(f, a), value) =>
-                val (value3, ctx3) = simplify1(Application(Application(Reverse(), f), value), true, ctx2)
-                simplifyStatement(Let(a, value3), ctx3)
+                val (value3, ctx3) = simplify1(Application(Application(Reverse(), f), value), true, ctx2, leaveDefs)
+                simplifyStatement(Let(a, value3), ctx3, leaveDefs)
             case (p2, v1) => (stmt.copy(p2, v1), ctx2)
             }
         case stmt@Def(id, v) =>
             if (leaveDefs) {
-                val (v1, ctx1) = simplify(v, true, context)
-                (simplifyDescription[Def](stmt.copy(value = v1), _.identity, context), ctx1 + (id -> v1))
+                val (v1, ctx1) = simplify(v, true, context, leaveDefs)
+                (simplifyDescription[Def](stmt.copy(value = v1), _.identity, context), ctx1)
             } else
-                simplifyStatement(Let(Variable(id, true), v), context)
+                simplifyStatement(Let(Variable(id, true), v), context, leaveDefs)
         case stmt@Sequence(ss@_*) =>
             val (ss1, ctx1) = ((Seq[Statement](), context) /: ss){
             case ((ss2, context2), s2) =>
@@ -451,7 +462,7 @@ class Simplifier {
                     i += 1
                 }
                 if (didMerge)
-                    simplifyStatement(stmt.copy(ss2:_*), ctx1)
+                    simplifyStatement(stmt.copy(ss2:_*), ctx1, leaveDefs)
                 else if (ss2.size == 1)
                     (ss2(0), ctx1)
                 else
