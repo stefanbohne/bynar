@@ -165,8 +165,8 @@ class DocBookGenerator(root1: Statement) extends {
         case BitRecordType(b) =>
             val it = VariableIdentity.setName(new VariableIdentity, 'it)
             val (entries, bw) = generateTableEntries(t, Lambda(Irreversible(), Undefined(), Application(InfiniteIndex(), NumberLiteral(0))), Seq())
-            if (entries.nonEmpty)
-    			<para>Bit width: { term2Xml(simp.simplify(Block(root, Application(bw, Variable(it, false))), true, defaultContext)._1) }</para>
+			<para>Bit width: { term2Xml(simp.simplify(Block(root, Application(bw, Variable(it, false))), true, defaultContext)._1) }</para> ++
+            (if (entries.nonEmpty)
                 <table pgwide="1">
 					<title>Structure of a { title }</title>
 					<tgroup cols="3" colsep="1" rowsep="1">
@@ -178,12 +178,12 @@ class DocBookGenerator(root1: Statement) extends {
 					</tgroup>
 				</table>
             else
-                <para>A { title } has no fields.</para>
+                <para>A { title } has no fields.</para>)
         case BitRegisterType(bw, b) =>
             val it = VariableIdentity.setName(new VariableIdentity, 'it)
             val (entries, _) = generateTableEntries(t, Lambda(Irreversible(), Undefined(), rangeIndex(NumberLiteral(0), bw)), Seq())
-            if (entries.nonEmpty)
-    			<para>Bit width: { term2Xml(simp.simplify(Block(root, bw), true, defaultContext)._1) }</para>
+ 			<para>Bit width: { term2Xml(simp.simplify(Block(root, bw), true, defaultContext)._1) }</para> ++
+            (if (entries.nonEmpty)
                 <table pgwide="1">
 					<title>Structure of a { title }</title>
 					<tgroup cols="3" colsep="1" rowsep="1">
@@ -195,7 +195,7 @@ class DocBookGenerator(root1: Statement) extends {
 					</tgroup>
 				</table>
             else
-                <para>A { title } has no fields.</para>
+                <para>A { title } has no fields.</para>)
         case BitFieldType(bw) =>
             <para>A { title } is a bit field of { 
                 val it = VariableIdentity.setName(new VariableIdentity, 'it)
