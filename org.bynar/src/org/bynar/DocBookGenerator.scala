@@ -178,7 +178,7 @@ class DocBookGenerator(root1: Statement) extends {
 					</tgroup>
 				</table>
             else
-                <para>Empty record.</para>
+                <para>A { title } has no fields.</para>
         case BitRegisterType(bw, b) =>
             val it = VariableIdentity.setName(new VariableIdentity, 'it)
             val (entries, _) = generateTableEntries(t, Lambda(Irreversible(), Undefined(), rangeIndex(NumberLiteral(0), bw)), Seq())
@@ -195,9 +195,9 @@ class DocBookGenerator(root1: Statement) extends {
 					</tgroup>
 				</table>
             else
-                <para>Empty register.</para>
+                <para>A { title } has no fields.</para>
         case BitFieldType(bw) =>
-            <para>A bit field of { 
+            <para>A { title } is a bit field of { 
                 val it = VariableIdentity.setName(new VariableIdentity, 'it)
                 term2Xml(simp.simplify(Block(root, Application(bw, Variable(it, false))), true, defaultContext)._1) 
                 } bits.</para>
@@ -210,7 +210,7 @@ class DocBookGenerator(root1: Statement) extends {
         case InterpretedBitType(t2, i) =>
             generateMainTypeDescription(t2, title) ++ interpretedTypeDescription(i)
         case Variable(id, _) =>
-            <para>Alias for { term2Xml(t) }.</para>
+            <para>A { title } is an alias for { term2Xml(t) }.</para>
         case _ => Seq()
         }
 
