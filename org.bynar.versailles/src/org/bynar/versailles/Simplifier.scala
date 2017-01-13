@@ -42,8 +42,11 @@ class Simplifier {
         expr match {
         case Undefined() => false
         case expr: Literal => true
-        case expr: Tuple => true
+        case expr: Tuple => expr.components.forall{ isDefined(_) }
         case expr: Lambda => true
+        case Application(InfiniteIndex(), a) => isDefined(a)
+        case Application(Application(RangeIndex(), a), b) => isDefined(a) && isDefined(b)
+        case Application(Application(IndexConcatenation(), a), b) => isDefined(a) && isDefined(b)
         case _ => false
         }
 
@@ -92,8 +95,6 @@ class Simplifier {
                 (cs2 :+ c2, ctx3)
             }
             (expr.copy(cs1:_*), ctx1)
-        case expr@Block(b1, Block(b2, s)) =>
-            simplify1(Block(Sequence(b1, b2), s), forward, context, leaveDefs)
         case expr@Block(b, s) =>
             val (b2, ctx2) = simplifyStatement(b, context, leaveDefs)
             b2 match {
@@ -106,6 +107,8 @@ class Simplifier {
                 (b2, s2) match {
                 case (Let(BooleanLiteral(true), c), v: OrElseValue) =>
                     simplify1(v.copy(expr.copy(b2, v.first), expr.copy(b2.deepCopy(), v.second)), forward, ctx3, leaveDefs)
+                case (b2, Block(b3, s2)) =>
+                    simplify1(Block(Sequence(b2, b3), s2), forward, context, leaveDefs)
                 case (b2, s2) =>
                     (expr.copy(b2, s2), ctx3)
                 }                
