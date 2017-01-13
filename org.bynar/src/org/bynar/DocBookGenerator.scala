@@ -29,6 +29,7 @@ import scala.xml.Text
 import org.bynar.versailles.OrElseValue
 import org.bynar.versailles.RangeIndex
 import org.bynar.versailles.Module
+import org.bynar.versailles.Tuple
 
 class DocBookGenerator(root1: Statement) extends {
     val simp = new Simplifier()
@@ -85,7 +86,13 @@ class DocBookGenerator(root1: Statement) extends {
                 t match {
                 case t: Lambda =>
                     val (args, body) = functionDescr(t.body)
-                    (<listitem>{ term2Xml(t.pattern) }</listitem> ++ args, body) 
+                    t.pattern match {
+                    case Tuple(patterns@_*) =>
+                        (patterns.map(p => <listitem>{ term2Xml(p) }</listitem>) ++ args, body)
+                    case pattern => 
+                        (<listitem>{ term2Xml(pattern) }</listitem> ++ args, body) 
+                    }
+                    
                 case t: BitTypeExpression => (Seq(), generateMainTypeDescription(t, title))
                 case t => (Seq(), <literallayout>{ term2Xml(simp.simplify(Block(root, t), true, defaultContext)._1) }</literallayout>)
                 }
