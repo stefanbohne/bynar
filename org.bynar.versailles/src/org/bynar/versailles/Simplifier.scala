@@ -85,7 +85,8 @@ class Simplifier {
     def simplify1(expr: Expression, forward: Boolean, context: Map[VariableIdentity, Expression], leaveDefs: Boolean): (Expression, Map[VariableIdentity, Expression]) =
         expr match {
         case expr@Variable(id, true) =>
-            (if (forward) context.getOrElse(id, expr) else expr, context - id)
+            if (forward) (context.getOrElse(id, expr), context)
+            else (expr, context - id)
         case expr@Variable(id, false) =>
             (context.getOrElse(id, expr), context)
         case expr@Tuple(cs@_*) =>
@@ -165,6 +166,48 @@ class Simplifier {
             
         case expr => (expr, context)
         }
+    
+    def simplifyAssociative[S](function: Literal, symmetric: Boolean, reverse: Boolean, expr: Expression, forward: Boolean, context: Map[VariableIdentity, Expression], leaveDefs: Boolean)(simplifier: PartialFunction[(Expression, Expression), Seq[Expression]])(order: Expression => S)(implicit ord: math.Ordering[S]): (Expression, Map[VariableIdentity, Expression]) = {
+        val result = mutable.Buffer[Expression]()
+        def collectSymmetricArguments(expr: Expression): Unit =
+            expr match {
+            case Application(Application(`function`, a), b) =>
+                if (reverse)
+                    collectSymmetricArguments(b)
+                collectSymmetricArguments(a)
+                if (!reverse)
+                    collectSymmetricArguments(b)
+            case expr => result += expr
+            }
+        collectSymmetricArguments(expr)
+        var found = false
+        var i = 0
+        while (i < result.size) {
+            var j = if (symmetric) 0 else i + 1
+            while (i < result.size && j < result.size) { 
+                if (i != j)
+                    simplifier.lift(result(i), result(j)) match {
+                    case Some(m) => 
+                        result.remove(Math.max(i, j))
+                        result.remove(Math.min(i, j))
+                        result.insertAll(Math.min(i, j), m)
+                        found = true
+                    case None => {}
+                    }
+                j += 1
+            }
+            i += 1
+        }
+        val result2 = if (reverse)
+                result.sortBy(order).reduceLeft((a, b) => function.deepCopy()(b)(a))
+            else
+                result.sortBy(order).reduceLeft((a, b) => function.deepCopy()(a)(b))
+        if (!found)
+            (result2, context)
+        else 
+            simplify1(result2, forward, context, leaveDefs)
+    }
+        
 
     def simplifyApplication(app: Application, forward: Boolean, ctx2: Map[VariableIdentity, Expression], leaveDefs: Boolean): (Expression, Map[VariableIdentity, Expression]) =
         app match {
@@ -177,40 +220,40 @@ class Simplifier {
             case (Reverse(), reverse(f)) =>
                 (f, ctx2)
 
-            case (Minus(), r: NumberLiteral) =>
-                (Application(Plus(), r.copy(-r.value)), ctx2)
+//            case (Minus(), r: NumberLiteral) =>
+//                (Application(Plus(), r.copy(-r.value)), ctx2)
             case (Minus(), r) =>
-                (Application(Plus(), r * NumberLiteral(-1)), ctx2)
+                simplify1(Application(Plus(), r * NumberLiteral(-1)), forward, ctx2, leaveDefs)
             case (Reverse(), Application(Plus(), x)) =>
                 (Application(Minus(), x), ctx2)
             case (Reverse(), Application(Minus(), x)) =>
                 (Application(Plus(), x), ctx2)
-            case (Application(Plus(), NumberLiteral(r)), NumberLiteral(l)) =>
-                (NumberLiteral(l + r), ctx2)
-            case (Application(Plus(), x), NumberLiteral(z)) if z == 0 =>
-                (x, ctx2)
-            case (Application(Plus(), NumberLiteral(z)), x) if z == 0 =>
-                (x, ctx2)
-            case (Application(Plus(), Application(Application(op@Plus(), NumberLiteral(r)), x)), NumberLiteral(l)) =>
-                simplify1(Application(Application(op, NumberLiteral(l + r)), x), forward, ctx2, leaveDefs)
-            case (Application(Plus(), NumberLiteral(r)), Application(Application(op@Plus(), NumberLiteral(l)), x)) =>
-                simplify1(Application(Application(op, NumberLiteral(l + r)), x), forward, ctx2, leaveDefs)
-            case (Application(Plus(), Application(Application(op1@Plus(), NumberLiteral(r)), x)), f3@Application(Application(op2@Plus(), NumberLiteral(l)), y)) =>
-                simplify1(Application(Application(op1, Application(Application(op2, NumberLiteral(l + r)), x)), y), forward, ctx2, leaveDefs)
-            case (Application(op@Plus(), r), l: NumberLiteral) =>
-                simplify1(Application(Application(op, l), r), forward, ctx2, leaveDefs)
-            case (f1@Application(Plus(), x), Application(f3@Application(Plus(), l: NumberLiteral), y)) =>
-                simplify1(Application(f3, Application(f1, y)), forward, ctx2, leaveDefs)
-            case (f1@Application(Plus(), f2@Application(f3@Application(Plus(), r: NumberLiteral), x)), y) =>
-                simplify1(Application(f3, Application(Application(f1.function, x), y)), forward, ctx2, leaveDefs)
-            case (Application(Plus(), x), y) if x == y =>
-                simplify1(x * 2, forward, ctx2, leaveDefs)
-            case (Application(Plus(), x * k), y) if x == y =>
-                simplify1(x * (k + 1), forward, ctx2, leaveDefs)
-            case (Application(Plus(), x), y * k) if x == y =>
-                simplify1(x * (k + 1), forward, ctx2, leaveDefs)
-            case (Application(Plus(), x * k), y * l) if x == y =>
-                simplify1(x * (k + l), forward, ctx2, leaveDefs)
+//            case (Application(Plus(), NumberLiteral(r)), NumberLiteral(l)) =>
+//                (NumberLiteral(l + r), ctx2)
+//            case (Application(Plus(), x), NumberLiteral(z)) if z == 0 =>
+//                (x, ctx2)
+//            case (Application(Plus(), NumberLiteral(z)), x) if z == 0 =>
+//                (x, ctx2)
+//            case (Application(Plus(), Application(Application(op@Plus(), NumberLiteral(r)), x)), NumberLiteral(l)) =>
+//                simplify1(Application(Application(op, NumberLiteral(l + r)), x), forward, ctx2, leaveDefs)
+//            case (Application(Plus(), NumberLiteral(r)), Application(Application(op@Plus(), NumberLiteral(l)), x)) =>
+//                simplify1(Application(Application(op, NumberLiteral(l + r)), x), forward, ctx2, leaveDefs)
+//            case (Application(Plus(), Application(Application(op1@Plus(), NumberLiteral(r)), x)), f3@Application(Application(op2@Plus(), NumberLiteral(l)), y)) =>
+//                simplify1(Application(Application(op1, Application(Application(op2, NumberLiteral(l + r)), x)), y), forward, ctx2, leaveDefs)
+//            case (Application(op@Plus(), r), l: NumberLiteral) =>
+//                simplify1(Application(Application(op, l), r), forward, ctx2, leaveDefs)
+//            case (f1@Application(Plus(), x), Application(f3@Application(Plus(), l: NumberLiteral), y)) =>
+//                simplify1(Application(f3, Application(f1, y)), forward, ctx2, leaveDefs)
+//            case (f1@Application(Plus(), f2@Application(f3@Application(Plus(), r: NumberLiteral), x)), y) =>
+//                simplify1(Application(f3, Application(Application(f1.function, x), y)), forward, ctx2, leaveDefs)
+//            case (Application(Plus(), x), y) if x == y =>
+//                simplify1(x * 2, forward, ctx2, leaveDefs)
+//            case (Application(Plus(), x * k), y) if x == y =>
+//                simplify1(x * (k + 1), forward, ctx2, leaveDefs)
+//            case (Application(Plus(), x), y * k) if x == y =>
+//                simplify1(x * (k + 1), forward, ctx2, leaveDefs)
+//            case (Application(Plus(), x * k), y * l) if x == y =>
+//                simplify1(x * (k + l), forward, ctx2, leaveDefs)
 
             case (Divide(), l: NumberLiteral) if ((1 / l.value) * l.value == 1) =>
                 simplify1(Application(Times(), NumberLiteral(1 / l.value)), forward, ctx2, leaveDefs)
@@ -220,35 +263,35 @@ class Simplifier {
                 (Application(Divide(), x), ctx2)
             case (Reverse(), Application(Divide(), x)) =>
                 (Application(Times(), x), ctx2)
-            case (Application(Times(), NumberLiteral(r)), NumberLiteral(l)) =>
-                (NumberLiteral(l * r), ctx2)
-            case (Application(Times(), x), NumberLiteral(o)) if o == 0 =>
-                (0, ctx2)
-            case (Application(Times(), NumberLiteral(o)), x) if o == 0 =>
-                (0, ctx2)
-            case (Application(Times(), x), NumberLiteral(o)) if o == 1 =>
-                (x, ctx2)
-            case (Application(Times(), NumberLiteral(o)), x) if o == 1 =>
-                (x, ctx2)
-            case (Application(Times(), f1@Application(f2@Application(Times(), NumberLiteral(r)), x)), NumberLiteral(l))
-                if (l * r / r == l && l * r / l == r) =>
-                simplify1(Application(Application(f2.function, NumberLiteral(l * r)), x), forward, ctx2, leaveDefs)
-            case (Application(Times(), NumberLiteral(r)), f1@Application(f2@Application(Times(), NumberLiteral(l)), x))
-                if (l * r / r == l && l * r / l == r) =>
-                simplify1(Application(Application(f2.function, NumberLiteral(l * r)), x), forward, ctx2, leaveDefs)
-            case (Application(Times(), NumberLiteral(r)), f1@Application(f2@Application(Times(), Application(Application(Power(), NumberLiteral(mo)), NumberLiteral(l))), x))
-                if (mo == -1 && (r / l) * l == r && r / (r / l) == l) =>
-                simplify1(Application(Application(f2.function, NumberLiteral(r / l)), x), forward, ctx2, leaveDefs)
-            case (Application(Times(), f1@Application(f2@Application(Times(), NumberLiteral(r)), x)), f3@Application(f4@Application(Times(), NumberLiteral(l)), y)) =>
-                simplify1(Application(Application(f2.function, Application(Application(f4.function, NumberLiteral(l * r)), y)), x), forward, ctx2, leaveDefs)
-            case (f1@Application(Times(), r), l: NumberLiteral) =>
-                simplify1(Application(Application(f1.function, l), r), forward, ctx2, leaveDefs)
-            case (f1@Application(Times(), x), f2@Application(f3@Application(Times(), l: NumberLiteral), y)) =>
-                simplify1(Application(f3, Application(f1, y)), forward, ctx2, leaveDefs)
-            case (f1@Application(Times(), f2@Application(f3@Application(Times(), r: NumberLiteral), x)), y) =>
-                simplify1(Application(f3, Application(Application(f1.function, x), y)), forward, ctx2, leaveDefs)
-            case (f1@Application(Times(), r: NumberLiteral), f2@Application(f3@Application(Plus(), NumberLiteral(l)), x)) =>
-                simplify1(Application(f3.copy(f3.function, NumberLiteral(l * r.value)), Application(f1.copy(f1.function, r), x)), forward, ctx2, leaveDefs)
+//            case (Application(Times(), NumberLiteral(r)), NumberLiteral(l)) =>
+//                (NumberLiteral(l * r), ctx2)
+//            case (Application(Times(), x), NumberLiteral(o)) if o == 0 =>
+//                (0, ctx2)
+//            case (Application(Times(), NumberLiteral(o)), x) if o == 0 =>
+//                (0, ctx2)
+//            case (Application(Times(), x), NumberLiteral(o)) if o == 1 =>
+//                (x, ctx2)
+//            case (Application(Times(), NumberLiteral(o)), x) if o == 1 =>
+//                (x, ctx2)
+//            case (Application(Times(), f1@Application(f2@Application(Times(), NumberLiteral(r)), x)), NumberLiteral(l))
+//                if (l * r / r == l && l * r / l == r) =>
+//                simplify1(Application(Application(f2.function, NumberLiteral(l * r)), x), forward, ctx2, leaveDefs)
+//            case (Application(Times(), NumberLiteral(r)), f1@Application(f2@Application(Times(), NumberLiteral(l)), x))
+//                if (l * r / r == l && l * r / l == r) =>
+//                simplify1(Application(Application(f2.function, NumberLiteral(l * r)), x), forward, ctx2, leaveDefs)
+//            case (Application(Times(), NumberLiteral(r)), f1@Application(f2@Application(Times(), Application(Application(Power(), NumberLiteral(mo)), NumberLiteral(l))), x))
+//                if (mo == -1 && (r / l) * l == r && r / (r / l) == l) =>
+//                simplify1(Application(Application(f2.function, NumberLiteral(r / l)), x), forward, ctx2, leaveDefs)
+//            case (Application(Times(), f1@Application(f2@Application(Times(), NumberLiteral(r)), x)), f3@Application(f4@Application(Times(), NumberLiteral(l)), y)) =>
+//                simplify1(Application(Application(f2.function, Application(Application(f4.function, NumberLiteral(l * r)), y)), x), forward, ctx2, leaveDefs)
+//            case (f1@Application(Times(), r), l: NumberLiteral) =>
+//                simplify1(Application(Application(f1.function, l), r), forward, ctx2, leaveDefs)
+//            case (f1@Application(Times(), x), f2@Application(f3@Application(Times(), l: NumberLiteral), y)) =>
+//                simplify1(Application(f3, Application(f1, y)), forward, ctx2, leaveDefs)
+//            case (f1@Application(Times(), f2@Application(f3@Application(Times(), r: NumberLiteral), x)), y) =>
+//                simplify1(Application(f3, Application(Application(f1.function, x), y)), forward, ctx2, leaveDefs)
+//            case (f1@Application(Times(), r: NumberLiteral), f2@Application(f3@Application(Plus(), NumberLiteral(l)), x)) =>
+//                simplify1(Application(f3.copy(f3.function, NumberLiteral(l * r.value)), Application(f1.copy(f1.function, r), x)), forward, ctx2, leaveDefs)
             case (IntegerDivide(), Tuple(l: NumberLiteral, r: NumberLiteral)) =>
                 (NumberLiteral(((l.value - (l.value % r.value)) / r.value)), ctx2)
                 
@@ -269,34 +312,54 @@ class Simplifier {
                 (literalLessOrEquals(l1, l2).map{ v => BooleanLiteral(!v) }.getOrElse(Undefined()), ctx2)
             case (Application(GreaterOrEquals(), l1), l2) if isLiteral(l1) && isLiteral(l2) =>
                 (literalLessOrEquals(l1, l2).map{ v => BooleanLiteral(!v || l1 == l2) }.getOrElse(Undefined()), ctx2)
-            case (Application(And(), BooleanLiteral(false)), _) =>
-                (BooleanLiteral(false), ctx2)
-            case (Application(And(), _), BooleanLiteral(false)) =>
-                (BooleanLiteral(false), ctx2)
-            case (Application(And(), a), b) if a == b =>
-                (a, ctx2)
-            case (Application(And(), BooleanLiteral(b1)), BooleanLiteral(b2)) =>
-                (BooleanLiteral(b1 && b2), ctx2)
-            case (Application(And(), a), Application(Application(And(), b), c)) =>
-                (And()(And()(a)(b))(c), ctx2)
-            case (Application(And(), a1 >= NumberLiteral(n1)), a2 < NumberLiteral(n2)) if a1 == a2 && n2 < n1 =>
-                (false, ctx2)
-            case (Application(And(), a1 < NumberLiteral(n1)), a2 >= NumberLiteral(n2)) if a1 == a2 && n1 < n2 =>
-                (false, ctx2)
-            case (Application(Or(), BooleanLiteral(b1)), BooleanLiteral(b2)) =>
-                (BooleanLiteral(b1 || b2), ctx2)
-            case (Application(Or(), BooleanLiteral(true)), _) =>
-                (BooleanLiteral(true), ctx2)
-            case (Application(Or(), _), BooleanLiteral(true)) =>
-                (BooleanLiteral(true), ctx2)
-            case (Application(Or(), a), b) if a == b =>
-                (a, ctx2)
-            case (Application(Or(), a), Application(Application(Or(), b), c)) =>
-                (Or()(Or()(a)(b))(c), ctx2)
+//            case (Application(And(), BooleanLiteral(false)), _) =>
+//                (BooleanLiteral(false), ctx2)
+//            case (Application(And(), _), BooleanLiteral(false)) =>
+//                (BooleanLiteral(false), ctx2)
+//            case (Application(And(), a), b) if a == b =>
+//                (a, ctx2)
+//            case (Application(And(), BooleanLiteral(b1)), BooleanLiteral(b2)) =>
+//                (BooleanLiteral(b1 && b2), ctx2)
+//            case (Application(And(), a), Application(Application(And(), b), c)) =>
+//                (And()(And()(a)(b))(c), ctx2)
+//            case (Application(And(), a1 >= NumberLiteral(n1)), a2 < NumberLiteral(n2)) if a1 == a2 && n2 < n1 =>
+//                (false, ctx2)
+//            case (Application(And(), a1 < NumberLiteral(n1)), a2 >= NumberLiteral(n2)) if a1 == a2 && n1 < n2 =>
+//                (false, ctx2)
+//            case (Application(Or(), BooleanLiteral(b1)), BooleanLiteral(b2)) =>
+//                (BooleanLiteral(b1 || b2), ctx2)
+//            case (Application(Or(), BooleanLiteral(true)), _) =>
+//                (BooleanLiteral(true), ctx2)
+//            case (Application(Or(), _), BooleanLiteral(true)) =>
+//                (BooleanLiteral(true), ctx2)
+//            case (Application(Or(), a), b) if a == b =>
+//                (a, ctx2)
+//            case (Application(Or(), a), Application(Application(Or(), b), c)) =>
+//                (Or()(Or()(a)(b))(c), ctx2)
+//            case (and@Application(And(), a), or1@Application(or2@Application(Or(), b), c)) =>
+//                simplify1(or1.copy(or2.copy(argument = Application(and, b)), Application(and.deepCopy(), c)), forward, ctx2, leaveDefs) 
+//            case (and@Application(And(), or1@Application(or2@Application(Or(), a), b)), c) =>
+//                simplify1(or1.copy(or2.copy(argument = and.copy(argument=a)(c)), and.copy(and.function.deepCopy(), b)(c)), forward, ctx2, leaveDefs) 
             case (Not(), BooleanLiteral(b)) =>
                 (BooleanLiteral(!b), ctx2)
-            case (Application(And(), a == l1), b == l2) if isLiteral(l1) && isLiteral(l2) && a == b =>
-                (BooleanLiteral(l1 == l2), ctx2)
+            case (Not(), a && b) =>
+                simplify1(!a || !b, forward, ctx2, leaveDefs)
+            case (Not(), a || b) =>
+                simplify1(!a && !b, forward, ctx2, leaveDefs)
+            case (Not(), a == b) =>
+                simplify1(a != b, forward, ctx2, leaveDefs)
+            case (Not(), a != b) =>
+                simplify1(a == b, forward, ctx2, leaveDefs)
+            case (Not(), a < b) =>
+                simplify1(a >= b, forward, ctx2, leaveDefs)
+            case (Not(), a <= b) =>
+                simplify1(a > b, forward, ctx2, leaveDefs)
+            case (Not(), a > b) =>
+                simplify1(a <= b, forward, ctx2, leaveDefs)
+            case (Not(), a >= b) =>
+                simplify1(a < b, forward, ctx2, leaveDefs)
+//            case (Application(And(), a == l1), b == l2) if isLiteral(l1) && isLiteral(l2) && a == b =>
+//                (BooleanLiteral(l1 == l2), ctx2)
 
             case (Application(Concat(), StringLiteral(l1)), StringLiteral(l2)) =>
                 (StringLiteral(l1 + l2), ctx2)
@@ -396,6 +459,56 @@ class Simplifier {
                 simplify1(b.copy(scope=Application(f, b.scope)), forward, ctx2, leaveDefs)
             case (b: Block, a) =>
                 simplify1(b.copy(scope=Application(b.scope, a)), forward, ctx2, leaveDefs)
+
+            case (Application(op@Plus(), _), _) =>
+                simplifyAssociative(op, true, true, app, forward, ctx2, leaveDefs){
+                    case (NumberLiteral(a), NumberLiteral(b)) => Seq(NumberLiteral(a + b))
+                    case (a, NumberLiteral(z)) if z == BigDecimal(0) => Seq(a)
+                    case (a, b) if a == b => Seq(a * 2)
+                    case (a * (lit@NumberLiteral(k)), b) if a == b => 
+                        Seq(a * lit.copy(k + 1))
+                    case (a * (lit@NumberLiteral(k)), b * NumberLiteral(k2)) if a == b => 
+                        Seq(a * lit.copy(k + k2))
+                }{ _.isInstanceOf[NumberLiteral] }
+            case (Application(op@Times(), _), _) =>
+                simplifyAssociative(op, true, true, app, forward, ctx2, leaveDefs){
+                    case (a, b@NumberLiteral(z)) if z == BigDecimal(0) => Seq(b)
+                    case (a@NumberLiteral(z), b) if z == BigDecimal(0) => Seq(a)
+                    case (a, NumberLiteral(o)) if o == BigDecimal(1) => Seq(a)
+                    case (NumberLiteral(l), NumberLiteral(r)) if (l * r / r == l && l * r / l == r) => Seq(NumberLiteral(l * r))
+                    case (NumberLiteral(l), Application(Application(Power(), mo), NumberLiteral(r))) if (mo == -1 && (r / l) * l == r && r / (r / l) == l) => Seq(NumberLiteral(l / r))
+                    case (a, b) if a == b => Seq(Power()(a)(2))
+                    case (pow@Application(pow2@Application(Power(), lit@NumberLiteral(k)), a), b) if a == b => 
+                        Seq(pow.copy(pow2.copy(argument = lit.copy(k + 1))))
+                    case (pow@Application(pow2@Application(Power(), lit@NumberLiteral(k)), a), Application(Application(Power(), NumberLiteral(k2)), b)) if a == b => 
+                        Seq(pow.copy(pow2.copy(argument = lit.copy(k + k2))))
+                }{ _.isInstanceOf[NumberLiteral] }
+            case (Application(op@And(), _), _) =>
+                simplifyAssociative(op, true, false, app, forward, ctx2, leaveDefs){
+                    case (BooleanLiteral(a), BooleanLiteral(b)) => Seq(BooleanLiteral(a && b))
+                    case (a, b@BooleanLiteral(false)) => Seq(b)
+                    case (a, b@BooleanLiteral(true)) => Seq(a)
+                    case (a, b) if a == b => Seq(a)
+                    case (a == l1, b == l2) if isLiteral(l1) && isLiteral(l2) && l1 != l2 && a == b => Seq(false)
+                    case (l1 == a, b == l2) if isLiteral(l1) && isLiteral(l2) && l1 != l2 && a == b => Seq(false)
+                    case (a == l1, l2 == b) if isLiteral(l1) && isLiteral(l2) && l1 != l2 && a == b => Seq(false)
+                    case (l1 == a, l2 == b) if isLiteral(l1) && isLiteral(l2) && l1 != l2 && a == b => Seq(false)
+                    case (a <= NumberLiteral(b), c > NumberLiteral(d)) if a == c && b <= d => Seq(false)
+                    case (a < NumberLiteral(b), c >= NumberLiteral(d)) if a == c && b <= d => Seq(false)
+                    case (a < NumberLiteral(b), c > NumberLiteral(d)) if a == c && b <= d => Seq(false)
+                    case (a <= NumberLiteral(b), c >= NumberLiteral(d)) if a == c && b < d => Seq(false)
+                    case (l@(a < NumberLiteral(b)), c < NumberLiteral(d)) if a == c && b <= d => Seq(l)
+                    case (l@(a <= NumberLiteral(b)), c <= NumberLiteral(d)) if a == c && b <= d => Seq(l)
+                    case (l@(a < NumberLiteral(b)), c <= NumberLiteral(d)) if a == c && b <= d => Seq(l)
+                    case (a < NumberLiteral(b), c <= NumberLiteral(d)) if a == c && b >= d => Seq(a < NumberLiteral(d))
+                }{ _ => () }
+            case (Application(op@Or(), _), _) =>
+                 simplifyAssociative(op, true, false, app, forward, ctx2, leaveDefs){
+                    case (BooleanLiteral(a), BooleanLiteral(b)) => Seq(BooleanLiteral(a || b))
+                    case (a, b@BooleanLiteral(false)) => Seq(a)
+                    case (a, b@BooleanLiteral(true)) => Seq(b)
+                    case (a, b) if a == b => Seq(a)
+                }{ _ => () }
             case (f, a) => (app, ctx2)
             }
         }
