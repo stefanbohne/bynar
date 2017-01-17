@@ -59,6 +59,26 @@ class DocBookGenerator(root1: Statement) extends {
 
     def term2Xml(term: Term): Seq[Node] =
         XML.loadString("<root>" + pp.prettyPrint(term) + "</root>").child
+        
+    def briefFromXml(nodes: Seq[Node]): Seq[Node] = {
+        def briefHelper(nodes: Seq[Node]): Seq[Node] =
+            nodes.flatMap{
+            case n: Elem if n.attribute("role").map{ _.map{ _.text }.mkString("") }.getOrElse("") == "brief" =>
+                Seq(n)
+            case n: Elem =>
+                val children = briefHelper(n.child)
+                if (children.size > 0)
+                    Seq(n.copy(child = children))
+                else
+                    Seq()
+            case _ => Seq()
+            }
+        val result = briefHelper(nodes)
+        if (result.isEmpty)
+            nodes
+        else
+            result
+    }
 
     override def generateMainDefinitions(item: Statement): Seq[Node] =
         item match {
@@ -96,7 +116,7 @@ class DocBookGenerator(root1: Statement) extends {
                         (<listitem>{ term2Xml(pattern) }</listitem> ++ args, body) 
                     }
                     
-                case t: BitTypeExpression => (Seq(), generateMainTypeDescription(t, title))
+                case t: BitTypeExpression => (Seq(), generateMainTypeDescription(t, title, path))
                 case t => (Seq(), <literallayout>{ term2Xml(simp.simplify(Block(root, t), true, defaultContext)._1) }</literallayout>)
                 }
             val (args, body) = functionDescr(v)
@@ -120,7 +140,7 @@ class DocBookGenerator(root1: Statement) extends {
         Seq(<section id={ path.map{ _.name }.mkString(".") }>
 			<title>{ title }</title>
 			{ descr }
-			{ generateMainTypeDescription(d.value.asInstanceOf[BitTypeExpression], title) }
+			{ generateMainTypeDescription(d.value.asInstanceOf[BitTypeExpression], title, path) }
 		</section>)
     }
 
@@ -170,10 +190,14 @@ class DocBookGenerator(root1: Statement) extends {
         }
     }
 
-    def generateMainTypeDescription(t: Expression, title: String): Seq[Node] = {
-        def generateTableDescription(entries: Seq[(Expression, String, Seq[Node])], bw: Expression): Seq[Node] = {
+    def pathAsXml(path: Seq[Symbol]) =
+        path.map{ _.name.replace("_", "_​") }.mkString(".​")
+    def generateMainTypeDescription(t: Expression, title: String, path: Seq[Symbol]): Seq[Node] = {
+        def generateBitWidthDescription(bw: Expression): Seq[Node] = {
             val it = VariableIdentity.setName(new VariableIdentity, 'it)
-			<para>Bit width: { term2Xml(simp.simplify(Block(root, Application(bw, Variable(it, false))), true, defaultContext)._1) }</para> ++
+			<para>Bit width: { term2Xml(simp.simplify(Block(root, Application(bw, Variable(it, false))), true, defaultContext)._1) }</para>
+        }
+        def generateTableDescription(entries: Seq[TableEntry]): Seq[Node] = {
             (if (entries.nonEmpty) {
                 def isSimpleOrElseRange(e: Expression): Boolean =
                     e match {
@@ -201,7 +225,12 @@ class DocBookGenerator(root1: Statement) extends {
                     }
                 def removeIfs(e: Expression): Expression =
                     removeIfs1(e).distinct.reduce{ OrElseValue(_, _) }
-                if (entries.forall{ case (bp, _, _) => isSimpleOrElseRange(bp) })
+                def generateTableRows(entries: Seq[TableEntry])(rowGen: TableEntry => Seq[Node]): Seq[Node] =
+                    for (e <- entries;
+    			         val row = if (e.children.isEmpty || e.shortDoc.nonEmpty) rowGen(e) else Seq();
+    			         rows <- row ++ generateTableRows(e.children)(rowGen))
+    			        yield rows
+                if (entries.forall{ e => isSimpleOrElseRange(e.bitPosition) })
                 <table pgwide="1">
 					<title>Structure of a { title }</title>
 					<tgroup cols="4" colsep="1" rowsep="1">
@@ -210,15 +239,14 @@ class DocBookGenerator(root1: Statement) extends {
 					<colspec colwidth="2*"/>
 					<colspec colwidth="3*"/>
             		<thead><row><entry>Offset</entry><entry>Size</entry><entry>Name</entry><entry>Description</entry></row></thead>
-					<tbody>{             
-					    for ((bp, n, d) <- entries) 
-                            yield <row>
-								<entry>{ term2Xml(removeIfs(firstIndex(bp))) }</entry>
-								<entry>{ term2Xml(removeIfs(indexSize(bp))) }</entry>
-								<entry>{ n }</entry>
-								<entry>{ d }</entry>
-							</row> 
-                     }</tbody>
+					<tbody>{ generateTableRows(entries){ e =>
+					    <row>
+							<entry>{ term2Xml(removeIfs(firstIndex(e.bitPosition))) }</entry>
+							<entry>{ term2Xml(removeIfs(indexSize(e.bitPosition))) }</entry>
+							<entry><link linkend={ (path ++ e.path).map{ _.name }.mkString(".") }>{ pathAsXml(e.path) }</link></entry>
+							<entry>{ e.shortDoc }</entry>
+						</row>}
+					}</tbody>
 					</tgroup>
 				</table>
 					else
@@ -229,42 +257,58 @@ class DocBookGenerator(root1: Statement) extends {
 					<colspec colwidth="2*"/>
 					<colspec colwidth="3*"/>
             		<thead><row><entry>Bit Position</entry><entry>Name</entry><entry>Description</entry></row></thead>
-					<tbody>{             
-					    for ((bp, n, d) <- entries) 
-                            yield <row>
-								<entry>{ term2Xml(removeIfs(bp)) }</entry>
-								<entry>{ n }</entry>
-								<entry>{ d }</entry>
-							</row> 
+					<tbody>{ generateTableRows(entries){ e =>             
+					    <row>
+							<entry>{ term2Xml(removeIfs(e.bitPosition)) }</entry>
+							<entry><link linkend={ (path ++ e.path).map{ _.name }.mkString(".") }>{ pathAsXml(e.path) }</link></entry>
+							<entry>{ e.shortDoc }</entry>
+						</row>} 
                      }</tbody>
 					</tgroup>
 				</table>
             } else
                 <para>A { title } has no fields.</para>)
         }
+        def generateComponentDescription(entries: Seq[TableEntry]): Seq[Node] =
+            for (TableEntry(bp, p, t, sd, d, ch) <- entries;
+                 rows <- <simplesect id={ (path ++ p).map{ _.name }.mkString(".") }>
+						<title>{ t }</title>
+						<segmentedlist>
+							<segtitle>Name</segtitle><segtitle>Bit position</segtitle><segtitle>Bit width</segtitle>
+							<seglistitem><seg>{ pathAsXml(p) }</seg><seg>{ term2Xml(bp) }</seg><seg>{ term2Xml(simp.simplify(Length()(bp), true, Map())._1) }</seg></seglistitem>
+						</segmentedlist>
+					    { d }
+					</simplesect> +: generateComponentDescription(ch))
+                yield rows
         t match {
         case BitRecordType(b) =>
             val (entries, bw) = generateTableEntries(t, Lambda(Irreversible(), Undefined(), Application(InfiniteIndex(), NumberLiteral(0))), Seq())
-            generateTableDescription(entries, bw)
+            generateBitWidthDescription(bw) ++ 
+                generateTableDescription(entries) ++ 
+                generateComponentDescription(entries)
         case BitRegisterType(bw, b) =>
             val (entries, _) = generateTableEntries(t, Lambda(Irreversible(), Undefined(), rangeIndex(NumberLiteral(0), bw)), Seq())
-            generateTableDescription(entries, bw)
+            generateBitWidthDescription(Lambda(Irreversible(), Variable(new VariableIdentity(), true), bw)) ++ 
+                generateTableDescription(entries) ++ 
+                generateComponentDescription(entries)
         case BitUnionType(b) =>
             val (entries, bw) = generateTableEntries(t, Lambda(Irreversible(), Undefined(), Application(InfiniteIndex(), NumberLiteral(0))), Seq())
-            generateTableDescription(entries, bw)
+            generateBitWidthDescription(bw) ++ 
+                generateTableDescription(entries) ++ 
+                generateComponentDescription(entries)
         case BitFieldType(bw) =>
             <para>A { title } is a bit field of { 
                 val it = VariableIdentity.setName(new VariableIdentity, 'it)
                 term2Xml(simp.simplify(Block(root, Application(bw, Variable(it, false))), true, defaultContext)._1) 
                 } bits.</para>
         case WrittenType(t2, w) =>
-            generateMainTypeDescription(t2, title) ++ writtenTypeDescription(w)
+            generateMainTypeDescription(t2, title, path) ++ writtenTypeDescription(w)
         case ConvertedType(t2, c) =>
-            generateMainTypeDescription(t2, title) ++ convertedTypeDescription(c)
+            generateMainTypeDescription(t2, title, path) ++ convertedTypeDescription(c)
         case WhereType(t2, w) =>
-            generateMainTypeDescription(t2, title) ++ whereTypeDescription(w)
+            generateMainTypeDescription(t2, title, path) ++ whereTypeDescription(w)
         case InterpretedBitType(t2, i) =>
-            generateMainTypeDescription(t2, title) ++ interpretedTypeDescription(i)
+            generateMainTypeDescription(t2, title, path) ++ interpretedTypeDescription(i)
         case Variable(id, _) =>
             <para>A { title } is an alias for { term2Xml(t) }.</para>
         case _ => Seq()
@@ -285,14 +329,20 @@ class DocBookGenerator(root1: Statement) extends {
         }), true, defaultContext)._1
     }
 
+    case class TableEntry(val bitPosition: Expression,
+                          val path: Seq[Symbol],
+                          val title: String,
+                          val shortDoc: Seq[Node],
+                          val doc: Seq[Node],
+                          val children: Seq[TableEntry])
     def generateTableEntries(`type`: Expression,
                              bitPermutation: Expression,
-                             tablePath: Seq[Symbol]): (Seq[(Expression, String, Seq[Node])], Expression) =
+                             tablePath: Seq[Symbol]): (Seq[TableEntry], Expression) =
         `type` match {
         case BitFieldType(bw) =>
             (Seq(), bw)
         case t: BitRecordType =>
-            t.foldComponents(Seq[(Expression, String, Seq[Node])](), Lambda(Irreversible(), Undefined(), NumberLiteral(0))){
+            t.foldComponents(Seq[TableEntry](), Lambda(Irreversible(), Undefined(), NumberLiteral(0))){
                 case (c, (rows, ofs)) =>
                     val bp = {
                         val x = VariableIdentity.setName(new VariableIdentity, '_)
@@ -301,16 +351,17 @@ class DocBookGenerator(root1: Statement) extends {
                                 Application(bitPermutation, Variable(x, false))))
                     }
                     val (rows2, bw) = generateTableEntries(c.`type`, bp, tablePath :+ c.name)
-                    val d = { val d = term2Xml(c.annotation(descriptionInfo).getOrElse(StringLiteral("")))
-    					              c.annotation(titleInfo).map{ t => <formalpara><title>{ t }</title>{ d }</formalpara> }.getOrElse(d)
-    					            } ++ generateTypeDescription(c.`type`)
-                    val row3 = if (d.nonEmpty || c.annotation(descriptionInfo).nonEmpty || rows2.isEmpty)
-                            Some(bitPermutationText(bp, bitRange(bw)),
-                                    (tablePath :+ c.name).map{ _.name }.mkString(".​"),
-                                    d)
-				         else 
-				             None
-                    (rows ++ row3 ++ rows2, {
+                    val t = c.annotation(titleInfo).getOrElse(niceTitle(c.name))
+                    val dd = term2Xml(c.annotation(descriptionInfo).getOrElse(StringLiteral("")))
+                    val d = c.annotation(titleInfo).map{ t => <formalpara><title>{ t }</title>{ dd }</formalpara> }.getOrElse(dd) ++
+    					        generateTypeDescription(c.`type`)
+                    val row3 = TableEntry(bitPermutationText(bp, bitRange(bw)),
+                                    tablePath :+ c.name,
+                                    t,
+                                    briefFromXml(dd),
+                                    d,
+                                    rows2)
+                    (rows :+ row3, {
                         val x = VariableIdentity.setName(new VariableIdentity, '_)
                         Lambda(Irreversible(), Variable(x, true), Application(Application(Plus(), Application(ofs, Variable(x, false))), Application(bw, Variable(x, false))))
                     })
@@ -321,52 +372,63 @@ class DocBookGenerator(root1: Statement) extends {
                 Lambda(Irreversible(), Variable(x, true),
                     bitPermutation(Variable(x, false)) o rangeIndex(NumberLiteral(0), t.bitWidth))
             }
-            (t.foldComponents(Seq[(Expression, String, Seq[Node])]()){
+            (t.foldComponents(Seq[TableEntry]()){
                 case (c, rows) =>
                     val (rows2, _) = generateTableEntries(c.`type`, {
                             val x = VariableIdentity.setName(new VariableIdentity, '_)
                             Lambda(Irreversible(), Variable(x, true),
                                 Application(Application(IndexComposition(), c.position), Application(bp, Variable(x, false))))
                         }, tablePath :+ c.name)
-                    val d = { val d = term2Xml(c.annotation(descriptionInfo).getOrElse(StringLiteral("")))
-    					              c.annotation(titleInfo).map{ t => <formalpara><title>{ t }</title>{ d }</formalpara> }.getOrElse(d)
-    					            } ++ generateTypeDescription(c.`type`)
-                    val row3 = if (c.annotation(descriptionInfo).nonEmpty || c.annotation(descriptionInfo).nonEmpty || rows2.isEmpty)
-                             Some(bitPermutationText(bp, Lambda(Irreversible(), Undefined(), c.position)),
-                                     (tablePath :+ c.name).map{ _.name }.mkString(".​"),
-                                     d)
-				         else 
-				             None
-                    rows ++ row3 ++ rows2
+                    val t = c.annotation(titleInfo).getOrElse(niceTitle(c.name))
+                    val dd = term2Xml(c.annotation(descriptionInfo).getOrElse(StringLiteral("")))
+                    val d = c.annotation(titleInfo).map{ t => <formalpara><title>{ t }</title>{ dd }</formalpara> }.getOrElse(dd) ++
+    					        generateTypeDescription(c.`type`)
+                    val row3 = TableEntry(bitPermutationText(bp, Lambda(Irreversible(), Undefined(), c.position)),
+                                     tablePath :+ c.name,
+                                     t,
+                                     briefFromXml(dd),
+                                     d,
+                                     rows2)
+                    rows :+ row3
             }, Lambda(Irreversible(), Undefined(), t.bitWidth))
         case t: BitUnionType =>
-            t.foldVariants(Seq[(Expression, String, Seq[Node])](), (Lambda(Irreversible(), Undefined(), Undefined()): Expression)){
+            t.foldVariants(Seq[TableEntry](), (Lambda(Irreversible(), Undefined(), Undefined()): Expression)){
                 case (v, (rows, bw)) =>
                     val (rows2, bw2) = generateTableEntries(v.`type`, bitPermutation, tablePath :+ v.name)
-                    val d = { val d = term2Xml(v.annotation(descriptionInfo).getOrElse(StringLiteral("")))
-    					              v.annotation(titleInfo).map{ t => <formalpara><title>{ t }</title>{ d }</formalpara> }.getOrElse(d)
-    					            } ++ generateTypeDescription(v.`type`)
-                    val row3 = if (v.annotation(descriptionInfo).nonEmpty || v.annotation(descriptionInfo).nonEmpty || rows2.isEmpty)
-                            Some(bitPermutationText(bitPermutation, bitRange(bw2)),
-                                    (tablePath :+ v.name).map{ _.name }.mkString(".​"),
-                                    d)
-		                else
-		                    None
-                    (rows ++ row3 ++ rows2, Application(Application(OrElse(), bw), bw2))
+                    val t = v.annotation(titleInfo).getOrElse(niceTitle(v.name))
+                    val dd = term2Xml(v.annotation(descriptionInfo).getOrElse(StringLiteral("")))
+                    val d = v.annotation(titleInfo).map{ t => <formalpara><title>{ t }</title>{ dd }</formalpara> }.getOrElse(dd) ++
+    					        generateTypeDescription(v.`type`)
+                    val row3 = TableEntry(bitPermutationText(bitPermutation, bitRange(bw2)),
+                                    tablePath :+ v.name,
+                                    t,
+                                    briefFromXml(dd),
+                                    d,
+                                    rows2)
+                    (rows :+ row3, Application(Application(OrElse(), bw), bw2))
             }
         case BitArrayType(et, u) =>
-            (Seq(), Lambda(Irreversible(), Undefined(), Undefined()))
+            (Seq(), Lambda(Irreversible(), Undefined(), StringLiteral("∞")))
         case WrittenType(t, _) =>
             generateTableEntries(t, bitPermutation, tablePath)
         case ConvertedType(t, _) =>
             generateTableEntries(t, bitPermutation, tablePath)
         case WhereType(t, w) =>
-            val (rows, bw) = generateTableEntries(t, bitPermutation, tablePath)
+            val x = VariableIdentity.setName(new VariableIdentity, '_)
+            val (rows, bw) = generateTableEntries(t, bitPermutation /*Lambda(Irreversible(), Variable(x, true), 
+                            Block(Let(BooleanLiteral(true), Application(w, Variable(x, false))), 
+                                  Application(bitPermutation, Variable(x, false))))*/, tablePath)
             (rows, {
                 val x = VariableIdentity.setName(new VariableIdentity, '_)
                 Lambda(Irreversible(), Variable(x, true),
                         Block(Let(BooleanLiteral(true), Application(w, Variable(x, false))), Application(bw, Variable(x, false))))
             })
+//            val x = VariableIdentity.setName(new VariableIdentity, '_)
+//            generateTableEntries(t, 
+//                    Lambda(Irreversible(), Variable(x, true), 
+//                            Block(Let(BooleanLiteral(true), Application(w, Variable(x, false))), 
+//                                  Application(bitPermutation, Variable(x, false)))),
+//                    tablePath)                    
         case InterpretedBitType(t, _) =>
             generateTableEntries(t, bitPermutation, tablePath)
         case Application(MemberContextedType(p), t) =>
