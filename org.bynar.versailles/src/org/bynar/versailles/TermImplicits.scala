@@ -27,7 +27,7 @@ object TermImplicits {
             Application(Application(Greater(), term), that)
         def >=(that: Expression) =
             Application(Application(GreaterOrEquals(), term), that)
-        def ! =
+        def unary_! =
             Application(Not(), term)
         def &&(that: Expression) =
             Application(Application(And(), term), that)
@@ -110,7 +110,7 @@ object TermImplicits {
             case _ => None
         }
     }
-    object `!` {
+    object unary_! {
         def unapply(t: Term) = t match {
             case Application(Not(), a) => Some(a)
             case _ => None

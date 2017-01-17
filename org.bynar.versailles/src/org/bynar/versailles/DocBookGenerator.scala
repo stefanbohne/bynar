@@ -50,7 +50,7 @@ abstract class DocBookGenerator(val root: Statement) {
 
     def niceTitle(name: Symbol): String = {
         val result = name.name.replace("_", " ").trim()
-        result.substring(0, 1).toUpperCase + result.substring(1)
+        result.split(" ").map{ s => if (s.nonEmpty) s.substring(0, 1).toUpperCase + s.substring(1) else s }.mkString(" ")
     }
 }
 

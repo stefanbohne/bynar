@@ -61,7 +61,12 @@ class TextPrettyPrinter extends PrettyPrinter {
             doPrettyPrint(l)
             doPrettyPrint(r)
         case Application(Member(n), b) =>
-            suffixOp(".​" + n.name, b, 60)
+            paren(60, {
+                precedence = 59
+                doPrettyPrint(b)
+                append(".​")
+                appendXml(<emphasis>{ n.name }</emphasis>)
+            })
         case Variable(id, false) =>
             if (id.annotation(versailles.DocBookGenerator.pathInfo).nonEmpty) {
                 val path = id.annotation(versailles.DocBookGenerator.pathInfo).get :+ VariableIdentity.getName(id)
