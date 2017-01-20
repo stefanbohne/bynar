@@ -16,6 +16,14 @@ import org.bynar.versailles.Variable
 import org.bynar.versailles.xtext.versaillesLang.MatchExpr
 import org.bynar.versailles.xtext.Converter
 import com.google.inject.Inject
+import org.bynar.versailles.xtext.versaillesLang.InterpolatedString
+import org.eclipse.emf.ecore.EStructuralFeature
+import org.xml.sax.SAXParseException
+import org.bynar.versailles.xtext.versaillesLang.VersaillesLangPackage
+import scala.xml.XML
+import org.bynar.versailles.xtext.versaillesLang.TypeStmt
+import org.bynar.versailles.xtext.versaillesLang.DefStmt
+import org.bynar.versailles.xtext.versaillesLang.ModuleStmt
 
 class VersaillesLangValidator extends AbstractVersaillesLangValidator {
 
@@ -23,6 +31,18 @@ class VersaillesLangValidator extends AbstractVersaillesLangValidator {
     val converter: Converter = null
     @Inject
     val variableAnalyzer: VariableAnalyzer = null
+    
+    def checkDescription(description: InterpolatedString, feature: EStructuralFeature) {
+        if (description != null && description.getStrings != null) {
+            val text = description.getStrings().map{ s => s.substring(1, s.size - 1) }.mkString("")
+    		try {
+    		    XML.loadString("<root>" + text + "</root>")
+    		} catch {
+    		    case e: SAXParseException => 
+    		        error(e.getLocalizedMessage, feature)
+    		}
+        }
+    }
 
     @Check
 	def checkBlock(block: BlockExpr) {
@@ -70,5 +90,19 @@ class VersaillesLangValidator extends AbstractVersaillesLangValidator {
                 showErrors(child)
         }
         showErrors(newIt)
+    }
+    
+    @Check 
+    def checkTypeStmtDescription(stmt: TypeStmt) {
+        checkDescription(stmt.getDescription, VersaillesLangPackage.eINSTANCE.getTypeStmt_Description)
+    }
+    @Check 
+    def checkDefStmtDescription(stmt: DefStmt) {
+        checkDescription(stmt.getDescription, VersaillesLangPackage.eINSTANCE.getDefStmt_Description)
+        checkDescription(stmt.getDescription2, VersaillesLangPackage.eINSTANCE.getDefStmt_Description2)
+    }
+    @Check 
+    def checkModuleStmtDescription(stmt: ModuleStmt) {
+        checkDescription(stmt.getDescription, VersaillesLangPackage.eINSTANCE.getModuleStmt_Description)
     }
 }
