@@ -36,6 +36,7 @@ abstract class DocBookGenerator(val root: Statement) {
 			{ d.value match {
 			    case m: Module => generateMainDefinitions(m.body)
 		    }}
+			<index/>
 	 	</article>
     }
     

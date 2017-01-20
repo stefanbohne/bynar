@@ -34,7 +34,9 @@ import org.bynar.versailles.Length
 import org.bynar.versailles.SingletonIndex
 import org.bynar.versailles.ZeroaryExpression
 
-class DocBookGenerator(root1: Statement) extends {
+class DocBookGenerator(root1: Statement,
+                       val offsetSizeColumnsIfPossible: Boolean = false,
+                       val shortTables: Boolean = false) extends {
     val simp = new Simplifier()
     val pp = new TextPrettyPrinter()
 } with org.bynar.versailles.DocBookGenerator(simp.simplifyStatement(root1, defaultContext, true)._1) {
@@ -230,8 +232,8 @@ class DocBookGenerator(root1: Statement) extends {
     			         val row = if (e.children.isEmpty || e.shortDoc.nonEmpty) rowGen(e) else Seq();
     			         rows <- row ++ generateTableRows(e.children)(rowGen))
     			        yield rows
-                if (entries.forall{ e => isSimpleOrElseRange(e.bitPosition) })
-                <table pgwide="1">
+                if (offsetSizeColumnsIfPossible && entries.forall{ e => isSimpleOrElseRange(e.bitPosition) })
+                <table pgwide="1" id={ path.map{ _.name }.mkString(".") + "-structure" }>
 					<title>Structure of a { title }</title>
 					<tgroup cols="4" colsep="1" rowsep="1">
 					<colspec colwidth="0.75*"/>
@@ -244,13 +246,13 @@ class DocBookGenerator(root1: Statement) extends {
 							<entry>{ term2Xml(removeIfs(firstIndex(e.bitPosition))) }</entry>
 							<entry>{ term2Xml(removeIfs(indexSize(e.bitPosition))) }</entry>
 							<entry><link linkend={ (path ++ e.path).map{ _.name }.mkString(".") }>{ pathAsXml(e.path) }</link></entry>
-							<entry>{ e.shortDoc }</entry>
+							<entry>{ if (shortTables) e.shortDoc else e.doc }</entry>
 						</row>}
 					}</tbody>
 					</tgroup>
 				</table>
 					else
-                <table pgwide="1">
+                <table pgwide="1" id={ path.map{ _.name }.mkString(".") + "-structure" }>
 					<title>Structure of a { title }</title>
 					<tgroup cols="3" colsep="1" rowsep="1">
 					<colspec colwidth="1.5*"/>
@@ -261,7 +263,7 @@ class DocBookGenerator(root1: Statement) extends {
 					    <row>
 							<entry>{ term2Xml(removeIfs(e.bitPosition)) }</entry>
 							<entry><link linkend={ (path ++ e.path).map{ _.name }.mkString(".") }>{ pathAsXml(e.path) }</link></entry>
-							<entry>{ e.shortDoc }</entry>
+							<entry>{ if (shortTables) e.shortDoc else e.doc }</entry>
 						</row>} 
                      }</tbody>
 					</tgroup>
@@ -283,21 +285,24 @@ class DocBookGenerator(root1: Statement) extends {
         t match {
         case BitRecordType(b) =>
             val (entries, bw) = generateTableEntries(t, Lambda(Irreversible(), Undefined(), Application(InfiniteIndex(), NumberLiteral(0))), Seq())
-            generateBitWidthDescription(bw) ++ 
+            <para>A <firstterm><type>{ title }</type></firstterm><indexterm><primary>{ title }</primary></indexterm> is a data structure with the bit format in <xref linkend={ path.map{ _.name }.mkString(".") + "-structure" }/>.</para> ++
+                generateBitWidthDescription(bw) ++ 
                 generateTableDescription(entries) ++ 
-                generateComponentDescription(entries)
+                (if (shortTables) generateComponentDescription(entries) else Seq())
         case BitRegisterType(bw, b) =>
             val (entries, _) = generateTableEntries(t, Lambda(Irreversible(), Undefined(), rangeIndex(NumberLiteral(0), bw)), Seq())
-            generateBitWidthDescription(Lambda(Irreversible(), Variable(new VariableIdentity(), true), bw)) ++ 
+            <para>A <firstterm><type>{ title }</type></firstterm><indexterm><primary>{ title }</primary></indexterm> is a data structure with the bit format in <xref linkend={ path.map{ _.name }.mkString(".") + "-structure" }/>.</para> ++
+                generateBitWidthDescription(Lambda(Irreversible(), Variable(new VariableIdentity(), true), bw)) ++ 
                 generateTableDescription(entries) ++ 
-                generateComponentDescription(entries)
+                (if (shortTables) generateComponentDescription(entries) else Seq())
         case BitUnionType(b) =>
             val (entries, bw) = generateTableEntries(t, Lambda(Irreversible(), Undefined(), Application(InfiniteIndex(), NumberLiteral(0))), Seq())
-            generateBitWidthDescription(bw) ++ 
+            <para>A <firstterm><type>{ title }</type></firstterm><indexterm><primary>{ title }</primary></indexterm> is a data structure with the bit format in <xref linkend={ path.map{ _.name }.mkString(".") + "-structure" }/>.</para> ++
+                generateBitWidthDescription(bw) ++ 
                 generateTableDescription(entries) ++ 
-                generateComponentDescription(entries)
+                (if (shortTables) generateComponentDescription(entries) else Seq())
         case BitFieldType(bw) =>
-            <para>A { title } is a bit field of { 
+            <para>A <firstterm><type>{ title }</type></firstterm><indexterm><primary>{ title }</primary></indexterm> is a bit field of { 
                 val it = VariableIdentity.setName(new VariableIdentity, 'it)
                 term2Xml(simp.simplify(Block(root, Application(bw, Variable(it, false))), true, defaultContext)._1) 
                 } bits.</para>
@@ -310,7 +315,7 @@ class DocBookGenerator(root1: Statement) extends {
         case InterpretedBitType(t2, i) =>
             generateMainTypeDescription(t2, title, path) ++ interpretedTypeDescription(i)
         case Variable(id, _) =>
-            <para>A { title } is an alias for { term2Xml(t) }.</para>
+            <para>A <firstterm><type>{ title }</type></firstterm><indexterm><primary>{ title }</primary></indexterm> is an alias for { term2Xml(t) }.</para>
         case _ => Seq()
         }
     }
@@ -353,8 +358,7 @@ class DocBookGenerator(root1: Statement) extends {
                     val (rows2, bw) = generateTableEntries(c.`type`, bp, tablePath :+ c.name)
                     val t = c.annotation(titleInfo).getOrElse(niceTitle(c.name))
                     val dd = term2Xml(c.annotation(descriptionInfo).getOrElse(StringLiteral("")))
-                    val d = c.annotation(titleInfo).map{ t => <formalpara><title>{ t }</title>{ dd }</formalpara> }.getOrElse(dd) ++
-    					        generateTypeDescription(c.`type`)
+                    val d = dd ++ generateTypeDescription(c.`type`)
                     val row3 = TableEntry(bitPermutationText(bp, bitRange(bw)),
                                     tablePath :+ c.name,
                                     t,
@@ -381,8 +385,7 @@ class DocBookGenerator(root1: Statement) extends {
                         }, tablePath :+ c.name)
                     val t = c.annotation(titleInfo).getOrElse(niceTitle(c.name))
                     val dd = term2Xml(c.annotation(descriptionInfo).getOrElse(StringLiteral("")))
-                    val d = c.annotation(titleInfo).map{ t => <formalpara><title>{ t }</title>{ dd }</formalpara> }.getOrElse(dd) ++
-    					        generateTypeDescription(c.`type`)
+                    val d = dd ++ generateTypeDescription(c.`type`)
                     val row3 = TableEntry(bitPermutationText(bp, Lambda(Irreversible(), Undefined(), c.position)),
                                      tablePath :+ c.name,
                                      t,
@@ -397,8 +400,7 @@ class DocBookGenerator(root1: Statement) extends {
                     val (rows2, bw2) = generateTableEntries(v.`type`, bitPermutation, tablePath :+ v.name)
                     val t = v.annotation(titleInfo).getOrElse(niceTitle(v.name))
                     val dd = term2Xml(v.annotation(descriptionInfo).getOrElse(StringLiteral("")))
-                    val d = v.annotation(titleInfo).map{ t => <formalpara><title>{ t }</title>{ dd }</formalpara> }.getOrElse(dd) ++
-    					        generateTypeDescription(v.`type`)
+                    val d = dd ++ generateTypeDescription(v.`type`)
                     val row3 = TableEntry(bitPermutationText(bitPermutation, bitRange(bw2)),
                                     tablePath :+ v.name,
                                     t,
