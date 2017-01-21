@@ -38,18 +38,36 @@ class TextPrettyPrinter extends PrettyPrinter {
                 replace(" &gt;-&gt; ", " &#x21A3; ").
                 replace(" &lt;-&lt; ", " &#x21A2; ").
                 replace(" &gt;-&lt; ", " &#x21AD; ").
-                replace(" &lt;&gt;-&lt;&gt; ", " &#x21C4; "))
+                replace(" &lt;&gt;-&lt;&gt; ", " &#x21C4; ").
+                replace("(", "(​"))
     }
     def appendXml(xml: Node*) {
         for (node <- xml)
             result.append(node.toString)
     }
+    def pathAsXml(path: Seq[Symbol]) =
+        path.map{ _.name.replace("_", "_​") }.mkString(".​")
     override def doPrettyPrint(term: Term) = {
         def isIfThenElse(term: Term): Boolean =
             term match {
             case Block(Let(BooleanLiteral(true), _), _) => true
             case OrElseValue(_, _) => true
             case _ => false
+            }
+        def isName(term: Term): Boolean =
+            term match {
+            case Variable(_, false) => true
+            case Application(Member(_), t) => isName(t)
+            case Application(MemberContextedType(_), t) => isName(t)
+            case _ => false
+            }
+        def getPath(term: Term): (Seq[Symbol], VariableIdentity) =
+            term match {
+            case Variable(id, false) => (Seq(), id)
+            case Application(Member(n), t) => 
+                val (p, id) = getPath(t)
+                (p :+ n, id)
+            case Application(MemberContextedType(_), t) => getPath(t)
             }
 
         term match {
@@ -60,32 +78,29 @@ class TextPrettyPrinter extends PrettyPrinter {
         case Application(Application(Concat(), l), r) =>
             doPrettyPrint(l)
             doPrettyPrint(r)
+        case term if isName(term) =>
+            val (p, id) = getPath(term)
+            if (id.annotation(versailles.DocBookGenerator.pathInfo).nonEmpty) {
+                // TODO: don't fake cross-references
+                val path = id.annotation(versailles.DocBookGenerator.pathInfo).get :+ VariableIdentity.getName(id)
+                result.append("<xref linkend=\"")
+                result.append((path ++ p).map{ _.name }.mkString("."))
+                result.append("\" xrefstyle=\"select:title\"/>")
+            } else {
+                result.append("<emphasis>")
+                result.append(pathAsXml(VariableIdentity.getName(id) +: p))
+                result.append("</emphasis>")
+            }
         case Application(Member(n), b) =>
             paren(60, {
                 precedence = 59
                 doPrettyPrint(b)
                 append(".​")
-                appendXml(<emphasis>{ n.name }</emphasis>)
+                appendXml(<emphasis>{ pathAsXml(Seq(n)) }</emphasis>)
             })
-        case Variable(id, false) =>
-            if (id.annotation(versailles.DocBookGenerator.pathInfo).nonEmpty) {
-                val path = id.annotation(versailles.DocBookGenerator.pathInfo).get :+ VariableIdentity.getName(id)
-                result.append("<link linkend=\"")
-                result.append(path.map{ _.name }.mkString("."))
-                result.append("\">")
-            }
-            result.append("<emphasis>")
-            id.annotation(versailles.DocBookGenerator.titleInfo) match {
-                case Some(t) => result.append(t)
-                case None => result.append(VariableIdentity.getName(id).name)
-            }            
-            result.append("</emphasis>")
-            if (id.annotation(versailles.DocBookGenerator.pathInfo).nonEmpty) {
-                result.append("</link>")
-            }
         case Variable(id, true) =>
-            result.append("<emphasis>?")
-            result.append(VariableIdentity.getName(id).name)
+            result.append("<emphasis>")
+            result.append(pathAsXml(Seq(VariableIdentity.getName(id))))
             result.append("</emphasis>")
         case term if isIfThenElse(term) =>
             def printIfThenElse(term: Term, last: Boolean) {

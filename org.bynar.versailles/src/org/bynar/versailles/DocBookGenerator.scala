@@ -28,7 +28,7 @@ abstract class DocBookGenerator(val root: Statement) {
                     Block(root, Application(d, StringLiteral("it"))),
                     false, defaultContext
             )._1) + "</root>").child }.getOrElse(Seq())
-        <article xmlns="http://docbook.org/ns/docbook" xmlns:mml="http://www.w3.org/1998/Math/MathML" version="5.0">
+        <article xmlns="http://docbook.org/ns/docbook" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0">
 			<info>
 				<title>{ title }</title>
 			</info>
