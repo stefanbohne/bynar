@@ -263,7 +263,7 @@ class PrettyPrinter {
                 binOpLeft(" && ", l, r, 4)
         case Application(Application(Or(), l), r)
             if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
-                binOpRight(" || ", l, r, 3)
+                binOpLeft(" || ", l, r, 3)
         case Application(Reverse(), a)
             if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
                 prefixOp("~", a, 35)

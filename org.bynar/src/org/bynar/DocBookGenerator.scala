@@ -35,7 +35,7 @@ import org.bynar.versailles.SingletonIndex
 import org.bynar.versailles.ZeroaryExpression
 
 class DocBookGenerator(root1: Statement,
-                       val offsetSizeColumnsIfPossible: Boolean = false,
+                       val offsetSizeColumnsIfPossible: Boolean = true,
                        val shortTables: Boolean = false) extends {
     val simp = new Simplifier()
     val pp = new TextPrettyPrinter()
@@ -97,7 +97,7 @@ class DocBookGenerator(root1: Statement,
                         Block(root, Application(d, StringLiteral("it"))),
                         false, defaultContext
                 )._1) + "</root>").child }.getOrElse(Seq())
-            Seq(<section id={ path.map{ _.name }.mkString(".") }>
+            Seq(<section xml:id={ path.map{ _.name }.mkString(".") }>
 				<title>{ title }</title>
 			    { descr }
 			    { generateMainDefinitions(b) }
@@ -116,16 +116,16 @@ class DocBookGenerator(root1: Statement,
                     val (args, body) = functionDescr(t.body)
                     t.pattern match {
                     case Tuple(patterns@_*) =>
-                        (patterns.map(p => <listitem>{ term2Xml(p) }</listitem>) ++ args, body)
+                        (patterns.map(p => <listitem><para>{ term2Xml(p) }</para></listitem>) ++ args, body)
                     case pattern => 
-                        (<listitem>{ term2Xml(pattern) }</listitem> ++ args, body) 
+                        (<listitem><para>{ term2Xml(pattern) }</para></listitem> ++ args, body) 
                     }
                     
                 case t: BitTypeExpression => (Seq(), generateMainTypeDescription(t, title, path))
                 case t => (Seq(), <literallayout>{ term2Xml(simp.simplify(Block(root, t), true, defaultContext)._1) }</literallayout>)
                 }
             val (args, body) = functionDescr(v)
-            Seq(<section id={ path.map{ _.name }.mkString(".") }>
+            Seq(<section xml:id={ path.map{ _.name }.mkString(".") }>
 				<title>{ title }</title>
 			    { descr }
 			    { if (args.nonEmpty) <para>Parameters:<orderedlist>{ args }</orderedlist></para> }
@@ -142,7 +142,7 @@ class DocBookGenerator(root1: Statement,
                     Block(root, Application(d, StringLiteral("it"))),
                     false, defaultContext
             )._1) + "</root>").child }.getOrElse(Seq())
-        Seq(<section id={ path.map{ _.name }.mkString(".") }>
+        Seq(<section xml:id={ path.map{ _.name }.mkString(".") }>
 			<title>{ title }</title>
 			{ descr }
 			{ generateMainTypeDescription(d.value.asInstanceOf[BitTypeExpression], title, path) }
@@ -160,17 +160,17 @@ class DocBookGenerator(root1: Statement,
         case BitFieldType(_) => Seq()
         case t: BitRecordType =>
             if (t.components.isEmpty)
-                <para>An empty record.</para>
+                <para>An empty data structure.</para>
             else
                 Seq()
         case t: BitRegisterType =>
             if (t.components.isEmpty)
-                <para>An empty register.</para>
+                <para>An empty data structure.</para>
             else
                 Seq()
         case t: BitUnionType =>
             if (t.variants.isEmpty)
-                <para>An empty union.</para>
+                <para>An impossible data structure.</para>
             else
                 Seq()
         case BitArrayType(ct, u) =>
@@ -233,7 +233,7 @@ class DocBookGenerator(root1: Statement,
 			         rows <- row ++ generateTableRows(e.children)(rowGen))
 			        yield rows
             if (offsetSizeColumnsIfPossible && entries.forall{ e => isSimpleOrElseRange(e.bitPosition) })
-                <table pgwide="1" id={ path.map{ _.name }.mkString(".") + "-structure" }>
+                <table pgwide="1" xml:id={ path.map{ _.name }.mkString(".") + "-structure" }>
 					<title>Structure of a { title }</title>
 					<tgroup cols="4" colsep="1" rowsep="1">
 					<colspec colwidth="0.75*"/>
@@ -243,7 +243,7 @@ class DocBookGenerator(root1: Statement,
             		<thead><row><entry>Offset</entry><entry>Size</entry><entry>Name</entry><entry>Description</entry></row></thead>
 					<tbody>{ generateTableRows(entries){ e =>
 				    <row>
-							<entry id={ if (!shortTables) (path ++ e.path).map{ _.name }.mkString(".") else null }
+							<entry xml:id={ if (!shortTables) (path ++ e.path).map{ _.name }.mkString(".") else null }
 					         	   xreflabel={ if (!shortTables) e.title else null }>{ term2Xml(removeIfs(firstIndex(e.bitPosition))) }</entry>
 							<entry>{ term2Xml(removeIfs(indexSize(e.bitPosition))) }</entry>
 							<entry>{ if (shortTables) 
@@ -256,7 +256,7 @@ class DocBookGenerator(root1: Statement,
 					</tgroup>
 				</table>
 			else
-                <table pgwide="1" id={ path.map{ _.name }.mkString(".") + "-structure" }>
+                <table pgwide="1" xml:id={ path.map{ _.name }.mkString(".") + "-structure" }>
 					<title>Structure of a { title }</title>
 					<tgroup cols="3" colsep="1" rowsep="1">
 					<colspec colwidth="1.5*"/>
@@ -265,7 +265,7 @@ class DocBookGenerator(root1: Statement,
             		<thead><row><entry>Bit Position</entry><entry>Name</entry><entry>Description</entry></row></thead>
 					<tbody>{ generateTableRows(entries){ e =>             
 				    <row>
-							<entry id={ if (!shortTables) (path ++ e.path).map{ _.name }.mkString(".") else null }
+							<entry xml:id={ if (!shortTables) (path ++ e.path).map{ _.name }.mkString(".") else null }
 					         	   xreflabel={ if (!shortTables) e.title else null }>{ term2Xml(removeIfs(e.bitPosition)) }</entry>
 							<entry>{ if (shortTables) 
 					                <link linkend={ (path ++ e.path).map{ _.name }.mkString(".") }>{ pp.pathAsXml(e.path) }</link>
@@ -279,7 +279,7 @@ class DocBookGenerator(root1: Statement,
         }
         def generateComponentDescription(entries: Seq[TableEntry]): Seq[Node] =
             for (TableEntry(bp, p, t, sd, d, ch) <- entries;
-                 rows <- <simplesect id={ (path ++ p).map{ _.name }.mkString(".") }>
+                 rows <- <simplesect xml:id={ (path ++ p).map{ _.name }.mkString(".") }>
 						<title>{ t }</title>
 						<segmentedlist>
 							<segtitle>Name</segtitle><segtitle>Bit position</segtitle><segtitle>Bit width</segtitle>
@@ -295,7 +295,8 @@ class DocBookGenerator(root1: Statement,
                 <para>A <firstterm><type>{ title }</type></firstterm><indexterm><primary>{ title }</primary></indexterm> is an empty data structure.</para> ++
                     generateBitWidthDescription(bw)
             else
-                <para>A <firstterm><type>{ title }</type></firstterm><indexterm><primary>{ title }</primary></indexterm> is a data structure with the bit format in <xref linkend={ path.map{ _.name }.mkString(".") + "-structure" }/>.</para> ++
+                <para>A <firstterm><type>{ title }</type></firstterm><indexterm><primary>{ title }</primary></indexterm> 
+						is a data structure with the bit format in <xref linkend={ path.map{ _.name }.mkString(".") + "-structure" } xrefstyle="select:label"/>.</para> ++
                     generateBitWidthDescription(bw) ++ 
                     generateTableDescription(entries) ++ 
                     (if (shortTables) generateComponentDescription(entries) else Seq())
@@ -305,7 +306,8 @@ class DocBookGenerator(root1: Statement,
                 <para>A <firstterm><type>{ title }</type></firstterm><indexterm><primary>{ title }</primary></indexterm> is an empty data structure.</para> ++
                     generateBitWidthDescription(Lambda(Irreversible(), Variable(new VariableIdentity(), true), bw))
             else
-                <para>A <firstterm><type>{ title }</type></firstterm><indexterm><primary>{ title }</primary></indexterm> is a data structure with the bit format in <xref linkend={ path.map{ _.name }.mkString(".") + "-structure" }/>.</para> ++
+                <para>A <firstterm><type>{ title }</type></firstterm><indexterm><primary>{ title }</primary></indexterm> 
+						is a data structure with the bit format in <xref linkend={ path.map{ _.name }.mkString(".") + "-structure" } xrefstyle="select:label"/>.</para> ++
                     generateBitWidthDescription(Lambda(Irreversible(), Variable(new VariableIdentity(), true), bw)) ++ 
                     generateTableDescription(entries) ++ 
                     (if (shortTables) generateComponentDescription(entries) else Seq())
@@ -315,7 +317,8 @@ class DocBookGenerator(root1: Statement,
                 <para>A <firstterm><type>{ title }</type></firstterm><indexterm><primary>{ title }</primary></indexterm> is an impossible data structure.</para> ++
                     generateBitWidthDescription(bw)
             else
-                <para>A <firstterm><type>{ title }</type></firstterm><indexterm><primary>{ title }</primary></indexterm> is a data structure with the bit format in <xref linkend={ path.map{ _.name }.mkString(".") + "-structure" }/>.</para> ++
+                <para>A <firstterm><type>{ title }</type></firstterm><indexterm><primary>{ title }</primary></indexterm> 
+						is a data structure with the bit format in <xref linkend={ path.map{ _.name }.mkString(".") + "-structure" } xrefstyle="select:label"/>.</para> ++
                     generateBitWidthDescription(bw) ++ 
                     generateTableDescription(entries) ++ 
                     (if (shortTables) generateComponentDescription(entries) else Seq())
@@ -480,9 +483,13 @@ class DocBookGenerator(root1: Statement,
 				{ i.foldValues(Seq[Node]()){
 				    case (v, ns) =>
 				        ns :+
-				        <varlistentry id={ v.annotation(pathInfo).map{ p => (p :+ v.name).map{ _.name }.mkString(".") }.orNull }>
-							<term>{ v.name.name }</term>
-                        	<listitem> = { term2Xml(v.value) }. { term2Xml(v.annotation(descriptionInfo).getOrElse(StringLiteral(""))) }</listitem>
+				        <varlistentry xml:id={ v.annotation(pathInfo).map{ p => (p :+ v.name).map{ _.name }.mkString(".") }.orNull }
+				                      xreflabel={ v.name.name }>
+							<term>{ v.name.name } = { term2Xml(v.value) }</term>
+							{ v.annotation(descriptionInfo) match {
+							    case Some(d) => <listitem>{ term2Xml(d) }</listitem>
+							    case None => <listitem><para/></listitem>
+							}}                        	
 						</varlistentry>
 				    }
 				}
