@@ -15,9 +15,9 @@ object TermImplicits {
             Application(Application(Times(), that), term)
         def /(that: Expression) =
             Application(Application(Divide(), that), term)
-        def ==(that: Expression) =
+        def equ(that: Expression) =
             Application(Application(Equals(), term), that)
-        def !=(that: Expression) =
+        def neq(that: Expression) =
             Application(Application(NotEquals(), term), that)
         def <(that: Expression) =
             Application(Application(Less(), term), that)
