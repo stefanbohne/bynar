@@ -225,8 +225,16 @@ class DocBookGenerator(root1: Statement,
                     removeIfs1(x)
                 case expr => Seq(expr)
                 }
-            def removeIfs(e: Expression): Expression =
-                removeIfs1(e).distinct.reduce{ OrElseValue(_, _) }
+            def findLiterals(e: Expression): BigDecimal = 
+                e match {
+                case NumberLiteral(v) => v
+                case Block(_, e) => findLiterals(e)
+                case Application(Application(RangeIndex(), a), b) => findLiterals(a)
+                case Application(Application(Plus(), a), b) => findLiterals(a)
+                case _ => 0
+                }
+            def removeIfs(e: Expression): Seq[Expression] =
+                removeIfs1(e).distinct
             def generateTableRows(entries: Seq[TableEntry])(rowGen: TableEntry => Seq[Node]): Seq[Node] =
                 for (e <- entries;
 			         val row = if (!shortTables || e.children.isEmpty || e.shortDoc.nonEmpty) rowGen(e) else Seq();
@@ -244,8 +252,8 @@ class DocBookGenerator(root1: Statement,
 					<tbody>{ generateTableRows(entries){ e =>
 				    <row>
 							<entry xml:id={ if (!shortTables) (path ++ e.path).map{ _.name }.mkString(".") else null }
-					         	   xreflabel={ if (!shortTables) e.title else null }>{ term2Xml(removeIfs(firstIndex(e.bitPosition))) }</entry>
-							<entry>{ term2Xml(removeIfs(indexSize(e.bitPosition))) }</entry>
+					         	   xreflabel={ if (!shortTables) e.title else null }>{ term2Xml(removeIfs(firstIndex(e.bitPosition)).sortBy(findLiterals _).reduce{ OrElseValue(_, _) }) }</entry>
+							<entry>{ term2Xml(removeIfs(indexSize(e.bitPosition)).sortBy(findLiterals _).reduce{ OrElseValue(_, _) }) }</entry>
 							<entry>{ if (shortTables) 
 					                <link linkend={ (path ++ e.path).map{ _.name }.mkString(".") }>{ pp.pathAsXml(e.path) }</link>
 				                 else 
@@ -266,7 +274,7 @@ class DocBookGenerator(root1: Statement,
 					<tbody>{ generateTableRows(entries){ e =>             
 				    <row>
 							<entry xml:id={ if (!shortTables) (path ++ e.path).map{ _.name }.mkString(".") else null }
-					         	   xreflabel={ if (!shortTables) e.title else null }>{ term2Xml(removeIfs(e.bitPosition)) }</entry>
+					         	   xreflabel={ if (!shortTables) e.title else null }>{ term2Xml(removeIfs(e.bitPosition).sortBy(findLiterals _).reduce{ OrElseValue(_, _) }) }</entry>
 							<entry>{ if (shortTables) 
 					                <link linkend={ (path ++ e.path).map{ _.name }.mkString(".") }>{ pp.pathAsXml(e.path) }</link>
 				                 else 
