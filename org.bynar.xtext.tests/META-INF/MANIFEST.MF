@@ -11,9 +11,11 @@ Require-Bundle: org.bynar.xtext,
  org.eclipse.xtext.xbase.junit,
  org.eclipse.xtext.xbase.lib,
  org.bynar.versailles.xtext;bundle-version="1.0.0",
- org.scala-lang.scala-library
+ org.scala-lang.scala-library,
+ org.eclipse.xtext.testing,
+ org.eclipse.xtext.xbase.testing
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
-Export-Package: org.bynar.xtext.tests
+Export-Package: org.bynar.xtext.tests;x-internal=true
 Import-Package: org.hamcrest.core,
  org.junit;version="4.5.0",
  org.junit.runners.model;version="4.5.0",

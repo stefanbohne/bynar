@@ -4,8 +4,10 @@ import "http://www.bynar.org/versailles/xtext/VersaillesLang" as versailles
 
 generate bynarLang "http://www.bynar.org/xtext/BynarLang"
 
+@Override 
 CompilationUnit returns versailles::CompilationUnit: super;
 
+@Override 
 Statement returns versailles::Statement:
 		super
 	|   "component" ({RegisterComponent} "[" bitPosition=IndexExpr "]" | {RecordComponent}) name=Name (title=STRING)? (description=InterpolatedString)? ":" type=TypeExpression
@@ -15,6 +17,7 @@ Statement returns versailles::Statement:
 	|	{EnumValue} "value" name=Name (title=STRING)? (description=InterpolatedString)? "=" value=Expression
 ;
 
+@Override 
 TypeModifiers returns versailles::TypeExpression:
 	TypeInt ( {TypeWrittenExpr.type=current} => "written" written=Expression
 			| {TypeConvertedExpr.type=current} => "converted" conversion=Expression
@@ -25,6 +28,7 @@ TypeInt returns versailles::TypeExpression:
 	TypeExtension ({TypeWithInterpretationExpr.type=current} "is" interpretation=Interpretation)?
 ;
 
+@Override
 TypeSimple returns versailles::TypeExpression:
 	   	super
 	|	BitTypeExpression
@@ -51,6 +55,7 @@ BitUnit:
 	|	{UnitMBytes} ("MB" | "megabytes" | "megabyte")
 ;
 
+@Override 
 Name:
 		super
 	|   "component" | "align" | "at" | "offset" | "to" | "by" | "variant" | "value"
@@ -58,6 +63,7 @@ Name:
 	|	"register" | "array" | "length" | "one" | "fixed" | "containing"
 	| 	"bit" | "byte" | "kB" | "kilobytes" | "kilobyte" | "megabytes" | "megabyte"
 ;
+@Override 
 TypeName:
 		super
 	| 	"MB"

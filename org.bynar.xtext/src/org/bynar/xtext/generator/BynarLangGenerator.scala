@@ -13,6 +13,10 @@ import org.bynar.versailles.Irreversible
 import org.bynar.versailles.xtext.versaillesLang.CompilationUnit
 import org.bynar.versailles.Block
 import org.bynar.versailles.xtext.DocBookGeneratorFactory
+import org.bynar.versailles.Sequence
+import org.bynar.versailles.Def
+import org.bynar.versailles.Statement
+import org.bynar.versailles.VariableIdentity
 
 class BynarLangGenerator extends AbstractGenerator {
 
@@ -35,7 +39,18 @@ class BynarLangGenerator extends AbstractGenerator {
         fsa.generateFile("simp.txt", prettyPrinter.prettyPrint(simplifier.simplify(analyzed, true)._1))
 
         val docGen = dbGen.create(analyzed.asInstanceOf[Block].block)
-        fsa.generateFile(resource.getURI.trimFileExtension().segments().drop(2).mkString("", "/", ".xml"), 
-                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + docGen.generate().toString)
+        val baseFileName = resource.getURI.trimFileExtension().segments().drop(2).mkString("/")
+        def generateModules(s: Statement) {
+	        s match {
+	            case ss: Sequence => 
+	                for (s <- ss.statements)
+	                    generateModules(s)
+	            case d: Def =>
+                    fsa.generateFile(baseFileName + "." + VariableIdentity.getName(d.identity).name + ".xml", 
+                            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + docGen.generate(d).toString)
+	            case _ => {}
+	        }
+	    }
+	    generateModules(docGen.root)
     }
 }

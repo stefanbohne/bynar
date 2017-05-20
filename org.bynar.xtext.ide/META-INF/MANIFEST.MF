@@ -8,7 +8,9 @@ Bundle-ActivationPolicy: lazy
 Require-Bundle: org.bynar.xtext,
  org.eclipse.xtext.ide,
  org.eclipse.xtext.xbase.ide,
- org.bynar.versailles.xtext;bundle-version="1.0.0"
+ org.bynar.versailles.xtext;bundle-version="1.0.0",
+ org.antlr.runtime,
+ org.scala-lang.scala-library
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
 Export-Package: org.bynar.xtext.ide.contentassist.antlr.internal,
  org.bynar.xtext.ide.contentassist.antlr

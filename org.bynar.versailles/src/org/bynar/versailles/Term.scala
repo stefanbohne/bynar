@@ -149,6 +149,10 @@ case class Concat() extends Literal {
     type SelfTerm = Concat
     override def toString = "`++`"
 }
+case class In() extends Literal {
+    type SelfTerm = In
+    override def toString = "in"
+}
 case class Equals() extends Literal {
     type SelfTerm = Equals
     override def toString = "`==`"

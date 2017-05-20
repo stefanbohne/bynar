@@ -14,10 +14,10 @@ Sep hidden (WS, ML_COMMENT, SL_COMMENT):
 
 Name: ID_LOWER | "pass" | "fail" | "let" | "forget" | "remember" | "def" | "letdef" | "type" | "lettype" |
 	  "if" | "else" | "fi" | "case" | "match" | "in" | "from" | "loop" | "until" | "do" |
-	  "module" | "for" | "where" | ID_BACKTICK
+	  "module" | "for" | "where" | "abstract" | ID_BACKTICK | TypeName
 ;
 TypeName: ID_UPPER | ID_FORWARDTICK;
-TypeNamePath: steps+=TypeName ("." steps+=TypeName)*;
+NamePath: steps+=Name ("." steps+=Name)*;
 
 
 Statement:
@@ -29,11 +29,12 @@ Statement:
 	|	{IfStmt} "if" condition=Expression "then" then=Statements (=> "else" else=Statements)? ("fi" assertion=Expression)?
 	|   {LoopStmt} ("from" assertion=Expression)? ("do" do=Statements)? ("loop" loop=Statements)? "until" condition=Expression
 	|	{CaseStmt} "case" case=LambdaExpr
-	|	{DefStmt} ("def"|let?="letdef") name=Name (typeArguments=TupleTypeTypeExpr)? (arguments+=TupleExpr)* (title=STRING)? (description=InterpolatedString)?
+	|	{DefStmt} ("def"|let?="letdef") name=Name (typeArguments=TupleTypeExpr)? (arguments+=TupleExpr)* (title=STRING)? (description=InterpolatedString)?
 					    ( janusClass=JanusClassExpression name2=Name? results=TupleExpr (title2=STRING)? (description2=InterpolatedString)? ("{" statements=Statements "}")?
 				        | ":" valueType=TypeExpression "=" value=Expression)
-	|	{TypeStmt} ("type"|let?="lettype") name=TypeName typeArguments=TupleTypeTypeExpr? (valueArguments+=TupleExpr)* (title=STRING)? (description=InterpolatedString)? "=" type=TypeExpression
-	|   {ModuleStmt} "module" path=TypeNamePath (title=STRING)? (description=InterpolatedString)? "{" statements=Statements "}"
+	|	{TypeStmt} ("type"|let?="lettype") name=Name typeArguments=TupleTypeExpr? (arguments+=TupleExpr)* (title=STRING)? (description=InterpolatedString)? 
+						(":" kind=TypeExpression)? "=" type=TypeExpression
+	|   {ModuleStmt} "module" path=NamePath (title=STRING)? (description=InterpolatedString)? "{" statements=Statements "}"
 ;
 Statements:
 	{Statements} ((statements+=Statement)? Sep)*
@@ -96,7 +97,7 @@ ExpressionUn returns Expression:
 ExpressionAppl returns Expression:
 	ExpressionSimple ( {ApplicationExpr.function=current} => argument=TupleExpr
 		             | {TypeApplicationExpr.function=current} => argument=TupleTypeExpr 
-		             | {MemberAccessExpr.base=current} => "." memberName=(Name|TypeName))*
+		             | {MemberAccessExpr.base=current} => "." memberName=Name)*
 ;
 ExpressionSimple returns Expression:
 		Variable
@@ -107,7 +108,6 @@ ExpressionSimple returns Expression:
 	|	InterpolatedString
 	|	TupleExpr
 	|	{TypeExpr} "@" type=TypeExpression
-	|   {TypeExpr} type=TypeVariable
 	|	{SpecialVariable} "_"
 ;
 Variable:
@@ -141,32 +141,24 @@ TypeModifiers returns TypeExpression:
 	TypeExtension
 ;
 TypeExtension returns TypeExpression:
-	TypeValueConcretion ({TypeExtension.base=current} => "{" block=Statements "}")*
-;
-TypeValueConcretion returns TypeExpression:
-	TypeConcretion ({TypeValueConcretion.function=current} => argument=TupleExpr)*
+	TypeConcretion ({TypeExtension.base=current} => "{" block=Statements "}")*
 ;
 TypeConcretion returns TypeExpression:
-	TypeSub ({TypeConcretion.base=current} => argument=TupleTypeExpr)?
-;
-TypeSub returns TypeExpression:
-	TypeSimple ({TypeMemberAccessExpr.base=current} => "." memberName=(Name|TypeName))*
+	TypeSimple ( {TypeValueConcretion.function=current} => argument=TupleExpr
+		       | {TypeConcretion.base=current} => argument=TupleTypeExpr
+		       | {TypeMemberAccessExpr.base=current} => "." memberName=Name)*
 ;
 TypeSimple returns TypeExpression:
 		{AbstractTypeExpr} "abstract"
+	|	{TypeNumberLiteral} value=NUMBER
+	|	{TypeStringLiteral} value=STRING
+	|	{ValueType} value=TupleExpr
 	|	{ValueType} "type" value=Expression
 	|	TypeVariable
 	|	TupleTypeExpr
-	|	"(" TypeExpression ")"
 ;
 TypeVariable:
 	 name=TypeName
-;
-TypeVariableDefinition:
-	variance=("+"|"-")? name=TypeName
-;
-TupleTypeTypeExpr:
-		{TupleTypeTypeExpr} "[" (arguments+=TypeVariableDefinition ("," arguments+=TypeVariableDefinition)*)? (forceTuple?=",")? "]"
 ;
 TupleTypeExpr returns TypeExpression:
 		{TupleTypeExpr} "[" "]"

@@ -30,7 +30,7 @@ class Converter {
             e
         else
             v.Block(fromStatements(cu.getStatements), e).putAnnotation(source, cu)
-    }
+    } 
 
     def fromExpression(it: Expression): v.Expression =
         it match {
@@ -90,6 +90,7 @@ class Converter {
             case ">=" => normal(v.GreaterOrEquals())
             case "&&" => normal(v.And())
             case "||" => normal(v.Or())
+            case "in" => normal(v.In())
             }
         case it: UnaryExpr =>
             val a = fromExpression(it.getExpr)
@@ -273,9 +274,12 @@ class Converter {
                 ).putAnnotation(source, it)
             ).putAnnotation(source, it))
         case it: TypeStmt =>
-            val args = (if (it.getTypeArguments != null) Seq(fromTupleTypeType(it.getTypeArguments)) else Seq()) ++
-                (for (a <- it.getValueArguments) yield fromExpression(a))
-            val t = fromTypeExpression(it.getType)
+            val args = (if (it.getTypeArguments != null) Seq(fromTypeExpression(it.getTypeArguments)) else Seq()) ++
+                (for (a <- it.getArguments) yield fromExpression(a))
+            val t = (fromTypeExpression(it.getType) /: Option(it.getKind)){
+                case (t, k) => v.Application(v.Application(v.Typed().putAnnotation(source, it), fromTypeExpression(k)).putAnnotation(source, it), t).putAnnotation(source, it)
+            }
+                
             val t2 = if (args.isEmpty) t else 
                 (args.take(args.size - 1) :\ v.Lambda(v.Irreversible().putAnnotation(source, it), args.last, t).putAnnotation(source, it)){
                 case (a, b) => v.Lambda(v.Irreversible().putAnnotation(source, it), a, b).putAnnotation(source, it)
@@ -297,7 +301,7 @@ class Converter {
                                  fromExpression(it.getDescription)))
             Seq(result)
         case it: DefStmt =>
-            val args = (if (it.getTypeArguments != null) Seq(fromTupleTypeType(it.getTypeArguments)) else Seq()) ++
+            val args = (if (it.getTypeArguments != null) Seq(fromTypeExpression(it.getTypeArguments)) else Seq()) ++
                 (for (a <- it.getArguments) yield fromExpression(a))
             val (body, jc) = if (it.getValueType != null) {
                 // value with type
@@ -406,18 +410,6 @@ class Converter {
         case _ =>
             v.Tuple().putAnnotation(source, it)
         }
-
-    def fromTupleTypeType(it: TupleTypeTypeExpr): v.Expression =
-        if (it.getArguments.size == 1 &&
-                !it.isForceTuple())
-            v.Variable(v.VariableIdentity.setName(new v.VariableIdentity, Symbol(it.getArguments.get(0).getName)), true).
-                putAnnotation(source, it.getArguments.get(0))
-        else
-            v.TupleType(it.getArguments.map{
-            case tv =>
-                v.Variable(v.VariableIdentity.setName(new v.VariableIdentity, Symbol(tv.getName)), true).
-                    putAnnotation(source, tv)
-            }:_*).putAnnotation(source, it)
             
     val regex = Pattern.compile("(0D|0X|0O|0B)?([0-9A-F]+)(?:\\.([0-9A-F]+))?(?:(?:E|P)((?:\\+|-)?[0-9A-F]+))?")
 	def fromNumber(it: NumberLiteral): v.NumberLiteral = {

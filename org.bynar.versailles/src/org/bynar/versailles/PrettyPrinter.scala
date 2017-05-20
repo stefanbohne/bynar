@@ -194,6 +194,12 @@ class PrettyPrinter {
         case Application(Application(Divide(), r), l)
             if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
                 binOpLeft(" / ", l, r, 20)
+        case Application(Application(Concat(), r), l)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
+                binOpLeft(" ++ ", l, r, 9)
+        case Application(Application(Divide(), r), l)
+            if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
+                binOpNone(" in ", l, r, 5)
         case term if term.annotation(applicationInfo).getOrElse(ApplicationAsApplication) == ApplicationAsList && isList(term) =>
             paren("[", "]", 0, {
                 def ppList(term: Term) { 
@@ -257,7 +263,7 @@ class PrettyPrinter {
                 binOpLeft(" && ", l, r, 4)
         case Application(Application(Or(), l), r)
             if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
-                binOpRight(" || ", l, r, 3)
+                binOpLeft(" || ", l, r, 3)
         case Application(Reverse(), a)
             if term.annotation(applicationInfo).getOrElse(ApplicationAsOperator) == ApplicationAsOperator =>
                 prefixOp("~", a, 35)
