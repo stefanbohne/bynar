@@ -140,7 +140,7 @@ class PrettyPrinter {
                     append(",")
             })
         case TupleType(cts@_*) =>
-            paren("<[", "]>", 0, {
+            paren("{", "}", 0, {
                 var first = true
                 for (c <- cts) {
                     if (!first)
@@ -285,11 +285,11 @@ class PrettyPrinter {
                 precedence = 50
                 doPrettyPrint(f)
                 if (!a.isInstanceOf[TupleType])
-                    append("[")
+                    append("{")
                 precedence = 0
                 doPrettyPrint(a)
                 if (!a.isInstanceOf[TupleType])
-                    append("]")
+                    append("}")
             })
         case Application(f, a) =>
             paren(40, {
@@ -303,7 +303,7 @@ class PrettyPrinter {
                     append(")")
             })
         case Lambda(Inverse(), Undefined(), Undefined()) =>
-            append("{}")
+            append("fail")
         case Lambda(jc, p, b) =>
             binOpRight(" " + jc.toString + " ", p, b, 1)
         case Block(Let(BooleanLiteral(true), c), t) =>
@@ -336,7 +336,7 @@ class PrettyPrinter {
         stmt match {
         case Let(Variable(id, true), t) if stmt.annotation(letInfo).getOrElse(LetAsLet) == LetAsType =>
             append(indentText * indent)
-            append("let type ")
+            append("lettype ")
             doPrettyPrintTypeName(VariableIdentity.getName(id))
             append(" = ")
             doPrettyPrint(t)

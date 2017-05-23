@@ -6,7 +6,7 @@ generate versaillesLang "http://www.bynar.org/versailles/xtext/VersaillesLang"
 
 
 CompilationUnit hidden(WS, NL, ML_COMMENT, SL_COMMENT):
-	{CompilationUnit} statements=Statements ("return" expression=Expression)? Sep*
+	{CompilationUnit} statements=Statements ("return" expression=Expression Sep*)?
 ;
 Sep hidden (WS, ML_COMMENT, SL_COMMENT):
 	NL | ";"
@@ -24,20 +24,22 @@ Statement:
 		{PassStmt} "pass"
 	|	{FailStmt} "fail"
 	|	{LetStmt} "let" pattern=Expression ("=" value=Expression)?
+	|	{ForStmt} "for" pattern=Expression "from" container=Expression 
+	|	{WhereStmt} ("where" | inverted?="unless") condition=Expression
 	|	{ForgetStmt} "forget" pattern=Expression "=" value=Expression
 	|	{RememberStmt} "remember" pattern=Expression "=" value=Expression
-	|	{IfStmt} "if" condition=Expression "then" then=Statements (=> "else" else=Statements)? ("fi" assertion=Expression)?
+	|	{IfStmt} "if" condition=Expression "then" then=Statements (=> "else" else=Statements)? "fi" (assertion=Expression)?
 	|   {LoopStmt} ("from" assertion=Expression)? ("do" do=Statements)? ("loop" loop=Statements)? "until" condition=Expression
 	|	{CaseStmt} "case" case=LambdaExpr
 	|	{DefStmt} ("def"|let?="letdef") name=Name (typeArguments=TupleTypeExpr)? (arguments+=TupleExpr)* (title=STRING)? (description=InterpolatedString)?
 					    ( janusClass=JanusClassExpression name2=Name? results=TupleExpr (title2=STRING)? (description2=InterpolatedString)? ("{" statements=Statements "}")?
-				        | ":" valueType=TypeExpression "=" value=Expression)
+				        | ":" valueType=TypeExpression ("=" value=Expression)?)
 	|	{TypeStmt} ("type"|let?="lettype") name=Name typeArguments=TupleTypeExpr? (arguments+=TupleExpr)* (title=STRING)? (description=InterpolatedString)? 
-						(":" kind=TypeExpression)? "=" type=TypeExpression
+						(":" kind=TypeExpression)? ("=" type=TypeExpression)?
 	|   {ModuleStmt} "module" path=NamePath (title=STRING)? (description=InterpolatedString)? "{" statements=Statements "}"
 ;
 Statements:
-	{Statements} ((statements+=Statement)? Sep)*
+	{Statements} ((statements+=Statement) Sep+)*
 ;
 
 Expression:
@@ -53,11 +55,13 @@ LambdaExpr:
 	pattern=ExpressionIf janusClass=JanusClass body=Expression
 ;
 ExpressionLambda returns Expression:
-	ExpressionIf ({LambdaExpr.pattern=current} janusClass=JanusClass body=Expression)?
+	ExpressionIf ({LambdaExpr.pattern=current} janusClass=JanusClass body=Expression)*
 ;
 ExpressionIf returns Expression:
-    ExpressionMatch ( {IfExpr.then=current} => "if" condition=Expression "else" else=ExpressionMatch
-    	            | {WhereExpr.then=current} => "where" condition=ExpressionMatch)*
+    ExpressionWhere ({IfExpr.then=current} => "if" condition=Expression "else" else=ExpressionWhere)*
+;
+ExpressionWhere returns Expression:
+    ExpressionMatch ({WhereExpr.then=current} => "asserting" condition=ExpressionMatch)*
 ;
 ExpressionMatch returns Expression:
 	ExpressionDisj ({MatchExpr.index=current} => "match" "{" statements=Statements "}")*
@@ -72,7 +76,7 @@ ExpressionConj returns Expression:
 ;
 ComparisionOp returns Operator: {Operator} op=("==" | "<" | ">" | "<=" | ">=" | "!=" | "in");
 ExpressionComp returns Expression:
-	ExpressionTyped ({BinaryExpr.left=current} op=ComparisionOp => right=ExpressionAdd)*
+	ExpressionTyped ({BinaryExpr.left=current} op=ComparisionOp => right=ExpressionTyped)*
 ;
 ExpressionTyped returns Expression:
 	ExpressionConcat ({TypedExpr.base=current} => ":" type=TypeExpression)?
@@ -103,11 +107,11 @@ ExpressionSimple returns Expression:
 		Variable
 	|	{NumberLiteral} value=NUMBER
 	|	{StringLiteral} value=STRING
-	|	{BlockExpr} "{" statements=Statements ("return" scope=Expression)? Sep* "}"
+	|	{BlockExpr} "{" statements=Statements ("return" scope=Expression Sep*)? "}"
 	|	{ListExpr} "[" indices=IndexExpr "]"
 	|	InterpolatedString
 	|	TupleExpr
-	|	{TypeExpr} "@" type=TypeExpression
+	|	{TypeExpr} type=TupleTypeExpr
 	|	{SpecialVariable} "_"
 ;
 Variable:
@@ -120,7 +124,7 @@ InterpolatedString:
 TupleExpr returns Expression:
 		{TupleExpr} "(" ")"
 	|	{TupleExpr} "(" positional+=Expression ("," positional+=Expression)* ("," names+=Name "=" named+=Expression)* (forceTuple?=",")?  ")"
-	|	{TupleExpr} "(" names+=Name "=" named+=Expression ("," names+=Name "=" named+=Expression)* (forceTuple?=",")?")"
+	|	{TupleExpr} "(" names+=Name "=" named+=Expression ("," names+=Name "=" named+=Expression)* (forceTuple?=",")? ")"
 ;
 IndexExpr:
 		IndexExprSimple ( {ComprehensionExpr.creator=current} (steps+=ComprehensionStep)+
@@ -129,13 +133,13 @@ IndexExpr:
 IndexExprSimple:
 		{SingletonIndexExpr} index=Expression ({RangeIndexExpr.from=current} ".." to=Expression)?
 ;
-ComprehensionStep: "for" pattern=Expression "from" list=Expression ("if" condition=Expression)?;
+ComprehensionStep: "for" pattern=Expression "from" list=Expression ("where" condition=Expression)?;
 
 TypeExpression:
 	TypeFun
 ;
 TypeFun returns TypeExpression:
-	TypeModifiers ({FunctionTypeExpr.argumentType=current} => functionClass=JanusClassExpression resultType=TypeExpression)?
+	TypeModifiers ({FunctionTypeExpr.argumentType=current} => functionClass=JanusClassExpression resultType=TypeExpression)*
 ;
 TypeModifiers returns TypeExpression:
 	TypeExtension
@@ -150,10 +154,10 @@ TypeConcretion returns TypeExpression:
 ;
 TypeSimple returns TypeExpression:
 		{AbstractTypeExpr} "abstract"
+	|	{TupleTypeExpr} "tuple"
 	|	{TypeNumberLiteral} value=NUMBER
 	|	{TypeStringLiteral} value=STRING
 	|	{ValueType} value=TupleExpr
-	|	{ValueType} "type" value=Expression
 	|	TypeVariable
 	|	TupleTypeExpr
 ;
@@ -161,9 +165,9 @@ TypeVariable:
 	 name=TypeName
 ;
 TupleTypeExpr returns TypeExpression:
-		{TupleTypeExpr} "[" "]"
-	|	{TupleTypeExpr} "[" => positional+=TypeExpression ("," positional+=TypeExpression)* ("," names+=Name ":" named+=TypeExpression)* (forceTuple?=",")? "]"
-	|	{TupleTypeExpr} "[" names+=Name ":" named+=TypeExpression => ("," names+=Name ":" named+=TypeExpression)* (forceTuple?=",")? "]"
+		{TupleTypeExpr} "{" "}"
+	|	{TupleTypeExpr} "{" => positional+=TypeExpression ("=" defaults+=Expression)? ("," positional+=TypeExpression ("=" defaults+=Expression)?)* ("," names+=Name ":" named+=TypeExpression ("=" defaults+=Expression)?)* (forceTuple?=",")? "}"
+	|	{TupleTypeExpr} "{" names+=Name ":" named+=TypeExpression ("=" defaults+=Expression)? => ("," names+=Name ":" named+=TypeExpression ("=" defaults+=Expression)?)* (forceTuple?=",")? "}"
 ;
 
 terminal ID_LOWER:
