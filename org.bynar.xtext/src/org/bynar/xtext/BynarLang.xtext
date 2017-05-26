@@ -31,15 +31,12 @@ TypeInt returns versailles::TypeExpression:
 @Override
 TypeSimple returns versailles::TypeExpression:
 	   	super
-	|	BitTypeExpression
-;
-BitTypeExpression returns BitTypeExpression:
-		{BitFieldTypeExpr} "bits" (bitWidth=Expression)
-	|   {ByteFieldTypeExpr} "bytes" (byteWidth=Expression)
+	|	{BitFieldTypeExpr} "bits" "(" (bitWidth=Expression) ")"
+	|   {ByteFieldTypeExpr} "bytes" "(" (byteWidth=Expression) ")"
 	|	{RecordTypeExpr} "record" "{" statements=Statements "}"
 	|	{UnionTypeExpr} "union" "{" statements=Statements "}"
 	|	{RegisterTypeExpr} "register" bitWidth=Expression "{" statements=Statements "}"
-	|	{ArrayTypeExpr} "array" "of" elementType=TypeExpression ("length" length=Expression | "until" until=Expression)
+	|	{ArrayTypeExpr} "array" "of" elementType=TypeExpression ("length"  "(" length=Expression ")" | "until"  "(" until=Expression ")")
 ;
 
 Interpretation:

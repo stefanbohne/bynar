@@ -192,6 +192,7 @@ class DocBookGenerator(root1: Statement,
             generateTypeDescription(t)
         case t@Application(_, _) =>
             <para>A { term2Xml(t) }.</para>
+        case _ => throw new Exception
         }
     }
 

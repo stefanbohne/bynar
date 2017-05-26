@@ -14,10 +14,14 @@ Sep hidden (WS, ML_COMMENT, SL_COMMENT):
 
 Name: ID_LOWER | "pass" | "fail" | "let" | "forget" | "remember" | "def" | "letdef" | "type" | "lettype" |
 	  "if" | "else" | "fi" | "case" | "match" | "in" | "from" | "loop" | "until" | "do" |
-	  "module" | "for" | "where" | "abstract" | ID_BACKTICK | TypeName
+	  "module" | "for" | "where" | "abstract" | "tuple" | ID_BACKTICK | TypeName
 ;
-TypeName: ID_UPPER | ID_FORWARDTICK;
+TypeName: ID_UPPER | ID_BACKTICK;
 NamePath: steps+=Name ("." steps+=Name)*;
+
+terminal SYM_LANGLE: "〈" | "<." | "\\langle";
+terminal SYM_RANGLE: "〉" | ".>" | "\\rangle";
+terminal SYM_LEFTARROW: "→" | "->" | "\\leftarrow" | "\\to";
 
 
 Statement:
@@ -31,11 +35,11 @@ Statement:
 	|	{IfStmt} "if" condition=Expression "then" then=Statements (=> "else" else=Statements)? "fi" (assertion=Expression)?
 	|   {LoopStmt} ("from" assertion=Expression)? ("do" do=Statements)? ("loop" loop=Statements)? "until" condition=Expression
 	|	{CaseStmt} "case" case=LambdaExpr
-	|	{DefStmt} ("def"|let?="letdef") name=Name (typeArguments=TupleTypeExpr)? (arguments+=TupleExpr)* (title=STRING)? (description=InterpolatedString)?
-					    ( janusClass=JanusClassExpression name2=Name? results=TupleExpr (title2=STRING)? (description2=InterpolatedString)? ("{" statements=Statements "}")?
+	|	{DefStmt} ("def"|let?="letdef") name=Name (SYM_LANGLE typeArguments=TupleTypeExpr SYM_RANGLE)? ("(" arguments+=TupleExpr ")")* (title=STRING)? (description=InterpolatedString)?
+					    ( janusClass=JanusClassExpression name2=Name? "(" results=TupleExpr ")" (title2=STRING)? (description2=InterpolatedString)? ("{" statements=Statements "}")?
 				        | ":" valueType=TypeExpression ("=" value=Expression)?)
-	|	{TypeStmt} ("type"|let?="lettype") name=Name typeArguments=TupleTypeExpr? (arguments+=TupleExpr)* (title=STRING)? (description=InterpolatedString)? 
-						(":" kind=TypeExpression)? ("=" type=TypeExpression)?
+	|	{TypeStmt} ("type"|let?="lettype") name=Name (SYM_LANGLE typeArguments=TupleTypeExpr SYM_RANGLE)? ("(" arguments+=TupleExpr ")")* (title=STRING)? (description=InterpolatedString)? 
+						("::" kind=TypeExpression)? ("=" type=TypeExpression)?
 	|   {ModuleStmt} "module" path=NamePath (title=STRING)? (description=InterpolatedString)? "{" statements=Statements "}"
 ;
 Statements:
@@ -45,7 +49,7 @@ Statements:
 Expression:
 	ExpressionLambda
 ;
-JanusClass: {JanusClass} op=("->" | "<-" | "<->" | ">->" | "<-<" | ">-<" | "<>-<>");
+JanusClass: {JanusClass} op=(SYM_LEFTARROW | "<-" | "<->" | ">->" | "<-<" | ">-<" | "<>-<>");
 JanusClassExpression returns JanusClassExpression:
 		JanusClass
 	|	{GenericJanusClass} ">-" variable=TypeVariable "->"
@@ -55,7 +59,7 @@ LambdaExpr:
 	pattern=ExpressionIf janusClass=JanusClass body=Expression
 ;
 ExpressionLambda returns Expression:
-	ExpressionIf ({LambdaExpr.pattern=current} janusClass=JanusClass body=Expression)*
+	ExpressionIf ({LambdaExpr.pattern=current} => janusClass=JanusClass body=Expression)*
 ;
 ExpressionIf returns Expression:
     ExpressionWhere ({IfExpr.then=current} => "if" condition=Expression "else" else=ExpressionWhere)*
@@ -76,10 +80,7 @@ ExpressionConj returns Expression:
 ;
 ComparisionOp returns Operator: {Operator} op=("==" | "<" | ">" | "<=" | ">=" | "!=" | "in");
 ExpressionComp returns Expression:
-	ExpressionTyped ({BinaryExpr.left=current} op=ComparisionOp => right=ExpressionTyped)*
-;
-ExpressionTyped returns Expression:
-	ExpressionConcat ({TypedExpr.base=current} => ":" type=TypeExpression)?
+	ExpressionConcat ({BinaryExpr.left=current} op=ComparisionOp right=ExpressionConcat)?
 ;
 ConcatOp returns Operator: {Operator} op=("++");
 ExpressionConcat returns Expression:
@@ -91,7 +92,10 @@ ExpressionAdd returns Expression:
 ;
 MulOp returns Operator: {Operator} op=("*" | "/" | "%");
 ExpressionMul returns Expression:
-	ExpressionUn ({BinaryExpr.left=current} => op=MulOp right=ExpressionUn)*
+	ExpressionTyped ({BinaryExpr.left=current} => op=MulOp right=ExpressionTyped)*
+;
+ExpressionTyped returns Expression:
+	ExpressionUn ({TypedExpr.base=current} => ":" type=TypeExpression)?
 ;
 UnaryOp returns Operator: {Operator} op=("~" | "-" | "!");
 ExpressionUn returns Expression:
@@ -99,8 +103,8 @@ ExpressionUn returns Expression:
 	|   ExpressionAppl
 ;
 ExpressionAppl returns Expression:
-	ExpressionSimple ( {ApplicationExpr.function=current} => argument=TupleExpr
-		             | {TypeApplicationExpr.function=current} => argument=TupleTypeExpr 
+	ExpressionSimple ( {ApplicationExpr.function=current} => "(" argument=TupleExpr ")"
+		             | {TypeApplicationExpr.function=current} => SYM_LANGLE argument=TupleTypeExpr SYM_RANGLE 
 		             | {MemberAccessExpr.base=current} => "." memberName=Name)*
 ;
 ExpressionSimple returns Expression:
@@ -110,8 +114,8 @@ ExpressionSimple returns Expression:
 	|	{BlockExpr} "{" statements=Statements ("return" scope=Expression Sep*)? "}"
 	|	{ListExpr} "[" indices=IndexExpr "]"
 	|	InterpolatedString
-	|	TupleExpr
-	|	{TypeExpr} type=TupleTypeExpr
+	|	"(" TupleExpr ")"
+	|	{TypeExpr} SYM_LANGLE type=TupleTypeExpr SYM_RANGLE
 	|	{SpecialVariable} "_"
 ;
 Variable:
@@ -122,9 +126,9 @@ InterpolatedString:
 	|   strings+=INTERPOL_START expressions+=Expression (strings+=INTERPOL_MIDDLE expressions+=Expression)* strings+=INTERPOL_END
 ;
 TupleExpr returns Expression:
-		{TupleExpr} "(" ")"
-	|	{TupleExpr} "(" positional+=Expression ("," positional+=Expression)* ("," names+=Name "=" named+=Expression)* (forceTuple?=",")?  ")"
-	|	{TupleExpr} "(" names+=Name "=" named+=Expression ("," names+=Name "=" named+=Expression)* (forceTuple?=",")? ")"
+		{TupleExpr} 
+	|	{TupleExpr} positional+=Expression ("," positional+=Expression)* ("," names+=Name "=" named+=Expression)* (forceTuple?=",")?
+	|	{TupleExpr} names+=Name "=" named+=Expression ("," names+=Name "=" named+=Expression)* (forceTuple?=",")?
 ;
 IndexExpr:
 		IndexExprSimple ( {ComprehensionExpr.creator=current} (steps+=ComprehensionStep)+
@@ -145,29 +149,30 @@ TypeModifiers returns TypeExpression:
 	TypeExtension
 ;
 TypeExtension returns TypeExpression:
-	TypeConcretion ({TypeExtension.base=current} => "{" block=Statements "}")*
+	TypeConcretion
 ;
 TypeConcretion returns TypeExpression:
-	TypeSimple ( {TypeValueConcretion.function=current} => argument=TupleExpr
-		       | {TypeConcretion.base=current} => argument=TupleTypeExpr
-		       | {TypeMemberAccessExpr.base=current} => "." memberName=Name)*
+	TypeSimple ( {TypeValueConcretion.function=current} => "(" argument=TupleExpr ")"
+		       | {TypeConcretion.base=current} => SYM_LANGLE argument=TupleTypeExpr SYM_RANGLE
+		       | {TypeMemberAccessExpr.base=current} => "." memberName=Name
+		       | {TypeKindedExpr.base=current} => "::" kind=TypeSimple)*
 ;
 TypeSimple returns TypeExpression:
-		{AbstractTypeExpr} "abstract"
-	|	{TupleTypeExpr} "tuple"
+		{AbstractTypeExpr} "abstract" "{" block=Statements "}"
+	|	{TupleTypeExpr} "tuple" "{" block=Statements "}"
 	|	{TypeNumberLiteral} value=NUMBER
 	|	{TypeStringLiteral} value=STRING
-	|	{ValueType} value=TupleExpr
+	|	{ValueType} "(" value=TupleExpr ")"
 	|	TypeVariable
-	|	TupleTypeExpr
+	|	SYM_LANGLE TupleTypeExpr SYM_RANGLE
 ;
 TypeVariable:
 	 name=TypeName
 ;
 TupleTypeExpr returns TypeExpression:
-		{TupleTypeExpr} "{" "}"
-	|	{TupleTypeExpr} "{" => positional+=TypeExpression ("=" defaults+=Expression)? ("," positional+=TypeExpression ("=" defaults+=Expression)?)* ("," names+=Name ":" named+=TypeExpression ("=" defaults+=Expression)?)* (forceTuple?=",")? "}"
-	|	{TupleTypeExpr} "{" names+=Name ":" named+=TypeExpression ("=" defaults+=Expression)? => ("," names+=Name ":" named+=TypeExpression ("=" defaults+=Expression)?)* (forceTuple?=",")? "}"
+		{TupleTypeExpr} 
+	|	{TupleTypeExpr} positional+=TypeExpression ("=" defaults+=Expression)? ("," positional+=TypeExpression ("=" defaults+=Expression)?)* ("," names+=Name ":" named+=TypeExpression ("=" defaults+=Expression)?)* (forceTuple?=",")?
+	|	{TupleTypeExpr} names+=Name ":" named+=TypeExpression ("=" defaults+=Expression)? => ("," names+=Name ":" named+=TypeExpression ("=" defaults+=Expression)?)* (forceTuple?=",")?
 ;
 
 terminal ID_LOWER:
@@ -178,7 +183,7 @@ terminal ID_BACKTICK:
 terminal ID_UPPER:
 ('A'..'Z')('a'..'z'|'A'..'Z'|'_'|'0'..'9')*;
 terminal ID_FORWARDTICK:
-'�' (!("\n"|'�'))* '�'
+'´' (!("\n"|'´'))* '´'
 ;
 terminal fragment DEC:
 	('0'..'9')

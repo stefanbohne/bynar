@@ -29,7 +29,7 @@ Export-Package: org.bynar.versailles,
  org.bynar.versailles.xtext.validation,
  org.bynar.versailles.xtext.versaillesLang,
  org.bynar.versailles.xtext.versaillesLang.impl,
- org.bynar.versailles.xtext.versaillesLang.util
+ org.bynar.versailles.xtext.versaillesLang.util,
+ org.bynar.versailles.xtext.formatting2
 Import-Package: org.apache.log4j
-Bundle-ClassPath: lib/org.bynar.versailles.jar,
- .
+Bundle-ClassPath: lib/org.bynar.versailles.jar,.

@@ -198,7 +198,7 @@ class Converter {
         it match {
         case it: JanusClass =>
             it.getOp match {
-            case "->" => v.Irreversible().putAnnotation(source, it)
+            case "->" | "→" | "\\leftarrow" | "\\to" => v.Irreversible().putAnnotation(source, it)
             case "<-" => v.ReverseIrreversible().putAnnotation(source, it)
             case "<->" => v.Inverse().putAnnotation(source, it)
             case ">->" => v.SemiInverse().putAnnotation(source, it)

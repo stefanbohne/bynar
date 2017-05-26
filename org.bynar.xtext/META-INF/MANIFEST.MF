@@ -30,7 +30,7 @@ Export-Package: org.bynar,
  org.bynar.xtext.scoping,
  org.bynar.xtext.serializer,
  org.bynar.xtext.services,
- org.bynar.xtext.validation
+ org.bynar.xtext.validation,
+ org.bynar.xtext.formatting2
 Import-Package: org.apache.log4j
-Bundle-ClassPath: lib/org.bynar.jar,
- .
+Bundle-ClassPath: lib/org.bynar.jar,.

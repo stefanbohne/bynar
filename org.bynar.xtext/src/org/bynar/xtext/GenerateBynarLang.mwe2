@@ -31,14 +31,22 @@ Workflow {
 		language = StandardLanguage {
 			name = "org.bynar.xtext.BynarLang"
 			fileExtensions = "bynar"
-
+//			parserGenerator = {
+//				options = {
+//					backtrack = true
+//				}
+//			}
 			serializer = {
 				generateStub = false
 			}
 			validator = {
 				// composedCheck = "org.eclipse.xtext.validation.NamesAreUniqueValidator"
 			}
-			referencedResource = "platform:/resource/org.bynar.versailles.xtext/model/generated/VersaillesLang.genmodel" 	}
-		}
+			formatter = {
+			    generateStub = true
+			}
+			referencedResource = "platform:/resource/org.bynar.versailles.xtext/model/generated/VersaillesLang.genmodel"
+	 	}
+	}
 	
 }

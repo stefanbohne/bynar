@@ -10,7 +10,6 @@ import org.bynar.xtext.bynarLang.BitFieldTypeExpr
 import org.bynar.xtext.bynarLang.ByteFieldTypeExpr
 import org.bynar.xtext.bynarLang.RecordTypeExpr
 import org.bynar.xtext.bynarLang.RecordComponent
-import org.bynar.xtext.bynarLang.BitTypeExpression
 import org.bynar.xtext.bynarLang.TypeWrittenExpr
 import org.bynar.xtext.bynarLang.TypeConvertedExpr
 import org.bynar.xtext.bynarLang.TypeWhereExpr
