@@ -9,60 +9,67 @@ CompilationUnit returns versailles::CompilationUnit: super;
 
 @Override 
 Statement returns versailles::Statement:
-		super
-	|   "component" ({RegisterComponent} "[" bitPosition=IndexExpr "]" | {RecordComponent}) name=Name (title=STRING)? (description=InterpolatedString)? ":" type=TypeExpression
-	|	{RecordAlign} "align" "at" alignment=Expression unit=BitUnit
-	|	{RecordOffset} "offset" ("to" | "by") offset=Expression unit=BitUnit
-	|	{UnionVariant} "variant" name=Name (title=STRING)? (description=InterpolatedString)? ":" type=TypeExpression
-	|	{EnumValue} "value" name=Name (title=STRING)? (description=InterpolatedString)? "=" value=Expression
+	super
+|   "component" ({RegisterComponent} bitPosition=IndexExpr | {RecordComponent}) name=Name (title=STRING)? (description=InterpolatedString)? ":" type=TypeExpression
+|	{RecordAlign} "align" "at" alignment=Expression unit=BitUnit
+|	{RecordOffset} "offset" ("to" | "by") offset=Expression unit=BitUnit
+|	{UnionVariant} "variant" name=Name (title=STRING)? (description=InterpolatedString)? ":" type=TypeExpression
+|	{EnumValue} "value" name=Name (title=STRING)? (description=InterpolatedString)? "=" value=Expression	
 ;
 
 @Override 
-TypeModifiers returns versailles::TypeExpression:
-	TypeInt ( {TypeWrittenExpr.type=current} => "written" written=Expression
-			| {TypeConvertedExpr.type=current} => "converted" conversion=Expression
-			| {TypeWhereExpr.type=current} => "where" where=Expression)*
-
-;
-TypeInt returns versailles::TypeExpression:
-	TypeExtension ({TypeWithInterpretationExpr.type=current} "is" interpretation=Interpretation)?
+ModifiedType returns versailles::TypeExpression:
+	CompoundType ( {versailles::KindedType.type=current} "::" kind=CompoundType
+	             | {versailles::WhereType.type=current} ("where" | inverted?="unless") where=Expression
+	             | {WrittenType.type=current} "written" written=Expression
+				 | {ConvertedType.type=current} "converted" conversion=Expression
+		         | {InterpretedType.type=current} "is" interpretation=Interpretation )*
 ;
 
 @Override
-TypeSimple returns versailles::TypeExpression:
-	   	super
-	|	{BitFieldTypeExpr} "bits" "(" (bitWidth=Expression) ")"
-	|   {ByteFieldTypeExpr} "bytes" "(" (byteWidth=Expression) ")"
-	|	{RecordTypeExpr} "record" "{" statements=Statements "}"
-	|	{UnionTypeExpr} "union" "{" statements=Statements "}"
-	|	{RegisterTypeExpr} "register" bitWidth=Expression "{" statements=Statements "}"
-	|	{ArrayTypeExpr} "array" "of" elementType=TypeExpression ("length"  "(" length=Expression ")" | "until"  "(" until=Expression ")")
+CompoundType returns versailles::TypeExpression:
+	super
+|	{BitFieldType} "bits" bitWidth=Expression
+|	{RecordType} "record" statements=Statements
+|	{UnionType} "union" statements=Statements
+|	{RegisterType} "register" bitWidth=Expression statements=Statements
+|	{ArrayType} "array" "of" elementType=TypeExpression ("length" length=Expression | "until" until=Expression)
 ;
 
 Interpretation:
-		{EnumInterpretation} "one" "of" "{" statements=Statements "}"
-	|	{FixedInterpretation} "fixed" value=Expression
-	|	{UnitInterpretation} "in" unit=STRING
-	|	{ContainingInterpretation} "containing" containedType=TypeExpression
+	{EnumInterpretation} "one" "of" statements=Statements
+|	{FixedInterpretation} "fixed" value=Expression
+|	{UnitInterpretation} "in" unit=STRING
+|	{ContainingInterpretation} "containing" containedType=CompoundType
 ;
 BitUnit:
-		{UnitBits} ("bits" | "bit")
-	|	{UnitBytes} ("bytes" | "byte")
-	|	{UnitKBytes} ("kB" | "kilobytes" | "kilobyte")
-	|	{UnitMBytes} ("MB" | "megabytes" | "megabyte")
+	{UnitBits} ("bits" | "bit")
+|	{UnitBytes} ("bytes" | "byte")
+|	{UnitKBytes} ("kB" | "kilobytes" | "kilobyte")
+|	{UnitKBytes} ("kiB" | "kibibytes" | "kibibyte")
+|	{UnitMBytes} ("MB" | "megabytes" | "megabyte")
+|	{UnitMBytes} ("MiB" | "mibibytes" | "mibibyte")
+|	{UnitGBytes} ("GB" | "gigabytes" | "gibabyte")
+|	{UnitGBytes} ("GiB" | "gibibytes" | "gibibyte")
+|	{UnitTBytes} ("TB" | "terabytes" | "terabyte")
+|	{UnitTBytes} ("TiB" | "tibibytes" | "tibibyte")
 ;
 
 @Override 
 Name:
-		super
-	|   "component" | "align" | "at" | "offset" | "to" | "by" | "variant" | "value"
-	| 	"written" | "converted" | "is" | "bits" | "bytes" | "record" | "union"
-	|	"register" | "array" | "length" | "one" | "fixed" | "containing"
-	| 	"bit" | "byte" | "kB" | "kilobytes" | "kilobyte" | "megabytes" | "megabyte"
+	super
+    "align" | "at" | "array" | "bit" |"bits" | "by" | "byte" | "bytes" | 
+    "component" | "containing" | "converted" |
+    "fixed" | "kB" | "gigabyte" | "gigabytes" | "gibibyte" | "gibibytes" | 
+    "kilobytes" | "kilobyte" | "kibibyte" | "kibibytes" | "is" | "length" | 
+    "megabytes" | "megabyte" | "mibibyte" | "mibibytes" | "offset" | "one" | "of" | 
+    "record" | "register" |
+ 	"terabyte" | "terabytes" | "tibibyte" | "tibibytes" | "to" | 
+ 	"union" | "variant" | "value" | "written"
 ;
 @Override 
 TypeName:
-		super
-	| 	"MB"
+	super
+| 	"GB" | "GiB" | "MB" | "MiB" | "TB" | "TiB" 
 ;
 

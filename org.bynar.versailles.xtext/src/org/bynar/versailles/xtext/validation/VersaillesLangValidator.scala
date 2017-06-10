@@ -3,7 +3,6 @@ package org.bynar.versailles.xtext.validation
 import scala.collection.JavaConversions._
 import org.eclipse.xtext.validation.Check
 import org.bynar.versailles.xtext.versaillesLang.BlockExpr
-import org.bynar.versailles.xtext.versaillesLang.CaseStmt
 import org.bynar.versailles.xtext.versaillesLang.CompilationUnit
 import org.bynar.versailles.xtext.Converter
 import org.bynar.versailles.VariableAnalyzer
@@ -13,7 +12,6 @@ import org.bynar.versailles.Term
 import org.bynar.versailles.Irreversible
 import org.bynar.versailles.Messages
 import org.bynar.versailles.Variable
-import org.bynar.versailles.xtext.versaillesLang.MatchExpr
 import org.bynar.versailles.xtext.Converter
 import com.google.inject.Inject
 import org.bynar.versailles.xtext.versaillesLang.InterpolatedString
@@ -43,28 +41,6 @@ class VersaillesLangValidator extends AbstractVersaillesLangValidator {
     		}
         }
     }
-
-    @Check
-	def checkBlock(block: BlockExpr) {
-		val message = "A block expression must either be empty, end with return, or contain only case statements.";
-		val countCase = block.getStatements.getStatements.count{ _.isInstanceOf[CaseStmt] }
-		if (block.getScope() == null) {
-			if (block.getStatements().getStatements().size() != countCase)
-				error(message, block, null);
-		} else
-			if (countCase > 0)
-			    error(message, block.getStatements.getStatements.filter{ _.isInstanceOf[CaseStmt] }.head, null);
-	}
-
-    @Check
-	def checkBlock(it: MatchExpr) {
-		val message = "A match expression must contain only case statements.";
-		for (stmt <- it.getStatements.getStatements)
-		    if (!stmt.isInstanceOf[CaseStmt]) {
-		        error(message, stmt, null);
-		        return;
-		    }
-	}
 
     @Check
     def checkVariables(it: CompilationUnit) {

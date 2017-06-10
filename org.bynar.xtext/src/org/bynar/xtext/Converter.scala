@@ -6,14 +6,12 @@ import org.{bynar => b}
 import org.bynar.{versailles => v}
 import org.bynar.versailles.xtext.versaillesLang.Expression
 import org.bynar.versailles.xtext.versaillesLang.TypeExpression
-import org.bynar.xtext.bynarLang.BitFieldTypeExpr
-import org.bynar.xtext.bynarLang.ByteFieldTypeExpr
-import org.bynar.xtext.bynarLang.RecordTypeExpr
+import org.bynar.xtext.bynarLang.BitFieldType
+import org.bynar.xtext.bynarLang.RecordType
 import org.bynar.xtext.bynarLang.RecordComponent
-import org.bynar.xtext.bynarLang.TypeWrittenExpr
-import org.bynar.xtext.bynarLang.TypeConvertedExpr
-import org.bynar.xtext.bynarLang.TypeWhereExpr
-import org.bynar.xtext.bynarLang.TypeWithInterpretationExpr
+import org.bynar.xtext.bynarLang.WrittenType
+import org.bynar.xtext.bynarLang.ConvertedType
+import org.bynar.xtext.bynarLang.InterpretedType
 import org.bynar.xtext.bynarLang.Interpretation
 import org.bynar.xtext.bynarLang.EnumInterpretation
 import org.bynar.xtext.bynarLang.FixedInterpretation
@@ -22,15 +20,16 @@ import org.bynar.xtext.bynarLang.ContainingInterpretation
 import org.bynar.xtext.bynarLang.UnionVariant
 import org.bynar.xtext.bynarLang.EnumValue
 import org.bynar.versailles.xtext.versaillesLang.Statement
-import org.bynar.xtext.bynarLang.UnionTypeExpr
+import org.bynar.xtext.bynarLang.UnionType
 import org.bynar.versailles.AnnotationKey
 import org.eclipse.emf.ecore.EObject
 import org.bynar.xtext.bynarLang.RegisterComponent
-import org.bynar.xtext.bynarLang.RegisterTypeExpr
+import org.bynar.xtext.bynarLang.RegisterType
 import org.bynar.versailles.DocBookGenerator
 import org.bynar.versailles.Term
-import org.bynar.xtext.bynarLang.ArrayTypeExpr
+import org.bynar.xtext.bynarLang.ArrayType
 import org.bynar.versailles.TermImplicits._
+import org.bynar.versailles.xtext.versaillesLang.WhereType
 
 class Converter extends org.bynar.versailles.xtext.Converter {
     import org.bynar.versailles.xtext.Converter._
@@ -103,32 +102,28 @@ class MemberConverter(val path: Seq[Symbol]) extends Converter {
 
     override def fromTypeExpression(it: TypeExpression): v.Expression =
         it match {
-        case it: TypeWrittenExpr =>
+        case it: WrittenType =>
             b.WrittenType(fromTypeExpression(it.getType),
                           new Converter().fromExpression(it.getWritten)).putAnnotation(source, it)
-        case it: TypeConvertedExpr =>
+        case it: ConvertedType =>
             b.ConvertedType(fromTypeExpression(it.getType),
                             new Converter().fromExpression(it.getConversion)).putAnnotation(source, it)
-        case it: TypeWhereExpr =>
+        case it: WhereType =>
             b.WhereType(fromTypeExpression(it.getType),
                         new Converter().fromExpression(it.getWhere)).putAnnotation(source, it)
-        case it: TypeWithInterpretationExpr =>
+        case it: InterpretedType =>
             b.InterpretedBitType(fromTypeExpression(it.getType),
                                  fromInterpretation(it.getInterpretation)).putAnnotation(source, it)
-        case it: BitFieldTypeExpr =>
+        case it: BitFieldType =>
             b.BitFieldType(fromExpression(it.getBitWidth)).putAnnotation(source, it)
-        case it: ByteFieldTypeExpr =>
-            b.BitFieldType(
-                    v.Application(v.Application(v.Times().putAnnotation(source, it), v.NumberLiteral(8).putAnnotation(source, it)).putAnnotation(source, it), fromExpression(it.getByteWidth))).
-                putAnnotation(source, it)
-        case it: RecordTypeExpr =>
+        case it: RecordType =>
             b.BitRecordType(fromStatements(it.getStatements)).putAnnotation(source, it)
-        case it: RegisterTypeExpr =>
+        case it: RegisterType =>
             b.BitRegisterType(fromExpression(it.getBitWidth),
                               fromStatements(it.getStatements)).putAnnotation(source, it)
-        case it: UnionTypeExpr =>
+        case it: UnionType =>
             b.BitUnionType(fromStatements(it.getStatements)).putAnnotation(source, it)
-        case it: ArrayTypeExpr =>
+        case it: ArrayType =>
             val u = if (it.getUntil != null)
                 fromExpression(it.getUntil)
             else {

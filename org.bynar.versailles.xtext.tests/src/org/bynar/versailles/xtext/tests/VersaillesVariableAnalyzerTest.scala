@@ -1,5 +1,6 @@
 package org.bynar.versailles.xtext.tests
 
+import scala.collection.JavaConversions._
 import com.google.inject.Inject
 import org.bynar.versailles.xtext.versaillesLang.CompilationUnit
 import org.bynar.versailles.xtext.Converter
@@ -28,7 +29,7 @@ class VersaillesVariableAnalyzerTest {
 	
 	def doAnalyze(source: String, pattern: Boolean, janusClass: JanusClass, context: variableAnalyzer.Context): (Statement, variableAnalyzer.Context) = {
 	    val parsed = parseHelper.parse(source)
-	    val converted = converter.fromStatements(parsed.getStatements)
+	    val converted = converter.fromStatements(parsed.getStatements, parsed)
 	    val ctx0 = variableAnalyzer.analyzeDefinitions(converted, context)
 	    variableAnalyzer.analyze(converted, pattern, janusClass, ctx0)
 	}

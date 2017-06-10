@@ -29,7 +29,7 @@ class Converter {
         if (cu.getStatements == null)
             e
         else
-            v.Block(fromStatements(cu.getStatements), e).putAnnotation(source, cu)
+            v.Block(fromStatements(cu.getStatements, cu), e).putAnnotation(source, cu)
     } 
 
     def fromExpression(it: Expression): v.Expression =
@@ -91,9 +91,12 @@ class Converter {
             case "&&" => normal(v.And())
             case "||" => normal(v.Or())
             case "in" => normal(v.In())
+            case "asserting" =>
+                 v.Block(v.Let(v.BooleanLiteral(true).putAnnotation(source, it), fromExpression(it.getRight)).putAnnotation(source, it),
+                    fromExpression(it.getLeft)).putAnnotation(source, it)
             }
         case it: UnaryExpr =>
-            val a = fromExpression(it.getExpr)
+            val a = fromExpression(it.getOperand)
             it.getOp.getOp match {
             case "~" => v.Application(v.Reverse().putAnnotation(source, it.getOp), a).
                     putAnnotation(source, it.getOp).
@@ -119,46 +122,38 @@ class Converter {
                           fromTypeExpression(it.getArgument)).
                     putAnnotation(source, it).
                     putAnnotation(applicationInfo, ApplicationAsTypeApplication)
-        case it: MatchExpr =>
-            v.Application(fromCaseStatements(it.getStatements),
-                          fromExpression(it.getIndex)).
-                    putAnnotation(source, it).
-                    putAnnotation(applicationInfo, ApplicationAsMatch)
         case it: LambdaExpr =>
             v.Lambda(fromJanusClassExpression(it.getJanusClass),
                      fromExpression(it.getPattern),
                      fromExpression(it.getBody)).putAnnotation(source, it)
         case it: TupleExpr =>
-            if (it.getPositional.size == 1 &&
-                it.getNamed.size == 0 &&
+            if (it.getComponents.size == 1 && it.getComponents.get(0).getName == null &&
                 !it.isForceTuple())
-                fromExpression(it.getPositional.get(0))
+                fromExpression(it.getComponents.get(0).getValue)
             else
-                v.Tuple(it.getPositional.map{ fromExpression(_) }:_*).putAnnotation(source, it)
+                v.Tuple(it.getComponents.map{ c => fromExpression(c.getValue) }:_*).putAnnotation(source, it)
         case it: BlockExpr =>
-            if (it.getScope == null && (it.getStatements.getStatements == null || it.getStatements.getStatements.isEmpty))
-                v.Lambda(v.Irreversible().putAnnotation(source, it),
-                         v.Undefined().putAnnotation(source, it),
-                         v.Undefined().putAnnotation(source, it)).putAnnotation(source, it)
-            else if (it.getScope == null && it.getStatements.getStatements.forall{ _.isInstanceOf[CaseStmt] })
-                fromCaseStatements(it.getStatements)
-            else
-                v.Block(fromStatements(it.getStatements),
-                        if (it.getScope == null)
-                            v.Tuple().putAnnotation(source, it)
-                        else
-                            fromExpression(it.getScope)).putAnnotation(source, it)
-        case it: TypeExpr =>
+            v.Block(fromStatements(it.getStatements, it),
+                    if (it.getScope == null)
+                        v.Tuple().putAnnotation(source, it)
+                    else
+                        fromExpression(it.getScope)).putAnnotation(source, it)
+        case it: CasesExpr =>
+            it.getCases.map{ c => fromExpression(c) }.reduceRight[v.Expression]{
+                case (c, r) =>
+                    v.Application(v.Application(v.OrElse().putAnnotation(source, it),
+                                                c).putAnnotation(source, it),
+                                  r).putAnnotation(source, it)
+                }
+
+        case it: Type2Expr =>
             fromTypeExpression(it.getType)
         case it: TypedExpr =>
             v.Application(v.Application(v.Typed().putAnnotation(source, it),
                                         fromTypeExpression(it.getType)).putAnnotation(source, it),
                           fromExpression(it.getBase)).putAnnotation(source, it).putAnnotation(v.PrettyPrinter.applicationInfo, v.PrettyPrinter.ApplicationAsOperator)
         case it: ListExpr =>
-            fromIndexExpr(it.getIndices, false).putAnnotation(applicationInfo, ApplicationAsList)
-        case it: WhereExpr =>
-            v.Block(v.Let(v.BooleanLiteral(true).putAnnotation(source, it), fromExpression(it.getCondition)).putAnnotation(source, it),
-                    fromExpression(it.getThen)).putAnnotation(source, it)
+            fromIndexExpr(it.getIndex, false).putAnnotation(applicationInfo, ApplicationAsList)
             
     }
 
@@ -186,19 +181,11 @@ class Converter {
                     fromIndexExpr(it.getSecond, true)).putAnnotation(source, it)
         }
 
-    def fromCaseStatements(it: Statements): v.Expression =
-        it.getStatements.map{ case s: CaseStmt => fromExpression(s.getCase) }.reduceRight[v.Expression]{
-        case (c, r) =>
-            v.Application(v.Application(v.OrElse().putAnnotation(source, it),
-                                        c).putAnnotation(source, it),
-                          r).putAnnotation(source, it)
-        }
-
     def fromJanusClassExpression(it: JanusClassExpression): v.Expression =
         it match {
         case it: JanusClass =>
-            it.getOp match {
-            case "->" | "→" | "\\leftarrow" | "\\to" => v.Irreversible().putAnnotation(source, it)
+            it.getJc match {
+            case "->" => v.Irreversible().putAnnotation(source, it)
             case "<-" => v.ReverseIrreversible().putAnnotation(source, it)
             case "<->" => v.Inverse().putAnnotation(source, it)
             case ">->" => v.SemiInverse().putAnnotation(source, it)
@@ -209,15 +196,18 @@ class Converter {
     }
 
     def fromStatements(it: Statements): v.Statement =
-        if (it == null)
-            v.Sequence()
+        fromStatements(it.getStatements, it)
+    def fromStatements(seq: Seq[Statement], it: EObject): v.Statement = 
+        if (seq.isEmpty)
+            v.Sequence().putAnnotation(source, it)
         else {
-            val ss = it.getStatements.flatMap{ fromStatement(_) }
+            val ss = seq.flatMap{ fromStatement(_) }
             if (ss.size == 1)
                 ss(0)
             else
                 v.Sequence(ss:_*).putAnnotation(source, it)
         }
+        
 
     def fromStatement(it: Statement): Seq[v.Statement] =
         it match {
@@ -274,8 +264,10 @@ class Converter {
                 ).putAnnotation(source, it)
             ).putAnnotation(source, it))
         case it: TypeStmt =>
-            val args = (if (it.getTypeArguments != null) Seq(fromTypeExpression(it.getTypeArguments)) else Seq()) ++
-                (for (a <- it.getArguments) yield fromExpression(a))
+            val args = for (a <- it.getArguments) yield a match {
+                case a: Expression => fromExpression(a)
+                case a: TypeExpression => fromTypeExpression(a)
+            }
             val t = (fromTypeExpression(it.getType) /: Option(it.getKind)){
                 case (t, k) => v.Application(v.Application(v.Typed().putAnnotation(source, it), fromTypeExpression(k)).putAnnotation(source, it), t).putAnnotation(source, it)
             }
@@ -301,16 +293,18 @@ class Converter {
                                  fromExpression(it.getDescription)))
             Seq(result)
         case it: DefStmt =>
-            val args = (if (it.getTypeArguments != null) Seq(fromTypeExpression(it.getTypeArguments)) else Seq()) ++
-                (for (a <- it.getArguments) yield fromExpression(a))
-            val (body, jc) = if (it.getValueType != null) {
+            val args = for (a <- it.getArguments) yield a match {
+                case a: Expression => fromExpression(a)
+                case a: TypeExpression => fromTypeExpression(a)
+            }
+            val (body, jc) = if (it.getType != null) {
                 // value with type
                 val x = fromExpression(it.getValue)
-                val t = fromTypeExpression(it.getValueType)
+                val t = fromTypeExpression(it.getType)
                 (v.Application(v.Application(v.Typed().putAnnotation(source, it), t).putAnnotation(source, it), x).putAnnotation(source, it), 
                         v.Irreversible().putAnnotation(source, it))
             } else {
-                assert(it.getValue == null && it.getValueType == null)
+                assert(it.getValue == null && it.getType == null)
                 val b = if (it.getStatements == null) {
                     // function with expression
                     fromExpression(it.getResults)
@@ -385,27 +379,26 @@ class Converter {
         case it: TypeVariable =>
             v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), Symbol(it.getName)), false).
                     putAnnotation(source, it)
-        case it: TupleTypeExpr =>
-            if (it.getPositional.size == 1 &&
-                it.getNamed.size == 0 &&
+        case it: TupleType =>
+            if (it.getComponents.size == 1 && it.getComponents.get(0).getName == null &&
                 !it.isForceTuple())
-                fromTypeExpression(it.getPositional.get(0))
+                fromTypeExpression(it.getComponents.get(0).getType)
             else
-                v.TupleType(it.getPositional.map{ fromTypeExpression(_) }:_*).putAnnotation(source, it)
-        case it: TypeConcretion =>
+                v.TupleType(it.getComponents.map{ c => fromTypeExpression(c.getType) }:_*).putAnnotation(source, it)
+        case it: ApplicationType =>
             v.Application(
-                fromTypeExpression(it.getBase),
+                fromTypeExpression(it.getFunction),
                 fromTypeExpression(it.getArgument)
             ).putAnnotation(source, it).putAnnotation(applicationInfo, ApplicationAsTypeApplication)
-        case it: TypeValueConcretion =>
+        case it: ValueApplicationType =>
             v.Application(
                 fromTypeExpression(it.getFunction),
                 fromExpression(it.getArgument)
             ).putAnnotation(source, it).putAnnotation(applicationInfo, ApplicationAsApplication)
-        case it: TypeMemberAccessExpr =>
+        case it: MemberAccessType =>
             v.Application(v.Member(Symbol(it.getMemberName)).putAnnotation(source, it),
                           fromTypeExpression(it.getBase)).putAnnotation(source, it)
-        case it: ValueType =>
+        case it: Expr2Type =>
             fromExpression(it.getValue)
         case _ =>
             v.Tuple().putAnnotation(source, it)
