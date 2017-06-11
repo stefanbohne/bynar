@@ -8,7 +8,7 @@ generate bynarLang "http://www.bynar.org/xtext/BynarLang"
 CompilationUnit returns versailles::CompilationUnit: super;
 
 @Override 
-Statement returns versailles::Statement:
+SimpleStatement returns versailles::Statement:
 	super
 |   "component" ({RegisterComponent} bitPosition=IndexExpr | {RecordComponent}) name=Name (title=STRING)? (description=InterpolatedString)? ":" type=TypeExpression
 |	{RecordAlign} "align" "at" alignment=Expression unit=BitUnit
@@ -57,7 +57,7 @@ BitUnit:
 
 @Override 
 Name:
-	super
+	super |
     "align" | "at" | "array" | "bit" |"bits" | "by" | "byte" | "bytes" | 
     "component" | "containing" | "converted" |
     "fixed" | "kB" | "gigabyte" | "gigabytes" | "gibibyte" | "gibibytes" | 
