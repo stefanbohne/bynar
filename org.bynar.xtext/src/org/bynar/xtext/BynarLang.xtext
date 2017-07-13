@@ -13,7 +13,7 @@ SimpleStatement returns versailles::Statement:
 |   "component" ({RegisterComponent} bitPosition=IndexExpr | {RecordComponent}) name=Name (title=STRING)? (description=InterpolatedString)? ":" type=TypeExpression
 |	{RecordAlign} "align" "at" alignment=Expression unit=BitUnit
 |	{RecordOffset} "offset" ("to" | "by") offset=Expression unit=BitUnit
-|	{UnionVariant} "variant" name=Name (title=STRING)? (description=InterpolatedString)? ":" type=TypeExpression
+|	{UnionVariant} "alternative" name=Name (title=STRING)? (description=InterpolatedString)? ":" type=TypeExpression
 |	{EnumValue} "value" name=Name (title=STRING)? (description=InterpolatedString)? "=" value=Expression	
 ;
 

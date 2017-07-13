@@ -171,6 +171,8 @@ class VariableAnalyzer {
                 }
                 (it.copy(ss1:_*), ctx1)
             }
+        case it@Fail() =>
+            (it, context)            
         case it@Def(id, v) =>
             //assert(context.containsVariable(id))
             val (v1, ctx1) = analyze(v, false, Irreversible(), context)

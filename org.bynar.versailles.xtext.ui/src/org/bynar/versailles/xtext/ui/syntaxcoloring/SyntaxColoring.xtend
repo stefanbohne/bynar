@@ -21,6 +21,7 @@ import org.eclipse.xtext.ui.editor.syntaxcoloring.IHighlightingConfigurationAcce
 import org.eclipse.xtext.ui.editor.utils.TextStyle
 import org.eclipse.xtext.ide.editor.syntaxcoloring.DefaultAntlrTokenToAttributeIdMapper
 import org.eclipse.swt.SWT
+import org.eclipse.xtext.nodemodel.util.NodeModelUtils
 
 public class VersaillesAntlrTokenToAttributeIdMapper extends DefaultAntlrTokenToAttributeIdMapper {
 	override protected String calculateId(String tokenName, int tokenType) {
@@ -52,7 +53,8 @@ public class VersaillesSemanticHighlightingCalculator extends DefaultSemanticHig
 			CancelIndicator cancelIndicator) {
 	    switch object {
     	NamePath:
-    		highlightFeature(acceptor, object, object.eClass.getEStructuralFeature(VersaillesLangPackage.NAME_PATH__STEPS), HighlightingStyles.DEFAULT_ID)
+    		for (c : NodeModelUtils.findNodesForFeature(object, object.eClass.getEStructuralFeature(VersaillesLangPackage.NAME_PATH__STEPS)))
+    			highlightNode(acceptor, c, HighlightingStyles.DEFAULT_ID)
     	Variable:
     		highlightFeature(acceptor, object, object.eClass.getEStructuralFeature(VersaillesLangPackage.VARIABLE__NAME), HighlightingStyles.DEFAULT_ID)
     	TupleComponent:

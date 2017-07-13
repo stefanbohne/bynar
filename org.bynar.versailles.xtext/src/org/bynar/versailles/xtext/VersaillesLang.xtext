@@ -5,11 +5,17 @@ import "http://www.eclipse.org/emf/2002/Ecore" as ecore
 generate versaillesLang "http://www.bynar.org/versailles/xtext/VersaillesLang"
 
 
-CompilationUnit hidden(WS, ML_COMMENT, SL_COMMENT): {CompilationUnit} (statements+=Statement ";")* ("return" expression=Expression)? ";"*;
+CompilationUnit hidden(WS, ML_COMMENT, SL_COMMENT): 
+	{CompilationUnit} statements+=SimpleStatement (";"+ statements+=ComplexStatement)* (";"+ "return" expression=Expression)? ";"*
+;
 
 
-Statements: {Statements} "{" (statements+=Statement ";")* "}";
-Statement:
+Statements: {Statements} "{" statements+=SimpleStatement (";"+ statements+=ComplexStatement)* ";"* "}";
+ComplexStatement returns Statement:
+		SimpleStatement
+	|	Statements
+;
+SimpleStatement returns Statement:
 	{PassStmt} "pass"
 |	{FailStmt} "fail"
 |	{LetStmt} "let" pattern=Expression ("=" value=Expression)?
@@ -17,8 +23,9 @@ Statement:
 |	{RememberStmt} "remember" pattern=Expression "=" value=Expression
 |	{ForStmt} "for" pattern=Expression "from" container=Expression 
 |	{WhereStmt} ("where" | inverted?="unless") condition=Expression
+|	{SwitchStmt} "switch" "{" ("case" cases+=ComplexStatement ";"*)* "}"
 |	{IfStmt} "if" condition=Expression then=Statements ("asserting" assertion=Expression)? ("else" else=Statements)? 
-|	{LoopStmt} ("from" assertion=Expression)? ("do" do=Statements)? ("loop" loop=Statements)? "until" condition=Expression
+|	{LoopStmt} ("from" assertion=Expression)? ("do" do=Statements)? ("loop" loop=Statements)? ("until" | while?="while") condition=Expression
 |   {DefStmt} ("def"|let?="letdef") name=Name
 					( (title=STRING)? (description=InterpolatedString)? ":" type=TypeExpression ("=" value=Expression)?
 					| (arguments+=(TupleExpr|TupleTypeExpr))+ (title=STRING)? (description=InterpolatedString)? (
@@ -29,7 +36,11 @@ Statement:
 |	{TypeStmt} ("type"|let?="lettype") name=TypeName (arguments+=(TupleExpr|TupleTypeExpr))* (title=STRING)? (description=InterpolatedString)? 
 					("::" kind=TypeExpression)? ("=" type=TypeExpression)?
 |   {ModuleStmt} "module" path=NamePath (title=STRING)? (description=InterpolatedString)? statements=Statements
+|   {VariantStmt} "variant" name=Name
+					( (title=STRING)? (description=InterpolatedString)? ":" type=TypeExpression ("=" value=Expression)?
+					| argument=(TupleExpr|TupleTypeExpr) (title=STRING)? (description=InterpolatedString)? )
 ;
+SwitchCase: pattern=ExprIf ("=>" | janusClass=JanusClassExpression) (statements+=ComplexStatement ";")*;
 
 
 Expression:
@@ -93,7 +104,7 @@ SimpleExpr returns Expression:
 |	InterpolatedString
 |	TupleExpr
 |	{ListExpr} index=IndexExpr
-|   {BlockExpr} "{" (statements+=Statement ";")* (("return" | yield?="yield") scope=Expression)? ";"* "}"
+|   {BlockExpr} "{" statements+=SimpleStatement (";"+ statements+=ComplexStatement)* (";"+ ("return" | yield?="yield") scope=Expression)? ";"* "}"
 |	CasesExpr
 |	{Type2Expr} type=TupleTypeExpr
 ;
@@ -115,7 +126,8 @@ IndexExpr:
 		                | ({SequenceIndexExpr.first=current} "," second=IndexExprSimple)* ","?) "]"
 ;
 IndexExprSimple:
-	{SingletonIndexExpr} index=Expression ({RangeIndexExpr.from=current} ".." to=Expression)?
+	{SingletonIndexExpr} index=Expression ( {RangeIndexExpr.from=current} ".." to=Expression
+										  | {KeyValueExpr.key=current} "=" value=Expression )?
 ;
 ComprehensionStep: "for" pattern=Expression "from" list=Expression (=> ("where" | inverted?="unless") condition=Expression)?;
 
@@ -180,7 +192,7 @@ TupleTypeComponent: (name=Name ":")? type=TypeExpression;
 TypeName: ID_UPPER | ID_BACKTICK;
 Name: ID_LOWER | TypeName | 
       "algebraic" | "and" | "asserting" | "def" |"do" | "else" | 
-      "fail" | "for" | "forget" | "from" | "if" | "inductive" | 
+      "fail" | "for" | "forget" | "from" | "if" | "in" | "inductive" | 
       "let" | "letdef" | "lettype" | "loop" | "mod" | "module" | "or" | 
       "remember" | "return" | "pass" | "then" | "tuple" | "unless" | "until" | "where"| "yield";
 NamePath: steps+=Name ("." steps+=Name)*;
