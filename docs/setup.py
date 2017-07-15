@@ -8,4 +8,5 @@ setup (
   [pygments.lexers]
   versailleslexer = versailleslexer:VersaillesLexer
   """,
+  requires=['sphinxcontrib-inlinesyntaxhighlight'],
 )
