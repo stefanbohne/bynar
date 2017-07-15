@@ -1,3 +1,7 @@
+.. role:: versailles(code)
+    :language: versailles
+.. default-role:: versailles
+       
 ===========================
 Versailles Standard Library
 ===========================
@@ -5,51 +9,53 @@ Versailles Standard Library
 Types
 =====
 
-``Boolean``
+`Boolean`
 
-``String``
+`String`
 
-``Number``
+`Number`
 
-``Type``
+`Type`
+
+`Janus_class`
 
 Values
 ======
 
-``true: Boolean``
+`true: Boolean`
 
-``false: Boolean``
+`false: Boolean`
 
-``if: {A:: Boolean -> Type} --> (cond: Boolean) --> (then: () -> A(true)) --> (else: () -> A(false)) --> A(cond)``
+`if: {A:: Boolean -> Type} --> (cond: Boolean) --> (then: () -> A(true)) --> (else: () -> A(false)) --> A(cond)`
 
-:literal:`\`+\`: Number -> Number <-> Number`
+`\`+\`: Number -> Number <-> Number`
 
 	Addition
 	
-:literal:`\`-\`: Number -> Number <-> Number`
+`\`-\`: Number -> Number <-> Number`
 
 	Subtraction
 
-:literal:`\`*\`: Number -> Number <-> Number`
+`\`*\`: Number -> Number <-> Number`
 
 	Multiplication
 	
-:literal:`\`/\`: Number -> Number <-> Number`
+`\`/\`: Number -> Number <-> Number`
 
 	Division
 	
-:literal:`\`//\`: {Number, Number} -> Number`
+`div: Number -> Number -> Number`
 
 	Integer division rounded towards negative infinity.	
 
-``mod: {Number, Number} -> Number``
+`mod: Number -> Number -> Number`
 
-	Integer modulo. ``mod(a, b)`` returns ``a - a // b * b``.	
+	Integer modulo. `mod(a, b)` returns `a - a // b * b`.	
 
-``muladd: Number -> {Number, Number} >-> Number``
+`muladd: Number -> {Number, Number} >-> Number`
 
-	``muladd k (a, b)`` returns ``a * k + b``
+	`muladd k (a, b)` returns `a * k + b`
 	
-``divmod: Number -> Number <-< {Number, Number}``
+`divmod: Number -> Number <-< {Number, Number}`
  
-    ``divmod k c`` returns ``(c // k, mod(c,  k))``
+    `divmod k c` returns `(c // k, mod(c,  k))`
