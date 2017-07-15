@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup (
   name='versailleslexer',
-  packages=find_packages(),
+  packages='versailleslexer',
   entry_points =
   """
   [pygments.lexers]
