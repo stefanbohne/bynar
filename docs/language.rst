@@ -9,16 +9,56 @@ Versailles Language Reference
 Expressions
 ===========
 
+Versailles is a strongly typed, functional language. So the this sections
+deals with types and the corresponding expressions to construct and deconstruct
+those types.
+
+.. productionlist:: versailles
+    Expression :  `Variable`
+               :| `NumberExpr`
+               :| `StringExpr`
+               :| `InterpolatedStringExpr`
+               :| `TernaryExpr`
+               :| `BinaryExpr`
+               :| `UnaryExpr`
+               :| `LambdaExpr`
+               :| `CasesExpr`
+               :| `ApplicationExpr`
+               :| `TupleExpr`
+               :| `IndexExpr`
+               :| `TupleTypeExpr`
+    TypeExpr :  `TypeVariable`
+             :| `FunctionType`
+             :| `ApplicationType`
+             :| `TupleType`
+             :| `AlgebraicType`
+             :| `TupleExpr`
+
 Built-in Types
 --------------
 
 Boolean
 ^^^^^^^
 
-The type for truth values. It has two possible values: `true` and `false`.
+The type for truth values. It has two possible values: `true` and `false`. [#fboolean]_
+
+.. [#fboolean] If anyone is wondering why there is no syntax here: `Boolean`, 
+               `true` and `false` are defined as built-in variables 
+               and thus are not reserved words.
 
 Number
 ^^^^^^
+
+.. productionlist:: versailles
+    Dec : ["0" .. "9"]
+    Hex : ["0" .. "9", "a" .. "f", "A" .. "F"]
+    Bin : ["0" .. "1"]
+    Oct : ["0" .. "9"]
+    NumberExpr :  `Dec` (`Dec` | "_")* ("." (`Dec` | "_")*)? (("e"|"E"|"p"|"P") `Dec` (`Dec` | "_")*)?
+               :| "0d" `Dec` (`Dec` | "_")* ("." (`Dec` | "_")*)? ((p"|"P") `Dec` (`Dec` | "_")*)?
+               :| "0x" `Hex` (`Hex` | "_")* ("." (`Hex` | "_")*)? ((p"|"P") `Hex` (`Hex` | "_")*)?
+               :| "0b" `Bin` (`Bin` | "_")* ("." (`Bin` | "_")*)? ((p"|"P") `Bin` (`Bin` | "_")*)?
+               :| "0o" `Oct` (`Oct` | "_")* ("." (`Oct` | "_")*)? ((p"|"P") `Oct` (`Oct` | "_")*)?
 
 Decimal integers: `0`, `1`, `42`, `-127`.
 
@@ -39,6 +79,9 @@ Underscores in the middle of numbers are allowed to group digits.
 String
 ^^^^^^
 
+.. productionlist:: versailles
+    StringExpr : "\"" [^ "\"" "\n"] "\""
+
 `"Text"`
 
 Escape sequence are [TODO].
@@ -52,6 +95,11 @@ Escape sequence are [TODO].
 Variables
 ---------
 
+.. productionlist:: versailles
+    TypeVariable : ["A" .. "Z"] ["a" .. "z", "A" .. "Z", "0" .. "9", "_"]*
+    Variable : "?"? (["a" .. "z"] ["a" .. "z", "A" .. "Z", "0" .. "9", "_"]*
+             :      | `TypeVariable`)
+
 Variable names consist of a letter followed by any number of letters, digits and
 underscores. Versailles does not have reserved words like other languages.
 Its syntax is such that words like `let` or `def` that are used elsewhere in
@@ -59,7 +107,8 @@ the language can always be differentiated from variables with such names.
 
 Every variable has a scope -- the portion of the source code where that
 variable is accessible. The scope usually starts with the expression where
-the variable appears first and ends at the end of the enclosing function or file.
+the variable appears first and ends at the end of the enclosing function, 
+block-expression, `tuple`-block or `algebraic`-block.
 The value of a variable cannot change during its scope.
 
 The scope of two variables with the same name may overlap. This can be achieved 
@@ -96,84 +145,99 @@ This is also a way to access lower-cased variables in types.
 
 .. `` # fixes editor syntax highlighting
 
-Binary Operators
-----------------
+Operators
+---------
+
+.. productionlist:: versailles
+    TernaryExpr : `Expression` "if" `Expression` "else `Expression`
+    BinaryExpr : `Expression` (
+               :      "=>"              // function expression with inferred type
+               :    | "->" | "-->"      // normal function expression
+               :    | "<->"             // inverse janus
+               :    | ">->"             // semi-inverse janus
+               :    | "<-<"             // cosemi-inverse janus
+               :    | ">-<"             // pseudoinverse janus
+               :    | "<>-<"            // semi-pseudoinverse janus
+               :    | ">-<>"            // cosemi-pseudoinverse janus
+               :    | "<>-<>"           // generic janus
+               :    | "==>" | "implies" // implies
+               :    | "<=>" | "iff"     // if and only if
+               :    | "||" | "or"       // logical or
+               :    | "&&" | "and"      // logical and
+               :    | "=="              // equals
+               :    | "!="              // not equals
+               :    | "<="              // less or equals
+               :    | ">="              // greater or equals
+               :    | "<"               // less than
+               :    | ">"               // greater than
+               :    | "in"              // is element of
+               :    | "++"              // concatenate
+               :    | "+"               // addition
+               :    | "-"               // subtraction
+               :    | "*"               // multiplication
+               :    | "/"               // division
+               :    | "div"             // integer division
+               :    | "mod"             // modulo
+               :    | "asserting"       // assertion checking
+               :    | ":"               // explicit typing
+               : ) `Expression`
+    UnaryExpr : ( "!"         // logical negation
+              : | "-"         // additive inverse
+              : | "~"         // janus reverse
+              : ) `Expression`
 
 .. list-table::
 
     * - Operator
       - Associativity
-      - Argument Type
-      - Result Type
-    * - `=>`, `->`, `-->`, `<->`, `>->`, `<-<`, `>-<`, `<>->`,
-        `<-<>`, `<>-<>`
+      - Type
+    * - `=>`, `->`, `-->`, `<->`, `>->`, `<-<`, `>-<`, `<>-<`,
+        `>-<>`, `<>-<>`
       - right
-      - any
-      - any
+      - N/A
+    * - `_ if _ else _`
+      - right
+      - `Boolean -> A -> A -> A`
     * - `==>`, `implies`
       - right
-      - `(Boolean, Boolean)`
-      - `Boolean`
+      - `Boolean -> Boolean -> Boolean`
     * - `<=>`, `iff`
       - none
-      - `(Boolean, Boolean)`
-      - `Boolean`
+      - `Boolean -> Boolean -> Boolean`
     * - `||`, `or`
       - right
-      - `(Boolean, Boolean)`
-      - `Boolean`
+      - `Boolean -> Boolean -> Boolean`
     * - `&&`, `and`
       - right
-      - `(Boolean, Boolean)`
-      - `Boolean`
-    * - `==`, `!=`, `<=`, `>=`‚ `<`‚ `>`
+      - `Boolean -> Boolean -> Boolean`
+    * - `==`, `!=`, `<=`, `>=`‚ `<`‚ `>`, `in`
       - none
-      - `(A, A)`
-      - `Boolean`
+      - `A -> A -> Boolean`
     * - `++`
       - right
-      - `(A, A)`
-      - `A`
+      - `A -> A -> A`
     * - `+`, `-`
       - right
-      - `(Number, Number)`
-      - `Number`
+      - `Number -> Number -> Number`
     * - `*`, `/`, `div`, `mod`
       - right
-      - `(Number, Number)`
-      - `Number`
+      - `Number -> Number -> Number`
     * - `asserting`
       - none
-      - `(A, Boolean)`
-      - `A`
+      - `A -> Boolean -> A`
     * - `:`
       - none
-      - `(A, Type)`
-      - `A`
-      
-
-Unary Operators
----------------
-
-.. list-table::
-
-    * - Operator 
-      - Position
-      - Argument Type
-      - Result Type
+      - `A -> Type -> A`
     * - `!`
       - prefix
-      - `Boolean`
-      - `Boolean`
+      - `Boolean -> Boolean`
     * - `-`
       - prefix
-      - `Number`
-      - `Number`
+      - `Number -> Number`
     * - `~`
       - prefix
-      - `A >-j-> B`
-      - `B <-j-< A`
-
+      - `(A >-j-> B) -> (B <-j-< A)`
+      
 Tuple Types (short form)
 ------------------------
 
@@ -277,6 +341,10 @@ with lower case letters cannot be used (directly), for example.
 Case-Expressions
 ----------------
 
+.. productionlist:: versailles
+    CasesExpr : "{" `CaseStmt`+ "}"
+    CaseStmt : "case" `LambdaExpr`
+
 A function can be defined by multiple cases that are tried in order. The first
 matching case determines the function result. The following function, for example,
 converts booleans to strings::
@@ -305,8 +373,8 @@ The `.`-operator can be used to immediately apply a case-expression to a
 value. This is equivalent to pattern matching expressions in other languages::
 
     parse("123").{
-        case Nothing => 0;
-        case Some(n) => n;
+        case nothing => 0;
+        case some(n) => n;
     }
 
 We use `=>` here, but any of the function or janus arrows may be used instead.
@@ -450,20 +518,78 @@ Block Expressions
 Statements
 ==========
 
+.. productionlist:: versailles
+    ComplexStatement :  `SimpleStatement` 
+                     :| `BlockStmt`
+    SimpleStatement :  `PassStmt`
+                    :| `FailStmt`
+                    :| `LetStmt` 
+                    :| `DefStmt` 
+                    :| `TypeStmt` 
+                    :| `IfStmt`
+    
+Pass-, Fail- and Block Statements
+---------------------------------
+
+.. productionlist:: versailles
+    PassStmt : "pass"
+    FailStmt : "fail"
+    BlockStmt : "{" `SimpleStatement` (";"+ `ComplexStatement`)* ";"* "}" 
+
+The statement `pass` does nothing. It is rarely useful. It is necessary to 
+create empty blocks.
+
+The statement `fail` stops the current execution makes the current pattern
+matching fail. Thus it may not be followed by other statements.
+
+It is possible to group multiple statements into a single statement by 
+enclosing them with curly braces (`{`, `}`). The first statement of a block
+cannot be a such a block statement [#fblock]_. If you need to you can always
+use `pass` as the first statement in your block.
+
+.. [#fblock] Allowing block statements as the first statement in a block statement
+             creates an ambiguity with tuple types.      
+
 .. _let-statement:
 
 Let-Statements
 --------------
+
+.. productionlist:: versailles
+    LetStmt : "let" (`Expression` "=")? `Expression`
+
+A `let`-statement consists of two expressions, say `a` and `b`, and is written
+like `let a = b;`. It computes the value of `b` and matches it against `a`. If 
+the match is successful, the undefined variables in `a` are assigned values 
+to make the match successful. Those variables are then available until they
+go out of scope (see :ref:`variables`).
+
+`let` is useful to define temporary variables. It cannot be used to define
+public objects that can be used from elsewhere. You have to use `def` and
+`type` for that. There is also `letdef` and `lettype`, that have the
+same syntax as `def` and `type`, but only define those variables locally.
+
+The short form of `let`, written just `let b;` that can be used to fail 
+on condition. `b` must be a `Boolean` expression. If `b` evaluates to `false`
+the statement fails. If `b` evaluates to `true`, the next statement is executed.
+This form is equivalent to `let true = b;`.
 
 .. _def-statement-values:
 
 Def-Statements for Values
 -------------------------
 
+A `def`-statement is used to define members of tuples and modules.
+
 .. _def-statement-functions:
 
 Def-Statements for Functions
 ----------------------------
+
+.. productionlist:: versailles
+    DefStmt:   ("def" | "letdef") `Name` (TupleExpr | TupleTypeExpr)* 
+           :   (":" `TypeExpression`)? ("=" `TypeExpression`)?
+
 
 `def f(x: A)(y: B): C = stuff;` is short for 
 `def f: (x: A) --> (y: B) --> C = (x: A) -> (y: B) -> stuff;`.
@@ -496,6 +622,10 @@ def g: (x: A) --> C <-> B = ~f;`.
 Type-Statements
 ---------------
 
+.. productionlist:: versailles
+    TypeStmt: ("type" | "lettype") `Name` (`TupleExpr` | `TupleTypeExpr`)* 
+            : ("::" `TypeExpression`)? ("=" `TypeExpression`)?
+
 Like `def` but the expression after `=` is a type expression.
 
 For example::
@@ -522,6 +652,13 @@ is just short for::
 
 If-Statements
 -------------
+
+.. productionlist:: versailles    
+    IfStmt : "if" `Expression` 
+           : ("then" `ComplexStatement` | `BlockStmt`)
+           : ("asserting" `Expression`)?
+           : ("else" `ComplexStatement`)?
+    
 
 Loop-Statements
 ---------------

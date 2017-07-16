@@ -28,9 +28,9 @@ class VersaillesLexer(RegexLexer):
             (r'(case|let|def|type|letdef|lettype|variant|forget|remember)\b',
              Keyword.Declaration),
             (words((
-                'and', 'asserting', 'do', 'else', 
+                'and', 'asserting', 'div', 'do', 'else', 
                 'fail', 'for', 'from', 'if', 'iff', 'implies', 'in',  
-                'loop', 'mod', 'or', 'return', 'unless', 'until', 'where', 
+                'loop', 'mod', 'or', 'pass', 'return', 'unless', 'until', 'where', 
                 'yield'), suffix=r'\b'),
              Keyword),
             (r'(true|false|cons|nil|muladd|divmod|if|mod)\b', Name.Builtin),

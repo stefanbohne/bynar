@@ -9,6 +9,8 @@
 org.bynar.jar
 org.bynar.versailles.jar
 **/.cache-main
+/versailleslexer.egg-info
+__pycache__
 
 # sbt specific
 .cache
