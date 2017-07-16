@@ -226,8 +226,8 @@ class Converter {
                              putAnnotation(letInfo, LetAsAssert))
         case it: IfStmt =>
             Seq(v.IfStmt(fromExpression(it.getCondition),
-                         fromStatements(it.getThen),
-                         fromStatements(it.getElse),
+                         fromStatements(Seq(it.getThen), it.getThen),
+                         fromStatements(Seq(it.getElse), it.getElse),
                          if (it.getAssertion == null)
                              v.Undefined().putAnnotation(source, it)
                          else
@@ -310,7 +310,7 @@ class Converter {
                     fromExpression(it.getResults)
                 } else {
                     // function with statements
-                            v.Block(fromStatements(it.getStatements),
+                            v.Block(fromStatements(Seq(it.getStatements), it.getStatements),
                                     fromExpression(it.getResults)).putAnnotation(source, it)
                 }
                 (b, fromJanusClassExpression(it.getJanusClass))

@@ -6,14 +6,18 @@ generate versaillesLang "http://www.bynar.org/versailles/xtext/VersaillesLang"
 
 
 CompilationUnit hidden(WS, ML_COMMENT, SL_COMMENT): 
-	{CompilationUnit} statements+=SimpleStatement (";"+ statements+=ComplexStatement)* (";"+ "return" expression=Expression)? ";"*
+	{CompilationUnit} statements+=AnnotatedStmt (";"+ statements+=ComplexStatement)* (";"+ "return" expression=Expression)? ";"*
 ;
 
 
-Statements: {Statements} "{" statements+=SimpleStatement (";"+ statements+=ComplexStatement)* ";"* "}";
+Statements: {Statements} "{" statements+=AnnotatedStmt (";"+ statements+=ComplexStatement)* ";"* "}";
 ComplexStatement returns Statement:
-		SimpleStatement
+		AnnotatedStmt
 	|	Statements
+;
+AnnotatedStmt returns Statement:
+    "@" {AnnotatedStmt} annotation=Expression statement=SimpleStatement
+|   SimpleStatement
 ;
 SimpleStatement returns Statement:
 	{PassStmt} "pass"
@@ -24,23 +28,26 @@ SimpleStatement returns Statement:
 |	{ForStmt} "for" pattern=Expression "from" container=Expression 
 |	{WhereStmt} ("where" | inverted?="unless") condition=Expression
 |	{SwitchStmt} "switch" "{" ("case" cases+=ComplexStatement ";"*)* "}"
-|	{IfStmt} "if" condition=Expression then=Statements ("asserting" assertion=Expression)? ("else" else=Statements)? 
-|	{LoopStmt} ("from" assertion=Expression)? ("do" do=Statements)? ("loop" loop=Statements)? ("until" | while?="while") condition=Expression
+|	{IfStmt} "if" condition=Expression 
+             ("then" then=ComplexStatement | then=Statements) 
+             ("asserting" assertion=Expression)? 
+             ("else" else=ComplexStatement)? 
+|	{LoopStmt} ("from" assertion=Expression)? ("do" do=ComplexStatement)? ("loop" loop=ComplexStatement)? ("until" | while?="while") condition=Expression
 |   {DefStmt} ("def"|let?="letdef") name=Name
 					( (title=STRING)? (description=InterpolatedString)? ":" type=TypeExpression ("=" value=Expression)?
 					| (arguments+=(TupleExpr|TupleTypeExpr))+ (title=STRING)? (description=InterpolatedString)? (
 							":" type=TypeExpression ("=" value=Expression)?
 						|   janusClass=JanusClassExpression
 							( ":" type=TypeExpression ("=" value=Expression)?
-						    | (name2=Name)? results=TupleExpr (title2=STRING)? (description2=InterpolatedString)? statements=Statements)))
+						    | (name2=Name)? results=TupleExpr (title2=STRING)? (description2=InterpolatedString)? statements=ComplexStatement)))
 |	{TypeStmt} ("type"|let?="lettype") name=TypeName (arguments+=(TupleExpr|TupleTypeExpr))* (title=STRING)? (description=InterpolatedString)? 
 					("::" kind=TypeExpression)? ("=" type=TypeExpression)?
 |   {ModuleStmt} "module" path=NamePath (title=STRING)? (description=InterpolatedString)? statements=Statements
 |   {VariantStmt} "variant" name=Name
 					( (title=STRING)? (description=InterpolatedString)? ":" type=TypeExpression ("=" value=Expression)?
 					| argument=(TupleExpr|TupleTypeExpr) (title=STRING)? (description=InterpolatedString)? )
+					
 ;
-SwitchCase: pattern=ExprIf ("=>" | janusClass=JanusClassExpression) (statements+=ComplexStatement ";")*;
 
 
 Expression:
@@ -53,7 +60,15 @@ ExprLambda returns Expression:
 	ExprIf ({LambdaExpr.pattern=current} ("=>" | janusClass=JanusClassExpression) body=ExprLambda)?
 ;
 ExprIf returns Expression:
-    ExprOr ({IfExpr.then=current} => "if" condition=Expression "else" else=ExprOr)*
+    ExprImplies ({IfExpr.then=current} => "if" condition=Expression "else" else=ExprImplies)*
+;
+ImpliesOp returns Operator: op=("==>" | "implies");
+ExprImplies returns Expression:
+    ExprIff ( {BinaryExpr.left=current} op=ImpliesOp right=ExprIff )*
+;
+IffOp returns Operator: op=("<=>" | "iff");
+ExprIff returns Expression:
+    ExprOr ( {BinaryExpr.left=current} op=IffOp right=ExprAnd )*
 ;
 OrOp returns Operator: op=("||" | "or");
 ExprOr returns Expression:
@@ -75,14 +90,14 @@ AddOp returns Operator: {Operator} op=("+" | "-");
 ExprAdd returns Expression:
 	ExprMul ( {BinaryExpr.left=current} op=AddOp right=ExprMul)*
 ;
-MulOp returns Operator: {Operator} op=("*" | "/" | "mod");
+MulOp returns Operator: {Operator} op=("*" | "/" | "div" | "mod");
 ExprMul returns Expression:
 	ExprTyped ( {BinaryExpr.left=current} op=MulOp right=ExprTyped)*
 ;
 AssertingOp returns Operator: op="asserting";
 ExprTyped returns Expression:
 	ExprUnary ({TypedExpr.base=current} ":" type=TypeExpression)? 
-	          ({BinaryExpr.then=current} op=AssertingOp condition=ExprComp)?
+	          ({BinaryExpr.then=current} op=AssertingOp condition=ExprImplies)?
 ;
 UnaryOp returns Operator: {Operator} op=("~" | "-" | "!");
 ExprUnary returns Expression:
@@ -104,7 +119,7 @@ SimpleExpr returns Expression:
 |	InterpolatedString
 |	TupleExpr
 |	{ListExpr} index=IndexExpr
-|   {BlockExpr} "{" statements+=SimpleStatement (";"+ statements+=ComplexStatement)* (";"+ ("return" | yield?="yield") scope=Expression)? ";"* "}"
+|   {BlockExpr} "{" statements+=AnnotatedStmt (";"+ statements+=ComplexStatement)* (";"+ ("return" | yield?="yield") scope=Expression)? ";"* "}"
 |	CasesExpr
 |	{Type2Expr} type=TupleTypeExpr
 ;
@@ -115,7 +130,7 @@ InterpolatedString:
 ;
 
 TupleExpr returns Expression: 
-	"(" {TupleExpr} (components+=TupleComponent ("," components+=TupleComponent)*)? (forceTuple?=",")? ")"
+	{TupleExpr} "(" (components+=TupleComponent ("," components+=TupleComponent)*)? (forceTuple?=",")? ")"
 ;
 TupleComponent:
 	(name=Name "=")? value=Expression
@@ -132,6 +147,7 @@ IndexExprSimple:
 ComprehensionStep: "for" pattern=Expression "from" list=Expression (=> ("where" | inverted?="unless") condition=Expression)?;
 
 CasesExpr: "{" {CasesExpr} ("case" cases+=LambdaExpr ";")+ "}";
+
 
 JanusClass: "->" | "<-" | "<->" | ">->" | "<-<" | ">-<" | "<>->" | "<-<>" | "<>-<>";
 JanusClassExpression returns JanusClassExpression:
@@ -160,7 +176,8 @@ TypeExpression returns TypeExpression:
 	FunctionType
 ;
 FunctionType returns TypeExpression:
-	ModifiedType ({FunctionType.left=current} janusClass=JanusClassExpression right=FunctionType)?
+	ModifiedType ( {FunctionType.left=current} janusClass=JanusClassExpression right=FunctionType
+		         | {PiType.left=current} "-->" right=FunctionType )?
 ;
 ModifiedType returns TypeExpression:
 	CompoundType ( {KindedType.type=current} "::" kind=CompoundType

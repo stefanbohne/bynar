@@ -22,6 +22,8 @@ import scala.xml.XML
 import org.bynar.versailles.xtext.versaillesLang.TypeStmt
 import org.bynar.versailles.xtext.versaillesLang.DefStmt
 import org.bynar.versailles.xtext.versaillesLang.ModuleStmt
+import org.bynar.versailles.xtext.versaillesLang.PiType
+import org.bynar.versailles.xtext.versaillesLang.Expr2Type
 
 class VersaillesLangValidator extends AbstractVersaillesLangValidator {
 
@@ -80,5 +82,11 @@ class VersaillesLangValidator extends AbstractVersaillesLangValidator {
     @Check 
     def checkModuleStmtDescription(stmt: ModuleStmt) {
         checkDescription(stmt.getDescription, VersaillesLangPackage.eINSTANCE.getModuleStmt_Description)
+    }
+    
+    @Check
+    def checkPiType(pi: PiType) {
+        if (!pi.getLeft.isInstanceOf[Expr2Type])
+            error("A dependent function type must start with a tuple pattern", pi.getLeft, null) 
     }
 }
