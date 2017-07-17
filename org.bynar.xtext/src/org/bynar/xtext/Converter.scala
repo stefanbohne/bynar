@@ -37,7 +37,7 @@ class Converter extends org.bynar.versailles.xtext.Converter {
     def fromInterpretation(it: Interpretation): b.BitTypeInterpretation =
         it match {
         case it: EnumInterpretation =>
-            b.EnumInterpretation(fromStatements(it.getStatements)).putAnnotation(source, it)
+            b.EnumInterpretation(fromBlockStmt(it.getStatements)).putAnnotation(source, it)
         case it: FixedInterpretation =>
             b.FixedInterpretation(fromExpression(it.getValue)).putAnnotation(source, it)
         case it: UnitInterpretation =>
@@ -117,12 +117,12 @@ class MemberConverter(val path: Seq[Symbol]) extends Converter {
         case it: BitFieldType =>
             b.BitFieldType(fromExpression(it.getBitWidth)).putAnnotation(source, it)
         case it: RecordType =>
-            b.BitRecordType(fromStatements(it.getStatements)).putAnnotation(source, it)
+            b.BitRecordType(fromBlockStmt(it.getStatements)).putAnnotation(source, it)
         case it: RegisterType =>
             b.BitRegisterType(fromExpression(it.getBitWidth),
-                              fromStatements(it.getStatements)).putAnnotation(source, it)
+                              fromBlockStmt(it.getStatements)).putAnnotation(source, it)
         case it: UnionType =>
-            b.BitUnionType(fromStatements(it.getStatements)).putAnnotation(source, it)
+            b.BitUnionType(fromBlockStmt(it.getStatements)).putAnnotation(source, it)
         case it: ArrayType =>
             val u = if (it.getUntil != null)
                 fromExpression(it.getUntil)

@@ -10,7 +10,7 @@ import org.bynar.versailles.JanusClass
 import org.bynar.versailles.Irreversible
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.bynar.versailles.xtext.versaillesLang.Statements
+import org.bynar.versailles.xtext.versaillesLang.BlockStmt
 import org.bynar.versailles.Statement
 import org.eclipse.xtext.testing.XtextRunner
 import org.eclipse.xtext.testing.InjectWith

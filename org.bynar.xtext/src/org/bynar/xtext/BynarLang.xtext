@@ -6,6 +6,8 @@ generate bynarLang "http://www.bynar.org/xtext/BynarLang"
 
 @Override 
 CompilationUnit returns versailles::CompilationUnit: super;
+@Override
+Language returns Language: {BynarLanguage} "bynar" "(" major=NUMBER "," minor=NUMBER ")";
 
 @Override 
 SimpleStatement returns versailles::Statement:
@@ -30,14 +32,14 @@ ModifiedType returns versailles::TypeExpression:
 CompoundType returns versailles::TypeExpression:
 	super
 |	{BitFieldType} "bits" bitWidth=Expression
-|	{RecordType} "record" statements=Statements
-|	{UnionType} "union" statements=Statements
-|	{RegisterType} "register" bitWidth=Expression statements=Statements
+|	{RecordType} "record" statements=BlockStmt
+|	{UnionType} "union" statements=BlockStmt
+|	{RegisterType} "register" bitWidth=Expression statements=BlockStmt
 |	{ArrayType} "array" "of" elementType=TypeExpression ("length" length=Expression | "until" until=Expression)
 ;
 
 Interpretation:
-	{EnumInterpretation} "one" "of" statements=Statements
+	{EnumInterpretation} "one" "of" statements=BlockStmt
 |	{FixedInterpretation} "fixed" value=Expression
 |	{UnitInterpretation} "in" unit=STRING
 |	{ContainingInterpretation} "containing" containedType=CompoundType
@@ -58,8 +60,8 @@ BitUnit:
 @Override 
 Name:
 	super |
-    "align" | "at" | "array" | "bit" |"bits" | "by" | "byte" | "bytes" | 
-    "component" | "containing" | "converted" |
+    "align" | "at" | "array" | "bit" |"bits" | "by" | "bynar" | "byte" | "bytes" | 
+    "component" | "containing" | "converted" | 
     "fixed" | "kB" | "gigabyte" | "gigabytes" | "gibibyte" | "gibibytes" | 
     "kilobytes" | "kilobyte" | "kibibyte" | "kibibytes" | "is" | "length" | 
     "megabytes" | "megabyte" | "mibibyte" | "mibibytes" | "offset" | "one" | "of" | 

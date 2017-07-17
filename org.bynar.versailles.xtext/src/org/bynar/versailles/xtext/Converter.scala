@@ -195,7 +195,7 @@ class Converter {
             }
     }
 
-    def fromStatements(it: Statements): v.Statement =
+    def fromBlockStmt(it: BlockStmt): v.Statement =
         fromStatements(it.getStatements, it)
     def fromStatements(seq: Seq[Statement], it: EObject): v.Statement = 
         if (seq.isEmpty)
@@ -215,6 +215,8 @@ class Converter {
             Seq(v.Sequence().putAnnotation(source, it))
         case it: FailStmt =>
             Seq(v.Fail().putAnnotation(source, it))
+        case it: BlockStmt =>
+            Seq(fromBlockStmt(it))
         case it: LetStmt =>
             if (it.getValue() != null)
                 Seq(v.Let(fromExpression(it.getPattern),
@@ -224,6 +226,9 @@ class Converter {
                           fromExpression(it.getPattern)).
                              putAnnotation(source, it).
                              putAnnotation(letInfo, LetAsAssert))
+        case it: CallStmt =>
+            Seq(v.Let(v.Tuple().putAnnotation(source, it),
+                      fromExpression(it.getValue)).putAnnotation(source, it))
         case it: IfStmt =>
             Seq(v.IfStmt(fromExpression(it.getCondition),
                          fromStatements(Seq(it.getThen), it.getThen),
@@ -366,7 +371,7 @@ class Converter {
                         v.Lambda(v.Irreversible().putAnnotation(source, it),
                                  v.Variable(v.VariableIdentity.setName(new v.VariableIdentity(), 'it), true).putAnnotation(source, it),
                                  fromExpression(it.getDescription).putAnnotation(source, it)))
-            val base = v.Def(id, v.Module(fromStatements(it.getStatements)).putAnnotation(source, it)).putAnnotation(source, it)
+            val base = v.Def(id, v.Module(fromBlockStmt(it.getStatements)).putAnnotation(source, it)).putAnnotation(source, it)
             Seq((base /: it.getPath.getSteps.take(it.getPath.getSteps.size - 1)){
             case (i, n) => 
                 v.Def(v.VariableIdentity.setName(new v.VariableIdentity, Symbol(n)), 

@@ -6,14 +6,18 @@ generate versaillesLang "http://www.bynar.org/versailles/xtext/VersaillesLang"
 
 
 CompilationUnit hidden(WS, ML_COMMENT, SL_COMMENT): 
-	{CompilationUnit} statements+=AnnotatedStmt (";"+ statements+=ComplexStatement)* (";"+ "return" expression=Expression)? ";"*
+	{CompilationUnit} (language=Language ";")?
+       statements+=AnnotatedStmt 
+       (";"+ statements+=ComplexStatement)* 
+       (";"+ "return" expression=Expression)? ";"*
 ;
+Language returns Language: {VersaillesLanguage} "versailles" "(" major=NUMBER "," minor=NUMBER ")";
 
 
-Statements: {Statements} "{" statements+=AnnotatedStmt (";"+ statements+=ComplexStatement)* ";"* "}";
+BlockStmt: {BlockStmt} "{" ";"* statements+=AnnotatedStmt (";"+ statements+=ComplexStatement)* ";"* "}";
 ComplexStatement returns Statement:
 		AnnotatedStmt
-	|	Statements
+	|	BlockStmt
 ;
 AnnotatedStmt returns Statement:
     "@" {AnnotatedStmt} annotation=Expression statement=SimpleStatement
@@ -23,16 +27,18 @@ SimpleStatement returns Statement:
 	{PassStmt} "pass"
 |	{FailStmt} "fail"
 |	{LetStmt} "let" pattern=Expression ("=" value=Expression)?
+|   {CallStmt} "call" value=Expression
 |	{ForgetStmt} "forget" pattern=Expression "=" value=Expression
 |	{RememberStmt} "remember" pattern=Expression "=" value=Expression
 |	{ForStmt} "for" pattern=Expression "from" container=Expression 
 |	{WhereStmt} ("where" | inverted?="unless") condition=Expression
 |	{SwitchStmt} "switch" "{" ("case" cases+=ComplexStatement ";"*)* "}"
 |	{IfStmt} "if" condition=Expression 
-             ("then" then=ComplexStatement | then=Statements) 
+             ("then" then=ComplexStatement | then=BlockStmt) 
              ("asserting" assertion=Expression)? 
              ("else" else=ComplexStatement)? 
-|	{LoopStmt} ("from" assertion=Expression)? ("do" do=ComplexStatement)? ("loop" loop=ComplexStatement)? ("until" | while?="while") condition=Expression
+|	{LoopStmt} ("from" assertion=Expression)? ( "do" do=ComplexStatement ("until" condition=Expression)? ("loop" loop=ComplexStatement)?
+                                              | ("until" condition=Expression)? "loop" loop=ComplexStatement)
 |   {DefStmt} ("def"|let?="letdef") name=Name
 					( (title=STRING)? (description=InterpolatedString)? ":" type=TypeExpression ("=" value=Expression)?
 					| (arguments+=(TupleExpr|TupleTypeExpr))+ (title=STRING)? (description=InterpolatedString)? (
@@ -42,7 +48,7 @@ SimpleStatement returns Statement:
 						    | (name2=Name)? results=TupleExpr (title2=STRING)? (description2=InterpolatedString)? statements=ComplexStatement)))
 |	{TypeStmt} ("type"|let?="lettype") name=TypeName (arguments+=(TupleExpr|TupleTypeExpr))* (title=STRING)? (description=InterpolatedString)? 
 					("::" kind=TypeExpression)? ("=" type=TypeExpression)?
-|   {ModuleStmt} "module" path=NamePath (title=STRING)? (description=InterpolatedString)? statements=Statements
+|   {ModuleStmt} "module" path=NamePath (title=STRING)? (description=InterpolatedString)? statements=BlockStmt
 |   {VariantStmt} "variant" name=Name
 					( (title=STRING)? (description=InterpolatedString)? ":" type=TypeExpression ("=" value=Expression)?
 					| argument=(TupleExpr|TupleTypeExpr) (title=STRING)? (description=InterpolatedString)? )
@@ -119,7 +125,7 @@ SimpleExpr returns Expression:
 |	InterpolatedString
 |	TupleExpr
 |	{ListExpr} index=IndexExpr
-|   {BlockExpr} "{" statements+=AnnotatedStmt (";"+ statements+=ComplexStatement)* (";"+ ("return" | yield?="yield") scope=Expression)? ";"* "}"
+|   {BlockExpr} "{" ";"* statements+=AnnotatedStmt (";"+ statements+=ComplexStatement)* (";"+ ("return" | yield?="yield") scope=Expression)? ";"* "}"
 |	CasesExpr
 |	{Type2Expr} type=TupleTypeExpr
 ;
@@ -130,7 +136,7 @@ InterpolatedString:
 ;
 
 TupleExpr returns Expression: 
-	{TupleExpr} "(" (components+=TupleComponent ("," components+=TupleComponent)*)? (forceTuple?=",")? ")"
+	{TupleExpr} "(" (","* components+=TupleComponent (","+ components+=TupleComponent)*)? (forceTuple?="," ","*)? ")"
 ;
 TupleComponent:
 	(name=Name "=")? value=Expression
@@ -186,9 +192,9 @@ ModifiedType returns TypeExpression:
 ;
 CompoundType returns TypeExpression:
 	ApplicationType
-|	{AlgebraicType} "algebraic" statements=Statements
-|	{InductiveType} "inductive" statements=Statements
-|	{BigTupleType} "tuple" statements=Statements
+|	{AlgebraicType} "algebraic" statements=BlockStmt
+|	{InductiveType} "inductive" statements=BlockStmt
+|	{BigTupleType} "tuple" statements=BlockStmt
 ;
 ApplicationType returns TypeExpression:
 	SimpleType ( {ValueApplicationType.function=current} => argument=TupleExpr
@@ -208,10 +214,11 @@ TupleTypeComponent: (name=Name ":")? type=TypeExpression;
 
 TypeName: ID_UPPER | ID_BACKTICK;
 Name: ID_LOWER | TypeName | 
-      "algebraic" | "and" | "asserting" | "def" |"do" | "else" | 
-      "fail" | "for" | "forget" | "from" | "if" | "in" | "inductive" | 
+      "algebraic" | "and" | "asserting" | "def" | "div" | "do" | "else" | 
+      "fail" | "for" | "forget" | "from" | "if" | "iff" | "implies" | "in" | "inductive" | 
       "let" | "letdef" | "lettype" | "loop" | "mod" | "module" | "or" | 
-      "remember" | "return" | "pass" | "then" | "tuple" | "unless" | "until" | "where"| "yield";
+      "remember" | "return" | "pass" | "switch" | "then" | "tuple" | 
+      "unless" | "until" | "versailles" | "where"| "yield";
 NamePath: steps+=Name ("." steps+=Name)*;
 
 terminal ID_LOWER:
