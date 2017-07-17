@@ -50,7 +50,7 @@ Values
 
 `mod: Number -> Number -> Number`
 
-	Integer modulo. `mod(a, b)` returns `a - a // b * b`.	
+	Integer modulo. `mod(a, b)` returns `a - div(a, b) * b`.	
 
 `muladd: Number -> {Number, Number} >-> Number`
 
@@ -58,4 +58,4 @@ Values
 	
 `divmod: Number -> Number <-< {Number, Number}`
  
-    `divmod k c` returns `(c // k, mod(c,  k))`
+    `divmod k c` returns `(div(c, k), mod(c,  k))`

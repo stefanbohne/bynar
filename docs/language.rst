@@ -6,12 +6,12 @@
 Versailles Language Reference
 =============================
 
-Expressions
-===========
+Expressions and Types
+=====================
 
 Versailles is a strongly typed, functional language. So the this sections
 deals with types and the corresponding expressions to construct and deconstruct
-those types.
+those values of those types.
 
 .. productionlist:: versailles
     Expression :  `Variable`
@@ -27,12 +27,14 @@ those types.
                :| `TupleExpr`
                :| `IndexExpr`
                :| `TupleTypeExpr`
-    TypeExpr :  `TypeVariable`
-             :| `FunctionType`
-             :| `ApplicationType`
-             :| `TupleType`
-             :| `AlgebraicType`
-             :| `TupleExpr`
+    TypeExpression :  `TypeVariable`
+                   :| `WhereType`
+                   :| `KindedType`
+                   :| `FunctionType`
+                   :| `ApplicationType`
+                   :| `TupleType`
+                   :| `AlgebraicType`
+                   :| `TupleExpr`
 
 Built-in Types
 --------------
@@ -90,15 +92,23 @@ Escape sequence are [TODO].
     
     :ref:`interpolated_text`
     
+Type
+^^^^
+
+Types have the built-in type `Type`. 
+    
 .. _variables:
     
 Variables
 ---------
 
 .. productionlist:: versailles
-    TypeVariable : ["A" .. "Z"] ["a" .. "z", "A" .. "Z", "0" .. "9", "_"]*
-    Variable : "?"? (["a" .. "z"] ["a" .. "z", "A" .. "Z", "0" .. "9", "_"]*
-             :      | `TypeVariable`)
+    TypeName :  ["A" .. "Z"] ["a" .. "z", "A" .. "Z", "0" .. "9", "_"]*
+             :| "`" [^ "`" "\n"] "`"
+    Name     :  ["a" .. "z"] ["a" .. "z", "A" .. "Z", "0" .. "9", "_"]*
+             :| `TypeName`
+    TypeVariable : "?"? `TypeName`
+    Variable     : "?"? `Name`
 
 Variable names consist of a letter followed by any number of letters, digits and
 underscores. Versailles does not have reserved words like other languages.
@@ -149,7 +159,7 @@ Operators
 ---------
 
 .. productionlist:: versailles
-    TernaryExpr : `Expression` "if" `Expression` "else `Expression`
+    TernaryExpr : `Expression` "if" `Expression` "else" `Expression`
     BinaryExpr : `Expression` (
                :      "=>"              // function expression with inferred type
                :    | "->" | "-->"      // normal function expression
@@ -238,8 +248,20 @@ Operators
       - prefix
       - `(A >-j-> B) -> (B <-j-< A)`
       
+Type Operators
+--------------
+
+.. productionlist:: versailles
+    WhereType : `TypeExpression` ("where" | "unless") `Expression` // refinement type
+    KindedType : `TypeExpression` "::" `TypeExpression` // explitely kinded type
+    
+      
 Tuple Types (short form)
 ------------------------
+
+.. productionlist:: versailles
+    TupleExpr : "(" (","* `Expression` (","+ `Expression`)* ("," `Name` "=" `Expression`)* ","* ")"
+    TupleTypeExpr : "(" (","* `TypeExpression` (","+ `TypeExpression`)* ("," `Name` ":" `TypeExpression`)* ","* ")"  
 
 A tuple is an ordered set of values. Tuples are written using parenthesis and 
 commas. For example `(1, "abc")` is a pair of numbers containing the number `1` as
@@ -284,6 +306,10 @@ section) which is sometimes useful. Its only value is the empty tuple `()`.
 
 Tuples (long form)
 -----------------------
+
+.. productionlist:: versailles
+    TupleExpr : ... | `BlockStmt`
+    TupleType : ... | "tuple" `BlockStmt`  
 
 Tuples and tuple types also have a more verbose form with more features. For example,
 the tuple type `{x: Integer, y: Integer, z: Integer}` can also be written as::
@@ -336,7 +362,20 @@ A function type for functions that map values of type `A` to values of type
 `B` is written `A -> B`. Even though the syntax of function types looks the
 same here as that of function expressions, it is not. Since `A` and `B` are
 types only type expression may appear in these places. So, variables that start
-with lower case letters cannot be used (directly), for example.  
+with lower case letters cannot be used (directly), for example.
+
+Function Application
+--------------------
+
+.. productionlist:: versailles
+    ApplicationExpr :  `Expression` `TupleExpr`
+                    :| `Expression` "." `Name`
+                    :| `Expression` "." `CasesExpr`
+                    :| `Expression` `IndexExpr`
+                    :| `Expression` `TupleTypeExpr`
+    ApplicationType :  `TypeExpression` `TupleExpr`
+                    :| `TypeExpression` "." `Name`
+                    :| `TypeExpression` `TupleTypeExpr`
 
 Case-Expressions
 ----------------
@@ -396,11 +435,11 @@ symbols.
 
 `>->` Semi-inverse Janus
 
-    If `f(x)` is defined then `~f(f(x)) == x`.
+    If `f(x)` is defined then `(~f)(f(x)) = x`.
     
 `<-<` Cosemi-inverse Janus
     
-    If `~f(x)` is defined then `f(~f(x)) == x`.
+    If `(~f)(x)` is defined then `f((~f)(x)) = x`, i.e., `~f` is semi-inverse.
     
 `<->` Inverse Janus
 
@@ -408,11 +447,11 @@ symbols.
     
 `<>->` Semi-pseudoinverse Janus
     
-    If `f(x)` is defined then `f(~f(f(x)) == x`.
+    If `f(x)` is defined then `f((~f)(f(x)) = x`.
     
 `<-<>` Cosemi-pseudoinverse Janus
     
-    If `~f(x)` is defined then `~f(f(~f(x)) == x`.
+    If `(~f)(x)` is defined then `(~f)(f((~f)(x)) = x`, i.e., `~f` is semi-pseudoinverse.
     
 `>-<` Pseudoinverse Janus
 
@@ -473,8 +512,8 @@ List are written `[1, 2, 3]`. Lists are similar to tuples, except that all
 components have to have the same type and that the list type does not distinguish
 between lists of different length. The empty list is written `[]`.
 
-There is a special notation for ranges, for example `[2 .. 5] == [2, 3, 4]`
-and `[5 .. 2] == [5, 4, 3]` and `[2 .. 2] == []`.
+There is a special notation for ranges, for example `[2 .. 5] = [2, 3, 4]`
+and `[5 .. 2] = [5, 4, 3]` and `[2 .. 2] = []`.
 
 There is also a special list application `f[1, 2, 3]` that returns a new list
 where the function is applied to each element of the list, so `[f(1), f(2), f(3)]`.
@@ -524,9 +563,14 @@ Statements
     SimpleStatement :  `PassStmt`
                     :| `FailStmt`
                     :| `LetStmt` 
+                    :| `CallStmt`
+                    :| `ForgetStmt`
+                    :| `RememberStmt`
                     :| `DefStmt` 
-                    :| `TypeStmt` 
+                    :| `TypeStmt`
+                    :| `SwitchStmt` 
                     :| `IfStmt`
+                    :| `LoopStmt`
     
 Pass-, Fail- and Block Statements
 ---------------------------------
@@ -569,10 +613,57 @@ public objects that can be used from elsewhere. You have to use `def` and
 `type` for that. There is also `letdef` and `lettype`, that have the
 same syntax as `def` and `type`, but only define those variables locally.
 
-The short form of `let`, written just `let b;` that can be used to fail 
-on condition. `b` must be a `Boolean` expression. If `b` evaluates to `false`
+The short form of `let`, written just `let b`, can be used to fail 
+on a condition. `b` must be a `Boolean` expression. If `b` evaluates to `false`
 the statement fails. If `b` evaluates to `true`, the next statement is executed.
-This form is equivalent to `let true = b;`.
+This form is equivalent to `let true = b` and `if !b { fail }`. So for 
+example, the square root function could be written like::
+    
+    def sqrt(x: Number): Number = {
+        let x >= 0;
+        ...
+    };
+    
+an it would be undefined for numbers less than zero.
+
+Call-Statements
+---------------
+
+.. productionlist:: versailles
+    CallStmt : "call" `Expression`
+    
+The call statement is used for function that have only side-effects. Their
+return type must be `Unit`. `call x` is actually equivalent to `let () = x`.
+
+TODO: side-effects    
+
+Forget- and Remember-Statements
+-------------------------------
+
+.. productionlist:: versailles
+    ForgetStmt : "forget" `Expression` "=" `Expression`
+    RememberStmt : "remember" `Expression` "=" `Expression`
+    
+The `forget`-statement is used in a reversible function to discard information.
+All the variables that appear linearly in the left expression are discarded. 
+Since, the function is reversible, you have to give a way of reconstructing 
+those variables in the reverse direction. That is what the right expression is
+for. In reverse, a `forget` becomes a `remember` which acts pretty much like
+a `let`-expression. The difference between `remember` and are as follows:
+
+    * `remember a = b` becomes `forget a = b` in reverse, but `let a = b` 
+       becomes `let b = a` in reverse.
+    * Variables cannot appear linearly in `remember`'s second expression.
+    
+`forget a = b` is actually just syntactic sugar for `let () = forget(() -> b)(a)`
+where `forget` is the built-in function. `remember a = b` is thus syntactic
+sugar for `let a = (~forget(() -> b))()`. `forget` is a semi-inverse janus with
+the following behavior:
+
+    For all `A: Type`, `f: Unit -> A`, `x: A`:
+    
+    #. `forget(f)(x) = ()`
+    #. `(~forget(f))() = f()` 
 
 .. _def-statement-values:
 
@@ -587,8 +678,8 @@ Def-Statements for Functions
 ----------------------------
 
 .. productionlist:: versailles
-    DefStmt:   ("def" | "letdef") `Name` (TupleExpr | TupleTypeExpr)* 
-           :   (":" `TypeExpression`)? ("=" `TypeExpression`)?
+    DefStmt: ("def" | "letdef") `Name` (`TupleExpr` | `TupleTypeExpr`)* 
+           : (":" `TypeExpression`)? ("=" `TypeExpression`)?
 
 
 `def f(x: A)(y: B): C = stuff;` is short for 
@@ -623,7 +714,7 @@ Type-Statements
 ---------------
 
 .. productionlist:: versailles
-    TypeStmt: ("type" | "lettype") `Name` (`TupleExpr` | `TupleTypeExpr`)* 
+    TypeStmt: ("type" | "lettype") `TypeName` (`TupleExpr` | `TupleTypeExpr`)* 
             : ("::" `TypeExpression`)? ("=" `TypeExpression`)?
 
 Like `def` but the expression after `=` is a type expression.
@@ -647,6 +738,22 @@ is just short for::
         case 0     => algebraic { variant Nil; };
         case n + 1 => algebraic { variant Cons: (A, NList(n){A}); };
     });
+    
+Switch-Statement
+----------------
+
+.. productionlist:: versailles
+    SwitchStmt: "switch" "{" "case" `ComplexStatement` (";"  
+              :              "case" `ComplexStatement`)* ";"? "}"
+
+Similar to how a function can be defined by pattern matching using the `case`-
+expression, the `switch`-statement allows to you to define multiple alternative
+statements. Each of the statements preceded by `case` are executed in order,
+until one is found that does not fail. The behavior of the `switch`-statement
+then becomes the same as the behavior of the non-failing `case`-statement. 
+
+The names and types of the consumed and defined variables in each `case`-
+statement must be identical.
 
 .. _if-statement:
 
@@ -659,9 +766,60 @@ If-Statements
            : ("asserting" `Expression`)?
            : ("else" `ComplexStatement`)?
     
+The `if`-statement executes either the statement following `then` or the 
+statement following `else` depending on the `Boolean` computed from the
+expression following `if`. If `asserting` is given, its value is checked
+after one of the branches was executed. If its value is different from the
+that of the expression following `if`, the whole `if`-statement fails.
+In a reversible context, the `asserting`-branch must be given.     
+    
+There is special treatment for block-expressions following `if` and `asserting`.
+Instead of a boolean expression you can give a block-expression. The expressions
+are considered `true` if they don't fail. Variables can be consumed and defined
+in those expressions. The block-expressions must not have `return`-statement, so
+they must actually be block-statements. In fact, `Boolean` expressions are 
+actually converted to the short form of `let`-expressions (see 
+:ref:`let-statement`) and then treated as block-statements.
+    
+`if c then t asserting a else e` is equivalent to `switch { case {c; t; a}; case e; }`.
+`if c then t else e` is equivalent to `switch { case {c; t}; case e; }`. 
+If the `else`-branch is not given just `pass` is assumed.
 
 Loop-Statements
 ---------------
+
+.. productionlist:: versailles
+    LoopStmt : ("from" `Expression`)? ("do" `ComplexStatement`)? 
+             : ("until" `Expression`)? ("loop" `ComplexStatement`)? 
+               
+This statement is a mix of ``while`` and ``do``-``while`` loops from C-like
+languages. `until u` is equivalent to `while !u`. One of `do` or `loop` is 
+required. If not given, `do pass`, `while true` and `loop pass` is assumed.
+
+`do d until u` does `d` and then checks `u`. If `false`, repeat, otherwise the 
+loop is finished.
+
+`until u loop l` first checks `u`. If `false`, execute `l` and repeat, otherwise 
+the loop is finished.
+
+The `from`-expression must be `true` before the `loop` is entered and must
+be `false` before every other repetition. The whole loop fails, if this is not
+the case. If the `from`-expression is omitted in an irreversible context,
+the `from`-expression is not checked at all. The `from`-expression is necessary
+for the loop to have a reverse, so it is always checked in a reversible context. 
+               
+`from f do d until u loop l` is actually equivalent to 
+`do { let !f; d } loop { let !u; l }`. All together, `do d loop l` does the 
+following:
+
+    #. In a reversible context only, try to execute `d`, and fail if it doesn't fail.
+    #. Execute `l`, and goto step 5 if it fails.
+    #. Execute `d`, and fail if it fails.
+    #. Goto step 2.
+    #. Done.
+
+The reverse of the loop `from f do d while w loop l` is `from w do dr while f loop lr`
+where `dr` and `lr` are the reverses of `d` and `l` respectively.
 
 Return-Statements
 -----------------

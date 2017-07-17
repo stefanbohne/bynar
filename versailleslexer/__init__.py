@@ -34,7 +34,7 @@ class VersaillesLexer(RegexLexer):
                 'yield'), suffix=r'\b'),
              Keyword),
             (r'(true|false|cons|nil|muladd|divmod|if|mod)\b', Name.Builtin),
-            (r'(Number|String|Boolean|Type|Janus_class)\b', Name.Builtin),
+            (r'(Number|Integer|Float|String|Boolean|Type|Janus_class)\b', Name.Builtin),
             (words((
                 'algebraic', 'inductive', 'tuple'), suffix=r'\b'),
              Keyword.Type),
