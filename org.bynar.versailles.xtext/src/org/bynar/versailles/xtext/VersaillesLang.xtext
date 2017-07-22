@@ -105,17 +105,19 @@ ExprTyped returns Expression:
 	ExprUnary ({TypedExpr.base=current} ":" type=TypeExpression)? 
 	          ({BinaryExpr.then=current} op=AssertingOp condition=ExprImplies)?
 ;
-UnaryOp returns Operator: {Operator} op=("~" | "-" | "!");
+UnaryOp returns Operator: {Operator} op=("-" | "!");
 ExprUnary returns Expression:
 	ExprApp
 |	{UnaryExpr} op=UnaryOp operand=ExprUnary 
 ;
+RevOp returns Operator: {Operator} op="~";
 ExprApp returns Expression:
 	SimpleExpr ( {ApplicationExpr.function=current} => argument=TupleExpr 
 		       | {ApplicationExpr.argument=current} => "." function=CasesExpr
 	           | {MemberAccessExpr.base=current} => "." memberName=Name
 	           | {TypeApplicationExpr.function=current} => argument=TupleTypeExpr
-	           | {IndexApplicationExpr.function=current} => argument=IndexExpr)*
+	           | {IndexApplicationExpr.function=current} => argument=IndexExpr
+	           | {UnaryExpr.operand=current} op=RevOp)*
 ;
 SimpleExpr returns Expression:
 	{Variable} (linear?="?")? name=Name

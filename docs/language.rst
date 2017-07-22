@@ -191,10 +191,11 @@ Operators
                :    | "asserting"       // assertion checking
                :    | ":"               // explicit typing
                : ) `Expression`
-    UnaryExpr : ( "!"         // logical negation
-              : | "-"         // additive inverse
-              : | "~"         // janus reverse
-              : ) `Expression`
+    PrefixExpr : ( "!"         // logical negation
+               : | "-"         // additive inverse
+               : ) `Expression`
+    PostfixExpr : `Expression` ( 
+                   "~" // janus reverse )
 
 .. list-table::
 
@@ -245,7 +246,7 @@ Operators
       - prefix
       - `Number -> Number`
     * - `~`
-      - prefix
+      - postfix
       - `(A >-j-> B) -> (B <-j-< A)`
       
 Type Operators
@@ -430,16 +431,16 @@ symbols.
 
 `<>-<>` Generic Janus
     
-    A generic janus, `f: A <>-<> B` has a reverse `~f: B <>-<> A` and that's
+    A generic janus, `f: A <>-<> B` has a reverse `f~: B <>-<> A` and that's
     it. Every janus is also a function, and so is its reverse.
 
 `>->` Semi-inverse Janus
 
-    If `f(x)` is defined then `(~f)(f(x)) = x`.
+    If `f(x)` is defined then `f~(f(x)) = x`.
     
 `<-<` Cosemi-inverse Janus
     
-    If `(~f)(x)` is defined then `f((~f)(x)) = x`, i.e., `~f` is semi-inverse.
+    If `f~(x)` is defined then `f(f~(x)) = x`, i.e., `f~` is semi-inverse.
     
 `<->` Inverse Janus
 
@@ -447,11 +448,11 @@ symbols.
     
 `<>->` Semi-pseudoinverse Janus
     
-    If `f(x)` is defined then `f((~f)(f(x)) = x`.
+    If `f(x)` is defined then `f(f~(f(x)) = x`.
     
 `<-<>` Cosemi-pseudoinverse Janus
     
-    If `(~f)(x)` is defined then `(~f)(f((~f)(x)) = x`, i.e., `~f` is semi-pseudoinverse.
+    If `f~(x)` is defined then `f~(f(f~(x)) = x`, i.e., `f~` is semi-pseudoinverse.
     
 `>-<` Pseudoinverse Janus
 
@@ -479,7 +480,7 @@ in the following way::
 
     def symsum(?a: Number, ?b: Number): Number = {
         let ?sum = `+`(a)(?b);
-        let ?diff = (~`+`(sum))(`*`(2)(?a));
+        let ?diff = `+`(sum)~(`*`(2)(?a));
         return (?sum, ?diff);
     };
 
@@ -496,8 +497,9 @@ Dependently Typed Functions
 A dependent function type is written with an extended arrow `-->`. In this 
 case, the argument is given as a tuple expression: `(x: A) --> B(x)`.
 This allows the result type of the function to depend on the actual value of 
-the argument. The argument type is then the type of the argument expression. 
-Otherwise `A -> B` is truly just an abbreviation of `(_: A) --> B` where 
+the argument. Instead of giving the type of the argument directly, the argument
+type is the type of the argument expression. 
+Thus, `A -> B` is truly just an abbreviation of `(_: A) --> B`. So, 
 the actual argument cannot not appear in `B`.
 
 Januses cannot have a dependent type.
@@ -633,7 +635,7 @@ Call-Statements
     CallStmt : "call" `Expression`
     
 The call statement is used for function that have only side-effects. Their
-return type must be `Unit`. `call x` is actually equivalent to `let () = x`.
+return type must be `Unit`. `call x` is actually equivalent to `for () from x`.
 
 TODO: side-effects    
 
@@ -657,13 +659,13 @@ a `let`-expression. The difference between `remember` and are as follows:
     
 `forget a = b` is actually just syntactic sugar for `let () = forget(() -> b)(a)`
 where `forget` is the built-in function. `remember a = b` is thus syntactic
-sugar for `let a = (~forget(() -> b))()`. `forget` is a semi-inverse janus with
-the following behavior:
+sugar for `let a = forget(() -> b)~()`. `forget(f)` is a semi-inverse janus
+with the following behavior:
 
     For all `A: Type`, `f: Unit -> A`, `x: A`:
     
     #. `forget(f)(x) = ()`
-    #. `(~forget(f))() = f()` 
+    #. `forget(f)~() = f()` 
 
 .. _def-statement-values:
 
@@ -693,7 +695,7 @@ Def-Statements for Functions
 
 `def f(x: A)(y: B) <-> g(z: C) { stuff; };` is short for 
 `def f: (x: A) --> B <-> C = (x: A) --> (y: B) <-> { stuff; return (z: C); };
-def g: (x: A) --> C <-> B = ~f;`.
+def g: (x: A) --> C <-> B = f~;`.
 
 
 `def f(x: A)(y: B): C;` is short for 
@@ -706,7 +708,7 @@ def g: (x: A) --> C <-> B = ~f;`.
 `def f: (x: A) --> B <-> C = (x: A) --> (y: B) <-> C;`.
 
 `def f(x: A)(y: B) <-> g(z: C);` is short for 
-`def f: (x: A) --> B <-> C; def g: (x: A) --> C <-> B = (x: A) -> ~f(x);`.
+`def f: (x: A) --> B <-> C; def g: (x: A) --> C <-> B = (x: A) -> f~(x);`.
 
 .. _type-statement:
 
@@ -833,3 +835,30 @@ Yield-Statements
 Module-Statements
 -----------------
 
+Miscellaneous
+=============
+
+Curly Braces
+------------
+
+Versailles has 
+
+* block-expressions
+    may contain `return`. If no `return` statement, then `return ()` is implied.
+    must not contain `for`, `when`, `yield`, `case`.
+* monad-block-expressions
+    must contain at least one of `for`, `when` or `yield`. `return x` is equivalent
+    to `yield pure(x)`.
+    must not contain `case`.
+* case-expressions
+    must contain only `case`-statements
+* tuple types
+    always begins with a type expression, which are can be differentiated
+    from statements by their first token.
+    
+To avoid confusion none of these forms allows empty curly braces (`{}`).
+
+* empty block-expression: `{ pass }`
+* empty monad-block-expression: `pure()`
+* empty case-expression: `fail` (the built-in function), or `{ fail } => { fail }` 
+* empty tuple type: `tuple { pass }` 
