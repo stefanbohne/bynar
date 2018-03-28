@@ -9,7 +9,7 @@ Versailles Language Reference
 Expressions and Types
 =====================
 
-Versailles is a strongly typed, functional language. So the this sections
+Versailles is a strongly typed, functional language. So this sections
 deals with types and the corresponding expressions to construct and deconstruct
 those values of those types.
 
@@ -25,8 +25,8 @@ those values of those types.
                :| `CasesExpr`
                :| `ApplicationExpr`
                :| `TupleExpr`
+               :| `TypeTupleExpr`
                :| `IndexExpr`
-               :| `TupleTypeExpr`
     TypeExpression :  `TypeVariable`
                    :| `WhereType`
                    :| `KindedType`
@@ -35,6 +35,7 @@ those values of those types.
                    :| `TupleType`
                    :| `AlgebraicType`
                    :| `TupleExpr`
+                   :| `TypeTupleExpr`
 
 Built-in Types
 --------------
@@ -130,8 +131,8 @@ the inner variable. For example::
     let y = ?sum * 3;
     return (sum, y);
     
-This returns `(3, 90)`. Any outer variable is inaccessible as long as the
-inner variable is visible. 
+This returns `(3, 90)`. Any outer variable is inaccessible as long as an
+inner variable with the same name in scope. 
 
 This feature can also be used, to simulate a variable that changes its value.
 The `?`\s are very important in that case::
@@ -202,13 +203,14 @@ Operators
     * - Operator
       - Associativity
       - Type
-    * - `=>`, `->`, `-->`, `<->`, `>->`, `<-<`, `>-<`, `<>-<`,
-        `>-<>`, `<>-<>`
+    * - `=>`, `->`, `-->`, 
+        `<->`, `>->`, `<-<`, 
+        `>-<`, `<>-<`, `>-<>`, `<>-<>`
       - right
       - N/A
     * - `_ if _ else _`
       - right
-      - `Boolean -> A -> A -> A`
+      - `(c: Boolean) --> A -> B -> (if c then A else B)`
     * - `==>`, `implies`
       - right
       - `Boolean -> Boolean -> Boolean`
@@ -221,7 +223,8 @@ Operators
     * - `&&`, `and`
       - right
       - `Boolean -> Boolean -> Boolean`
-    * - `==`, `!=`, `<=`, `>=`‚ `<`‚ `>`, `in`
+    * - `==`, `!=`, `<=`, `>=`‚ 
+        `<`‚ `>`, `in`
       - none
       - `A -> A -> Boolean`
     * - `++`
@@ -257,23 +260,23 @@ Type Operators
     KindedType : `TypeExpression` "::" `TypeExpression` // explitely kinded type
     
       
-Tuple Types (short form)
-------------------------
+Tuples and Tuple Types (short form)
+-----------------------------------
 
 .. productionlist:: versailles
-    TupleExpr : "(" (","* `Expression` (","+ `Expression`)* ("," `Name` "=" `Expression`)* ","* ")"
-    TupleTypeExpr : "(" (","* `TypeExpression` (","+ `TypeExpression`)* ("," `Name` ":" `TypeExpression`)* ","* ")"  
+    TupleExpr : "(" (`Expression` ("," `Expression`)* ("," `Name` "=" `Expression`)* ","? ")"
+    TypeTupleExpr : "{" (`TypeExpression` ("," `TypeExpression`)* ("," `Name` "=" `TypeExpression`)* ","? "}"
+    TupleType : "<" (`TypeExpression` ("," `TypeExpression`)* ("," `Name` ":" `TypeExpression`)* ","? ">"  
 
 A tuple is an ordered set of values. Tuples are written using parenthesis and 
-commas. For example `(1, "abc")` is a pair of numbers containing the number `1` as
+commas. For example `(1, "abc")` is a pair containing the number `1` as
 its first component and the string `"abc"` as its second component. A tuple can contain
 any number of components, even zero. The components also can have different data
 types. They can even be tuples again.
 
 Tuples that contain only one component must have an extra comma to differentiate
 them from simple parenthesis. For example `(1)` is just the number `1`,
-but `(1,)` is the tuple that contains the number one. Additional commas can 
-be inserted anywhere in a tuple if you feel the need.
+but `(1,)` is the tuple that contains the number one.
 
 Tuple components can be given names. For example `(x = 1, y = 2, z = 3)` has
 three components named `x`, `y` and `z`. Named and unnamed components 
@@ -293,27 +296,33 @@ the variables `a`, `b` and `c`. [TODO:named]
 The pattern must match exactly the number of components that the tuple has or
 the match fails. 
  
-A tuple type defines the types for each component. For example, `{Integer, String}` 
-is describes pairs of integers and strings. A tuple type may also describe
-the names of its components. For example, `{x: Integer, y: Integer, z: Integer}` 
-is a tuple type with three integer components with the names `x`, `y` and `z`.
+The form with curly braces is a syntactical convenience to define tuples of types.
+So, for example, `{String -> Integer, Integer -> String}` is a pair of types. 
+Same as with normal tuples, a singleton type tuple must contain an extra comma, 
+like `{String -> Integer,}`. Otherwise curly braces act as parenthesis for types.
 
-The singleton tuple type is written `{A,}`. Curly braces serve the same
-grouping purpose for types as parenthesis do for values. So, if the comma is ommitted 
-as in `{A}` the whole expression stand just for the type `A`.
+Since curly braces are normal expressions they are a means to use types where
+normally only values are allowed. Thus the type tuple `{A, B}` is really just
+an abbreviation for `({A}, {B})`. Conversely normal expressions can be use in
+places where only types are allowed by using parenthesis.
+
+A tuple type defines the types for each component. For example, `<Integer, String>` 
+is describes pairs of integers and strings. A tuple type may also describe
+the names of its components. For example, `<x: Integer, y: Integer, z: Integer>` 
+is a tuple type with three integer components with the names `x`, `y` and `z`.
 
 The empty tuple type is `Unit` (defined as `tuple { pass }`, see next 
 section) which is sometimes useful. Its only value is the empty tuple `()`.
 
-Tuples (long form)
------------------------
+Tuples and Tuple Types (long form)
+----------------------------------
 
 .. productionlist:: versailles
     TupleExpr : ... | `BlockStmt`
     TupleType : ... | "tuple" `BlockStmt`  
 
 Tuples and tuple types also have a more verbose form with more features. For example,
-the tuple type `{x: Integer, y: Integer, z: Integer}` can also be written as::
+the tuple type `<x: Integer, y: Integer, z: Integer>` can also be written as::
 
     tuple {
         def x: Integer;
@@ -341,7 +350,7 @@ This form allows
 Functions
 ---------
 
-Functions are usually not written in the form explain in this section. Most 
+Functions are usually not written in the form explained in this section. Most 
 functions are defined by using the :ref:`def-statement-functions`. You can
 skip this section and still be able to write any program.
 
@@ -377,6 +386,9 @@ Function Application
     ApplicationType :  `TypeExpression` `TupleExpr`
                     :| `TypeExpression` "." `Name`
                     :| `TypeExpression` `TupleTypeExpr`
+                    
+Functions are used by applying them to a value. This value is called the
+function's *argument*. 
 
 Case-Expressions
 ----------------
@@ -397,14 +409,14 @@ converts booleans to strings::
 Of course it is possible to have more complex patterns. The following example
 implements the fast exponentiation function::
 
-    let fastexp = {
-        case (0, _)         => 1;
-        case (n * 2, x)     => { 
+    def fastexp: <Number, Number> -> Number = {
+        case (_, 0)         => 1;
+        case (x, n * 2)     => { 
             let xn = fastexp(n, x); 
             return xn * xn; 
         };
-        case (n * 2 + 1, x) => { 
-            let x2 = fastexp(n, x); 
+        case (x, n * 2 + 1) => { 
+            let xn = fastexp(n, x); 
             return xn * xn * x; 
         };
     };  
@@ -458,7 +470,7 @@ symbols.
 
    `f` is semi-pseudoinverse and cosemi-pseudoinverse.
    
-A janus is really two functions. It has additional constraints. Of course every
+A janus is really two functions. Of course every
 function that is called inside a janus must be a janus. Otherwise, we cannot
 hope to construct a reverse. There are also restrictions on how variables
 are used, which are a bit unintuitive. Every variable must be used at least once.
@@ -634,7 +646,7 @@ Call-Statements
 .. productionlist:: versailles
     CallStmt : "call" `Expression`
     
-The call statement is used for function that have only side-effects. Their
+The call statement is used for functions that have only side-effects. Their
 return type must be `Unit`. `call x` is actually equivalent to `for () from x`.
 
 TODO: side-effects    
@@ -647,15 +659,15 @@ Forget- and Remember-Statements
     RememberStmt : "remember" `Expression` "=" `Expression`
     
 The `forget`-statement is used in a reversible function to discard information.
-All the variables that appear linearly in the left expression are discarded. 
+All the variables that appear linearly in the left-hand expression are discarded. 
 Since, the function is reversible, you have to give a way of reconstructing 
-those variables in the reverse direction. That is what the right expression is
+those variables in the reverse direction. That is what the right-hand expression is
 for. In reverse, a `forget` becomes a `remember` which acts pretty much like
 a `let`-expression. The difference between `remember` and are as follows:
 
     * `remember a = b` becomes `forget a = b` in reverse, but `let a = b` 
        becomes `let b = a` in reverse.
-    * Variables cannot appear linearly in `remember`'s second expression.
+    * Variables do not appear linearly in `remember`'s right-hand expression.
     
 `forget a = b` is actually just syntactic sugar for `let () = forget(() -> b)(a)`
 where `forget` is the built-in function. `remember a = b` is thus syntactic
