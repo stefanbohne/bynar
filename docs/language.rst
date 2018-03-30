@@ -265,7 +265,6 @@ Tuples and Tuple Types (short form)
 
 .. productionlist:: versailles
     TupleExpr : "(" (`Expression` ("," `Expression`)* ("," `Name` "=" `Expression`)* ","? ")"
-    TypeTupleExpr : "{" (`TypeExpression` ("," `TypeExpression`)* ("," `Name` "=" `TypeExpression`)* ","? "}"
     TupleType : "<" (`TypeExpression` ("," `TypeExpression`)* ("," `Name` ":" `TypeExpression`)* ","? ">"  
 
 A tuple is an ordered set of values. Tuples are written using parenthesis and 
@@ -296,16 +295,6 @@ the variables `a`, `b` and `c`. [TODO:named]
 The pattern must match exactly the number of components that the tuple has or
 the match fails. 
  
-The form with curly braces is a syntactical convenience to define tuples of types.
-So, for example, `{String -> Integer, Integer -> String}` is a pair of types. 
-Same as with normal tuples, a singleton type tuple must contain an extra comma, 
-like `{String -> Integer,}`. Otherwise curly braces act as parenthesis for types.
-
-Since curly braces are normal expressions they are a means to use types where
-normally only values are allowed. Thus the type tuple `{A, B}` is really just
-an abbreviation for `({A}, {B})`. Conversely normal expressions can be use in
-places where only types are allowed by using parenthesis.
-
 A tuple type defines the types for each component. For example, `<Integer, String>` 
 is describes pairs of integers and strings. A tuple type may also describe
 the names of its components. For example, `<x: Integer, y: Integer, z: Integer>` 
@@ -346,6 +335,53 @@ This form allows
 * type components using :ref:`type-statement`
 * local definititions using the :ref:`let-statement` 
 * :ref:`if-statement` which may not depend on runtime values
+
+Type Tuples and Implicit Arguments
+----------------------------------
+
+.. productionlist:: versailles
+    TypeTupleExpr : "{" (`TypeExpression` ("," `TypeExpression`)* ("," `Name` "=" `TypeExpression`)* ","? "}"
+
+The tuple form with curly braces is a syntactical convenience to define tuples of types.
+So, for example, `{String -> Integer, Integer -> String}` is a pair of function types. 
+Same as with normal tuples, a singleton type tuple must contain an extra comma, 
+like `{String -> Integer,}`. Otherwise curly braces act as parenthesis for types.
+
+Since curly braces are normal expressions they are a means to use types where
+normally only values are allowed. Thus the type tuple `{A, B}` is really just
+an abbreviation for `({A}, {B})`. Conversely normal expressions can be use in
+places where only types are allowed by using parenthesis.
+
+Type tuples have an additional completely independent use. When a function
+is defined, its arguments can be either given as a tuple expression or as a
+type tuple expression (curly braces). When they are given as a type tuple 
+expression the argument is called *implicit*. Implicit arguments can be omitted
+and are inferred by the type checker. Implicit arguments must be given with
+a type tuple expression (with curly braces) instead of a normal tuple 
+expression.
+
+So in summary, tuple expressions are used for arguments that are values and explicit,
+type tuple expression are used for arguments that are types and implicit.
+
+By using parenthesis and curly braces, it is possible to give arguments that
+are implicit values and explicit types. For example::
+
+    // definition
+    def f: {(implicitInt: Integer)} --> ({ExplicitType:: Type}) --> ...;
+    // usage
+    f{(42)}({A -> B})
+    // or
+    implicit def int: Integer = 42;
+    f({A -> B})
+    
+Implicit values are defined by `def`-statements with the `implicit` keyword.
+Whenever an implicit argument is to be inferred, all *implicit* definitions
+are searched for one with the correct type. If none or more than one are found,
+the type checker fails.
+
+Types use a different inference algorithm and thus one cannot define *implicit*
+types. Types are always inferred by some unification algorithm (Hindley Milner) 
+with the types of the explicit arguments.
 
 Functions
 ---------
@@ -547,7 +583,7 @@ Dictionaries
 ------------
 
 Dictionaries are lists of key value pairs, written like 
-`["fst" = 1, "snd" = 2, "thd" = 3]`.  
+`["fst" = 1, "snd" = 2, "trd" = 3]`.  
 
 Dictionary comprehensions are like `[name(x) = value(x) for x from list]`.
 
@@ -559,6 +595,12 @@ Algebraic Data Types
 Interpolated Text
 -----------------
 
+.. productionlist:: versailles
+    InterpolatedText ::= "'" [^'$]* ("$" Expression "$" [^'$]*)* "'"
+    
+Interpolated text is a convenient way to construct string. For example,
+`'year: $year$'` is short for `"year: " ++ toString(year)`.
+
 If-Expressions
 --------------
 
@@ -567,6 +609,10 @@ Asserting-Expressions
 
 Block Expressions
 -----------------
+
+A block expression consists of one or more statements and a expression. The
+purpose of block expressions is to define the expression under with the help
+of statements.
 
 Statements
 ==========
@@ -660,24 +706,24 @@ Forget- and Remember-Statements
     
 The `forget`-statement is used in a reversible function to discard information.
 All the variables that appear linearly in the left-hand expression are discarded. 
-Since, the function is reversible, you have to give a way of reconstructing 
+Since the function is reversible you have to give a way of reconstructing 
 those variables in the reverse direction. That is what the right-hand expression is
 for. In reverse, a `forget` becomes a `remember` which acts pretty much like
-a `let`-expression. The difference between `remember` and are as follows:
+a `let`-expression. The difference between `remember` and `let` are as follows:
 
     * `remember a = b` becomes `forget a = b` in reverse, but `let a = b` 
        becomes `let b = a` in reverse.
-    * Variables do not appear linearly in `remember`'s right-hand expression.
+    * Variables cannot not appear linearly in `remember`'s right-hand expression.
     
-`forget a = b` is actually just syntactic sugar for `let () = forget(() -> b)(a)`
+`forget a = b` is actually just syntactic sugar for `let () = forget(b)(a)`
 where `forget` is the built-in function. `remember a = b` is thus syntactic
-sugar for `let a = forget(() -> b)~()`. `forget(f)` is a semi-inverse janus
+sugar for `let a = forget(b)~()`. `forget(b)` is a semi-inverse janus
 with the following behavior:
 
-    For all `A: Type`, `f: Unit -> A`, `x: A`:
+    For all `A: Type`, `b: A`, `a: A`:
     
-    #. `forget(f)(x) = ()`
-    #. `forget(f)~() = f()` 
+    #. `forget(b)(a) = ()`
+    #. `forget(b)~() = b` 
 
 .. _def-statement-values:
 
@@ -839,7 +885,7 @@ Return-Statements
 -----------------
 
 Returns ends the current block specifying its value. If a block has no 
-`return`-statement, a `return ()` is implied.
+`return`-statement and no `def`- or `type`-statements, a `return ()` is implied.
 
 Yield-Statements
 ----------------
@@ -856,16 +902,20 @@ Curly Braces
 Versailles has 
 
 * block-expressions
-    may contain `return`. If no `return` statement, then `return ()` is implied.
-    must not contain `for`, `when`, `yield`, `case`.
+    may contain `return`. If no `return`, `def` or `type` statement, then 
+    `return ()` is implied. Must not contain `for`, `when`, `yield`, `case`.
+* long tuple-expressions
+    must contain at least one `def` or `type` statement. Must not contain 
+    `return`, `for`, `when`, `yield`, `case`.
 * monad-block-expressions
     must contain at least one of `for`, `when` or `yield`. `return x` is equivalent
     to `yield pure(x)`.
     must not contain `case`.
 * case-expressions
-    must contain only `case`-statements
-* tuple types
-    always begins with a type expression, which are can be differentiated
+    must contain at least one `case`-statement. Must not contain `return`, 
+    `for`, `when`, `yield`.
+* type tuples
+    always begins with a type expression, which can be differentiated
     from statements by their first token.
     
 To avoid confusion none of these forms allows empty curly braces (`{}`).
