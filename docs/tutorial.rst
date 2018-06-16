@@ -6,82 +6,409 @@
 Versailles Tutorial
 ===================
 
-Motivational Example
+Introduction
+============
+
+This text teaches you the basics of Versailles. We assume some prior experience
+with other programming languages.
+
+Versailles is a statically typed language. This means that before a Versailles
+program is executed a first pass is made over it that assigns each expression
+a type. Types are for example ``Integer`` or ``String``. During this pass it is 
+checked that there a no nonsensical expressions like adding an integer and string.
+
+Versailles is also a pure functional language. This essentially means that
+the values of variables cannot be changed. More generally speaking functions
+cannot have side effects. That means that the result of every function call is
+solely determined by its arguments.
+
+First Steps
+===========
+
+TODO: how to start the repl.
+
+Versailles makes a clear distinction between *expressions* and *statements* [#fexprstmt]_.
+The repl expects statements by default. In the beginning we will focus on 
+expressions, but one very useful statement is the ``let``-statement. The 
+``let``-statement allows you define variables. For example::
+
+    > let pi = 3.14159265359
+    
+allows you to later use the variable ``pi`` in place of the more verbose number.
+
+In order to tell the repl to treat the input as an expression, we begin the
+line with an equals sign (``=``) [#fequstmt]_. So, for example to see the
+value of `pi / 2` you type::
+
+    > = pi / 2
+    1.5707963268
+    
+Versailles does not have reserved words. It is absolutely possible to define 
+a variable called ``let`` via::
+
+    > let let = "let"
+
+Versaille's syntax is crafted in such a way that keywords (like ``let``) 
+never conflict with variable names. This ensures that extensions to the 
+language will never make your programs invalid due to the addition of new
+reserved words. But unfortunately it also means that expressions and 
+statements cannot be mixed as they are many other languages.
+
+
+        
+.. rubric:: Footnotes
+
+.. [#fexprstmt] There are other syntactical categories (types, janus classes and
+                tuple components) which we will get into later.
+.. [#fequstmt] The ``=`` sign here is actually a special statement that simply
+               prints its single argument. The ``=`` statement only exists in
+               the repl. 
+
+Simple Types
+============
+
+Numbers
+-------
+
+One of the most basic things to do with a computer is arithmetic. For example
+type ``= 1 + 2`` and press Enter. You will see::
+
+    > = 1 + 2
+    3
+
+Other operators are ``-``, ``*``, ``/`` and ``mod`` for subtraction, multiplication,
+division and remainder. The operators bind as they do in math: ``*``, ``/`` and ``mod`` 
+bind stronger than ``+`` and ``-``. Parenthesis can be used to make the binding 
+explicit. So ``1 + 2 * 3`` is the same as ``1 + (2 * 3)`` and results in ``7``, but 
+``= (1 + 2) * 3`` would be ``9``. Of course, ``-`` can also be used as unary 
+operator. Other functions are called by name, like `sqrt(2)` or `sin(0.5)`.
+The parenthesis in such function calls are required.
+
+Versailles also supports writing numbers in different bases by prefixing the 
+numbers with zero and one of the letters x, o, b or d:
+
+* Hexadecimal: `0x1234567890ABCDEF`
+* Octal: `0o12345670`
+* Binary: `0b10`
+* Decimal: `0d1234567890`
+
+You can sprinkle in some underscores to make large numbers more readable::
+
+    > = 123_456_789
+    123456789
+    
+Real numbers can be written using the dot (``.``) as decimal separator as seen 
+before. We also support scientific notation::
+ 
+    > let g = 6.67408e-11
+    
+Note that in order to support scientific notation for hexadecimal we 
+cannot use ``e`` for the exponent. Thus numbers that use a base prefix must
+use ``p`` instead. For example, here is (an approximation of) the same number 
+in hexadecimal::
+
+    > let g = 0x6.AC908p-11
+    
+.. note::
+
+    The default type of numbers in Versailles are so called 
+    `computable numbers <https://en.wikipedia.org/wiki/Computable_number>`_
+    which have infinite precision. The advantage of using these numbers is that
+    you never have to worry about overflows, underflows or rounding errors. The
+    disadvantage is a performance impact and the inability to compare to numbers
+    for equality. We will later learn how to use other types of numbers.   
+
+Strings
+-------
+
+A string is written using quotation marks (``"``). Characters can be escaped with
+a backslash as in many other languages. For example, the string containing a 
+single quotation mark is written ``"\""``.
+
+An extended form called *string interpolation* is written using apostrophes 
+(``'``). Inside such strings the dollar sign (``$``) has a special meaning.
+The dollar sign encloses expression which are not constant strings but are
+computed into string. For example::
+
+    > let name = "Bob"
+    > let age = 42
+    > = 'Hello $name$ of age $age$!'
+    "Hello Bob of age 42!" 
+
+TODO: string functions, concatenation (++), substring, search
+
+Booleans
+--------
+
+The basic truth values are called ``true`` and ``false``. We can create them
+for example by the comparison operators ``==``, ``!=``, ``>=``, ``<=``, ``>`` 
+and ``<`` which return ``true`` if and only if the two operands are respectively
+equal, unequal, greater or equal, less or equal, greater or less. For combining
+booleans we have the usual operators ``&&``, ``||`` and ``!`` for logical and, 
+or and not.
+
+The ``if``-statements lets us make decisions based on a boolean expression::
+
+    > let x = 42
+    > if x mod 2 == 0 then
+          let result = "even"
+      else
+          let result = "odd"
+    > = 'x is $result$'
+    "x is even"
+    
+It takes a boolean as condition and, if it is ``true``, the statement following 
+``then`` will be executed. Otherwise the statement following ``else`` will be 
+executed. The ``else``-part can be omitted, in which case the the empty statement 
+(``pass``) will be executed if the condition is ``false``. So
+
+.. code::
+
+    if is_even(x) then
+      = "It's even"
+      
+is equivalent to 
+
+.. code::
+  
+    if is_even(x) then
+      = "It's even"
+    else
+      pass
+      
+The keen reader might wonder what happens when some variables are only defined
+in one branch. The answer is that only variables that are defined in **both** 
+branches are available after the ``if``-statement. So the following will 
+result in an error::  
+
+    > x = 42
+    > if x mod 2 == 0 then
+        let result = "even"
+    > = 'x is $result$'
+    Error: Unknown variable `result`.
+    
+TODO: Check actual error message
+    
+.. _tuples:    
+    
+Tuples
+------
+
+We can write pairs of numbers with a tuple expression `(3, 4)`. Tuple 
+expressions can have zero or more components. Singleton tuples like `(3,)` must
+add an extra comma to differentiate it from simple parenthesis. We can give names 
+to the components, like `(x = 3, y = 4, z = 5)`.
+
+Tuple components can be accessed via the dot-operator. If `t` is some tuple then
+it's first component is `t.0`, it's second component `t.1` and so on. Named
+components can also be access with their name, like `t.x`.
+
+Another way of accessing tuple components is by using the ``let``-statement::
+
+    > let (a, b) = (3, 4)
+    
+for example simultaneously defines two variables `a` and `b` with values `3` and
+`4` respectively. This general idea is more broadly explained in 
+:ref:`patternmatching`.
+
+There is also a notation that unpacks a tuple inside another tuple::
+
+    > let pos = (x = 1, y = 2)
+    > let size = (w = 10, h = 20)
+    > = (pos, size)
+    ((x = 1, y = 2), (w = 10, h = 20))
+    > = (*pos, *size)
+    (x = 1, y = 2, w = 10, h = 20)
+    
+So when we prefix a tuple component with `*` it has to be a tuple itself. Its
+components are then inserted into the tuple at that position in their respective
+order and with their respective names.
+
+Lists
+-----
+
+Tuples usually have a fixed number of components of many types. To store a
+variable number of values of the same type we use lists.
+
+Lists are written using square brackets, like `[1, 2, 3]` or `[]` for the empty
+list. Similar to tuples, there is also a notation for expanding lists::
+
+    > let x = [1]
+    > let x2 = [x, 2, *x]
+    > = x2
+    [1, 2, 1]
+    
+Accessing elements of a list also uses parenthesis::
+
+    > = x2(0)
+    3
+    > = x2(1)
+    2
+    
+But we can also use a square brackets to access multiple elements at the same time::
+
+    > = x2[0, 2]
+    [3, 1]
+    > = x2[2, 1, 0]
+    [1, 2, 3]
+    > = x2[]
+    []
+    
+TODO: useful list functions (`range`, `++`, `flatten`).
+    
+From mathematics we know set-comprehensions. Versailles also has list-comprehensions::
+
+    > [x * 2 for x from x2]
+    [6, 4, 2]    
+    
+Dictionaries
+------------
+
+A dictionary is a data structure that associates a number of keys with a number
+of entries. Dictionaries are written similar to lists except that each entry
+is a key and a value separated by an equals sign (``=``)::
+
+    > let d1 = ["yes" = 1]
+    > let d2 = ["no" = 0, "maybe" = 2]
+    > = d1("yes")
+    1
+    > = [*d1, *d2]["maybe", "no", "yes"]
+    [2, 1, 0]
+    > = [v = 'he says $k$' for k = v in [*d2, *d1]]
+    [0 = "he says no", 2 = "he says maybe", 1 = "he says yes"]
+    
+Statements
+==========
+
+
+    
+Functions
+=========
+    
+Defining Simple Functions
+-------------------------
+
+.. code::
+
+    > def double(x: Number): Number = x + x
+    > = double(double(11.5))
+    42
+
+As you can see we usually annotate the type of the arguments and the result 
+with a colon (``:``). But result types can usually be inferred automatically
+by the type checker. So it is OK to omit them (unless the type checker complains)::
+
+    > def double(x: Number) = x + x
+    
+There is a syntax that lets you assign the result as a variable::
+
+    > def double(x: Number) => (*y: Number) {
+          let y = x + x
+      }
+
+The meaning of the ``*`` is as explained in :ref:`tuples`. If it wasn't 
+there the function would return a singleton-tuple and would technically not
+be the same the previous definition.
+
+Reversible Functions
 ====================
 
-Hello, world.
+Now ... this is the part Versailles was invented for. Take a very simple 
+arithmetic function like::
 
-.. code::
+    > def add3(x: Number) = x + 3
     
-    call write(stdout, "Hello, world!");
+We would like to know if `5` was the the result of `add3(x)`, what was `x`?
+Well, thanks to general education the answer is pretty easy: `2`.
+
+Now, let's phrase this problem a little differently. Let's introduce a new 
+operator ``~`` that computes the *inverse* of a function. The problem is:
+what is the value of `x` after::
+
+    > let x = add3~(5)
     
-Greeting.
-
-.. code::
-
-    call write(stdout, "Who TF are you?");
-    let name = read(stdin);
-    call write(stdout, "Oh, hi there, " ++ name ++ "!");
+In this reading `add3~` is a new function with the special property that for 
+every `x` `add3~(add3(x)) == x` and for every `y` `add3(add3~(y)) == y`.
     
-.. code::
+The way Versailles solves how to find `add3~` is by using the idea that if a function
+only uses reversible functions to compute its result, the function itself is
+also reversible. 
 
-    call write(stdout, 'Oh, hi there $name$!')
-    
-Greeting function.
+In this case `x + 3` actually is interpreted as the multiple
+function call `add(3)(x)` to the built-in higher-order function `add`. `add`
+itself is irreversible, but for any number it returns a reversible function. So,
+`add3~` is solved to be `add(3)~`, which is defined to be equal to `subtract(3)`.
+And `substract(3)(5)` will give us `2`.
 
-.. code::
+.. _patternmatching:
 
-    def greeting(question: String, greeting1: String, greeting2: String): Unit = {
-        call write(stdout, question);
-        let name = read(stdin);
-        call write(stdout, greeting1 ++ name ++ greeting2);
-    };
-    
-    call greeting("Who you be?", "Hi, ", "!");
-    
-Greeting functional.
+Pattern Matching
+----------------
 
-.. code::
-
-    def greeting(question: String, greeting: String -> String): Unit = {
-        call write(stdout, question);
-        let name = read(stdin);
-        call write(stdout, greeting(name));
-    };
-    def mygreeting(name: String): String = 'Hello, $name$!';
-    
-    call greeting("What's your name?", mygreeting);
+In Versailles pattern matching has two main ideas. The first is that 
     
 .. code::
+  
+    > let f(y) = x
+    
+is equivalent to
 
-    call greeting("What's your name?", name => 'Hello, $name$!');
+.. code::
+
+    > let y = f~(x) 
+    
+For example::
+
+    > let y + 3 = 5
+    > = y
+    2    
+      
+The second idea is that such pattern may fail and in this case you can define
+another pattern to try. The following defines the fast exponentiation function
+using two patterns - one for even numbers and one for od numbers::
+
+    > def fastexp(x: Integer, e: Integer) =
+          e.{
+          case n * 2 => { let tmp = fastexp(x, n); return tmp * tmp }
+          case n * 2 + 1 => { let tmp = fastexp(x, n); return tmp * tmp * x }
+          }
         
-Biased greeting.
+Cases expression::        
 
-.. code::
+    > def fastexp = {
+      case (x, n * 2) => { let tmp = fastexp(x, n); return tmp * tmp }
+      case (x, n * 2 + 1) => { let tmp = fastexp(x, n); return tmp * tmp * x }
+      }
+        
+More general: ``switch``-statement::
 
-    def mygreeting(name: String): String = {
-        if name == "stefan" then
-            let result = 'OK, $name$.';
-        else
-            let result = 'Welcome, $name$!';
-        return result;
-    };
+    > def fastexp(x: Integer, e: Integer) => (y: Integer) {
+          switch {
+              case {
+                  try let n * 2 = e
+                  let tmp = fastexp(x, n)
+                  let y = tmp * tmp
+              }
+              case {
+                  let n * 2 + 1 = e
+                  let tmp = fastexp(x, n)
+                  let y = tmp * tmp * x
+              }
+          }
+      }
+      
+Generalized ``if``-statement::
 
-[TODO: Maybe?]
-
-.. code::
-
-    def mygreeting(name: String): String = {
-        if name.begins_with("s") then
-            return 'OK, $name$.';
-        else
-            return 'Welcome, $name$!';
-    };
-    
-`name.beginswith(x)` is equivalent to `begins_with(name)(x)` which is 
-equivalent to `x.(name.begins_with)`.    
-
+    > if { try let 2 * n = e } then {
+          let tmp = fastexp(x, n)
+          let y = tmp * tmp
+      } else {
+          let 2 * n + 1 = e
+          let tmp = fastexp(x, n)
+          let y = tmp * tmp * x
+      }
+      
+      
 Basics
 ======
 

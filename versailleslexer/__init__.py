@@ -25,30 +25,39 @@ class VersaillesLexer(RegexLexer):
             (r'//(.*?)\n', Comment.Single),
             (r'/(\\\n)?[*](.|\n)*?[*](\\\n)?/', Comment.Multiline),
             (r'(import|module)\b', Keyword.Namespace),
-            (r'(case|let|def|type|letdef|lettype|variant|forget|remember)\b',
+            (r'(case|let|try|def|type|letdef|lettype|variant|forget|remember)\b',
              Keyword.Declaration),
             (words((
-                'and', 'asserting', 'div', 'do', 'else', 
+                'and', 'asserting', 'call', 'div', 'do', 'else', 
                 'fail', 'for', 'from', 'if', 'iff', 'implies', 'in',  
-                'loop', 'mod', 'or', 'pass', 'return', 'unless', 'until', 'where', 
-                'yield'), suffix=r'\b'),
+                'loop', 'mod', 'or', 'pass', 'return', 'switch', 
+                'unless', 'until', 'then', 'versailles', 'where', 'yield'), 
+                suffix=r'\b'),
              Keyword),
             (r'(true|false|cons|nil|muladd|divmod|if|mod)\b', Name.Builtin),
-            (r'(Number|Integer|Float|String|Boolean|Type|Janus_class)\b', Name.Builtin),
+            (r'(Number|Integer|Float|String|Boolean|List|Dictionary|Type|Janus_class)\b', Name.Builtin),
             (words((
                 'algebraic', 'inductive', 'tuple'), suffix=r'\b'),
              Keyword.Type),
             # float_lit
-            (r'\d+(\.\d+[eE][+\-]?\d+|'
-             r'\.\d*|[eE][+\-]?\d+)', Number.Float),
-            (r'\.\d+([eE][+\-]?\d+)?', Number.Float),
-            # int_lit
+            (r'[0-9_]+(\.[\d_]+[eEpP][+\-]?[0-9_]+|'
+             r'\.[0-9_]*|[eE][+\-]?[0-9_]+)?', Number.Float),
+            (r'\.[0-9_]+([eE][+\-]?[0-9_]+)?', Number.Float),
+            (r'0[dD][0-9_]+(\.[\d_]+[eEpP][+\-]?[0-9_]+|'
+             r'0[dD]\.[0-9_]*|[pP][+\-]?[0-9_]+)?', Number.Float),
+            (r'0[dD]\.[0-9_]+([pP][+\-]?[0-9_]+)?', Number.Float),
             # -- octal_lit
-            (r'0[0-7]+', Number.Oct),
+            (r'0[oO][0-7_]+(\.[\d_]+[pP][+\-]?[0-7_]+|'
+             r'0[oO]\.[0-7_]*|[pP][+\-]?[0-7_]+)?', Number.Oct),
+            (r'0[oO]\.[0-7_]+([pP][+\-]?[0-7_]+)?', Number.Oct),
             # -- hex_lit
-            (r'0[xX][0-9a-fA-F]+', Number.Hex),
-            # -- decimal_lit
-            (r'(0|[1-9][0-9]*)', Number.Integer),
+            (r'0[xX][0-9A-Fa-f_]+(\.[\d_]+[pP][+\-]?[0-9A-Fa-f_]+|'
+             r'0[xX]\.[0-9A-Fa-f_]*|[pP][+\-]?[0-9A-Fa-f_]+)?', Number.Hex),
+            (r'0[xX]\.[0-9A-Fa-f_]+([pP][+\-]?[0-9A-Fa-f_]+)?', Number.Hex),
+            # -- binary_lit
+            (r'0[bB][0-1_]+(\.[\d_]+[pP][+\-]?[0-1_]+|'
+             r'0[bB]\.[0-1_]*|[pP][+\-]?[0-1_]+)?', Number.Bin),
+            (r'0[bB]\.[0-1_]+([pP][+\-]?[0-1_]+)?', Number.Bin),
             # StringLiteral
             (r'"[^"]*"', String),
             # -- interpreted_string_lit
