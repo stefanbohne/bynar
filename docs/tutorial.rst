@@ -19,7 +19,7 @@ checked that there a no nonsensical expressions like adding an integer and strin
 
 Versailles is also a pure functional language. This essentially means that
 the values of variables cannot be changed. More generally speaking functions
-cannot have side effects. That means that the result of every function call is
+cannot have side effects. So the result of every function call is
 solely determined by its arguments.
 
 First Steps
@@ -127,7 +127,7 @@ single quotation mark is written ``"\""``.
 
 An extended form called *string interpolation* is written using apostrophes 
 (``'``). Inside such strings the dollar sign (``$``) has a special meaning.
-The dollar sign encloses expression which are not constant strings but are
+The dollar sign encloses expressions which are not constant strings but are
 computed into string. For example::
 
     > let name = "Bob"
@@ -194,14 +194,14 @@ TODO: Check actual error message
 Tuples
 ------
 
-We can write pairs of numbers with a tuple expression `(3, 4)`. Tuple 
+We can write pairs of numbers with a tuple expression like `(3, 4)`. Tuple 
 expressions can have zero or more components. Singleton tuples like `(3,)` must
-add an extra comma to differentiate it from simple parenthesis. We can give names 
+add an extra comma to differentiate it from simple parenthesis. We can also give names 
 to the components, like `(x = 3, y = 4, z = 5)`.
 
 Tuple components can be accessed via the dot-operator. If `t` is some tuple then
-it's first component is `t.0`, it's second component `t.1` and so on. Named
-components can also be access with their name, like `t.x`.
+its first component is `t.0`, it's second component `t.1` and so on. Named
+components can also be accessed by their name, like `t.x`.
 
 Another way of accessing tuple components is by using the ``let``-statement::
 
@@ -227,8 +227,8 @@ order and with their respective names.
 Lists
 -----
 
-Tuples usually have a fixed number of components of many types. To store a
-variable number of values of the same type we use lists.
+Tuples usually have a fixed number of components. To store a
+variable number of values we use lists.
 
 Lists are written using square brackets, like `[1, 2, 3]` or `[]` for the empty
 list. Similar to tuples, there is also a notation for expanding lists::
@@ -238,7 +238,7 @@ list. Similar to tuples, there is also a notation for expanding lists::
     > = x2
     [1, 2, 1]
     
-Accessing elements of a list also uses parenthesis::
+Accessing elements of a list uses parenthesis, same as function calls::
 
     > = x2(0)
     3
