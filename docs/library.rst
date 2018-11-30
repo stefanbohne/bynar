@@ -9,15 +9,27 @@ Versailles Standard Library
 Types
 =====
 
-`Boolean`
+`Type:: Type`
 
-`String`
+`DependentFunctionType:: (A: Type) --> (_: (_: A) --> Type) --> Type`
 
-`Number`
+`Janus_class:: Type`
 
-`Type`
+`SimpleFunctionType:: (_: Janus_class) --> (_: Type) --> (_: Type) --> Type`
+ 
+`\`->\`:: Janus_class`
 
-`Janus_class`
+`List: Type -> Type`
+ 
+`Tuple:: List(Type) -> Type`
+ 
+`Boolean:: Type`
+
+`String:: Type`
+
+`Number:: Type`
+
+`Type:: Type`
 
 Values
 ======

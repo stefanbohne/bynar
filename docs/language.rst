@@ -849,7 +849,7 @@ Loop-Statements
 ---------------
 
 .. productionlist:: versailles
-    LoopStmt : ("from" `Expression`)? ("do" `ComplexStatement`)? 
+    LoopStmt : ("from" `Expression`)? ("repeat" `ComplexStatement`)? 
              : ("until" `Expression`)? ("loop" `ComplexStatement`)? 
                
 This statement is a mix of ``while`` and ``do``-``while`` loops from C-like
