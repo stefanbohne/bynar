@@ -264,15 +264,15 @@ TODO: useful list functions (``range``, ``++``, ``flatten``).
 
 Duplicate::
 
-    > = [42][0, 0, 0, 0}
+    > = [42][0, 0, 0, 0]
     [42, 42, 42, 42]
     > = [4, 2] * 4
     [4, 2, 4, 2, 4, 2, 4, 2]
     
 From mathematics we know set-comprehensions. Versailles also has list-comprehensions::
 
-    > [n * 2 for n from x2]
-    [6, 4, 2]
+    > [n * n for n from [1..10] where is_prime(n)] // squares of prime numbers less than 10
+    [4, 9, 25, 49]
     
 Dictionaries
 ------------
@@ -298,7 +298,49 @@ Dictionary comprehension::
 Statements
 ==========
 
+Pass-statement
+--------------
 
+Occasionally we need a statement that does nothing. This is written ``pass`` in Versailles.
+
+Switch, Try, Reject
+-----------------------
+
+The switch statement is the most general way in Versailles to execute different 
+statements depending on some conditions. It's written like this::
+
+	switch {
+	case a;
+	case b;
+	...
+	case z;
+	}
+	
+where ``a``, ``b``, ..., ``z`` can be any statement. This will try to execute ``a``,
+and if that rejects try ``b``, and so on, and reject if everything fails.
+
+How can a statement fail? That's what the ``fail`` statement is for. It fails 
+unconditionally and is thus only rarely useful.
+
+The normal  ``let``-expression will result in an error if the pattern cannot 
+be matched against the value. Therefore we cannot us it in a ``switch``-statement.
+
+Using the ``try``-statement we can turn those errors into match failures.
+So instead of failing completely a failure to match the pattern would backtrack 
+and try the next ``case`` in a surrounding ``switch``.
+
+If-statement
+------------
+
+
+
+Block-expressions
+-----------------
+
+Statements allow you to define new variables, but how do you use them in an expression?
+That what block statements are for. A block statement is basically a sequence of
+statements with a expression that give the overall value and but can also use all the 
+variables defined by the statements. 
     
 Functions
 =========
@@ -318,7 +360,7 @@ by the type checker. So it is OK to omit them (unless the type checker complains
 
     > def double(x: Number) = x + x
     
-There is a syntax that lets you assign the result as a variable::
+There is also a syntax that lets you assign the result as a variable::
 
     > def double(x: Number) => (*y: Number) {
           let y = x + x
@@ -410,7 +452,7 @@ More general: ``switch``-statement::
     > def fastexp(x: Integer, e: Integer) => (y: Integer) {
           switch {
               case {
-                  try let n * 2 = e
+                  try n * 2 = e
                   let tmp = fastexp(x, n)
                   let y = tmp * tmp
               }
@@ -424,7 +466,7 @@ More general: ``switch``-statement::
       
 Generalized ``if``-statement::
 
-    > if { try let 2 * n = e } then {
+    > if { try 2 * n = e } then {
           let tmp = fastexp(x, n)
           let y = tmp * tmp
       } else {
