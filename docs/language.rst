@@ -49,6 +49,14 @@ The type for truth values. It has two possible values: `true` and `false`. [#fbo
                `true` and `false` are defined as built-in variables 
                and thus are not reserved words.
 
+.. math::
+
+    \Gamma; \emptyset \vdash Boolean &\colon \to Type &=& 1 + 1
+
+    \Gamma; \emptyset \vdash true &\colon \to Boolean &=& \iota_1
+
+    \Gamma; \emptyset \vdash false &\colon \to Boolean &=& \iota_2
+
 Number
 ^^^^^^
 
@@ -97,6 +105,10 @@ Type
 ^^^^
 
 Types have the built-in type `Type`. 
+
+.. math::
+
+    \Gamma; \emptyset \vdash Type&\colon \to Type
     
 .. _variables:
     
@@ -259,6 +271,8 @@ Type Operators
     WhereType : `TypeExpression` ("where" | "unless") `Expression` // refinement type
     KindedType : `TypeExpression` "::" `TypeExpression` // explitely kinded type
     
+
+.. _tuples-short:
       
 Tuples and Tuple Types (short form)
 -----------------------------------
@@ -303,6 +317,8 @@ is a tuple type with three integer components with the names `x`, `y` and `z`.
 The empty tuple type is `Unit` (defined as `tuple { pass }`, see next 
 section) which is sometimes useful. Its only value is the empty tuple `()`.
 
+.. _tuples-long:
+
 Tuples and Tuple Types (long form)
 ----------------------------------
 
@@ -326,15 +342,21 @@ The long form for the tuple `(x = 1, y = 2, z = 3)` is::
         def y: Integer = 2;
         def z: Integer = 3;
     }
+
+The empty tuple and tuple type are written::
+
+    (): tuple { pass }
     
 This form allows
 
 * to document components using the :ref:`def-statement-values`
 * computed members using the definite form of :ref:`def-statement-values`
 * function members using :ref:`def-statement-functions`
-* type components using :ref:`type-statement`
-* local definititions using the :ref:`let-statement` 
-* :ref:`if-statement` which may not depend on runtime values
+* type components using :ref:`type-statements`
+* local definititions using the :ref:`let-statements` 
+* :ref:`if-statements` which may not depend on runtime values
+
+.. _type-tuples:
 
 Type Tuples and Implicit Arguments
 ----------------------------------
@@ -425,6 +447,8 @@ Function Application
                     
 Functions are used by applying them to a value. This value is called the
 function's *argument*. 
+
+.. _case-expressions:
 
 Case-Expressions
 ----------------
@@ -587,6 +611,8 @@ Dictionaries are lists of key value pairs, written like
 
 Dictionary comprehensions are like `[name(x) = value(x) for x from list]`.
 
+.. _algebraic-types:
+
 Algebraic Data Types
 --------------------
 
@@ -606,6 +632,8 @@ If-Expressions
 
 Asserting-Expressions
 ---------------------
+
+.. _block-expressions:
 
 Block Expressions
 -----------------
@@ -654,7 +682,7 @@ use `pass` as the first statement in your block.
 .. [#fblock] Allowing block statements as the first statement in a block statement
              creates an ambiguity with tuple types.      
 
-.. _let-statement:
+.. _let-statements:
 
 Let-Statements
 --------------
@@ -768,7 +796,7 @@ def g: (x: A) --> C <-> B = f~;`.
 `def f(x: A)(y: B) <-> g(z: C);` is short for 
 `def f: (x: A) --> B <-> C; def g: (x: A) --> C <-> B = (x: A) -> f~(x);`.
 
-.. _type-statement:
+.. _type-statements:
 
 Type-Statements
 ---------------
@@ -798,9 +826,11 @@ is just short for::
         case 0     => algebraic { variant Nil; };
         case n + 1 => algebraic { variant Cons: (A, NList(n){A}); };
     });
+
+.. _switch-statements:
     
-Switch-Statement
-----------------
+Switch-Statements
+-----------------
 
 .. productionlist:: versailles
     SwitchStmt: "switch" "{" "case" `ComplexStatement` (";"  
@@ -815,7 +845,7 @@ then becomes the same as the behavior of the non-failing `case`-statement.
 The names and types of the consumed and defined variables in each `case`-
 statement must be identical.
 
-.. _if-statement:
+.. _if-statements:
 
 If-Statements
 -------------
@@ -839,7 +869,7 @@ are considered `true` if they don't fail. Variables can be consumed and defined
 in those expressions. The block-expressions must not have `return`-statement, so
 they must actually be block-statements. In fact, `Boolean` expressions are 
 actually converted to the short form of `let`-expressions (see 
-:ref:`let-statement`) and then treated as block-statements.
+:ref:`let-statements`) and then treated as block-statements.
     
 `if c then t asserting a else e` is equivalent to `switch { case {c; t; a}; case e; }`.
 `if c then t else e` is equivalent to `switch { case {c; t}; case e; }`. 
@@ -890,6 +920,8 @@ Returns ends the current block specifying its value. If a block has no
 Yield-Statements
 ----------------
 
+.. _module-statements:
+
 Module-Statements
 -----------------
 
@@ -899,22 +931,30 @@ Miscellaneous
 Curly Braces
 ------------
 
-Versailles has 
+Curly braces (``{}``) have many uses in Versailles. Some uses are easy distinguishable:
 
-* block-expressions
+* :ref:`Tuple Types (long form) <tuples-long>`: `tuple { ... }`
+* :ref:`algebraic-types`: `algebraic { ... }`
+* :ref:`def-statement-functions`: `def f(...) { ... }`
+* :ref:`switch-statements`: `switch { ... }`
+* :ref:`module-statements`: `module { ... }`
+
+Other uses are distinguished by their content.
+
+* :ref:`block-expressions`
     may contain `return`. If no `return`, `def` or `type` statement, then 
     `return ()` is implied. Must not contain `for`, `when`, `yield`, `case`.
-* long tuple-expressions
+* :ref:`Tuples (longform) <tuples-long>`
     must contain at least one `def` or `type` statement. Must not contain 
     `return`, `for`, `when`, `yield`, `case`.
-* monad-block-expressions
+* monadic :ref:`block-expressions`
     must contain at least one of `for`, `when` or `yield`. `return x` is equivalent
     to `yield pure(x)`.
     must not contain `case`.
-* case-expressions
+* :ref:`case-expressions`
     must contain at least one `case`-statement. Must not contain `return`, 
     `for`, `when`, `yield`.
-* type tuples
+* :ref:`Type Tuples <type-tuples>`
     always begins with a type expression, which can be differentiated
     from statements by their first token.
     
@@ -923,4 +963,6 @@ To avoid confusion none of these forms allows empty curly braces (`{}`).
 * empty block-expression: `{ pass }`
 * empty monad-block-expression: `pure()`
 * empty case-expression: `fail` (the built-in function), or `{ fail } => { fail }` 
-* empty tuple type: `tuple { pass }` 
+* empty tuple type: `Unit` or `tuple { pass }` 
+
+Other uses of curly braces are distignuishable by context.
