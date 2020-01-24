@@ -39,25 +39,20 @@ class VersaillesLexer(RegexLexer):
             (words((
                 'algebraic', 'inductive', 'tuple'), suffix=r'\b'),
              Keyword.Type),
-            # float_lit
-            (r'[0-9_]+(\.[\d_]+[eEpP][+\-]?[0-9_]+|'
-             r'\.[0-9_]*|[eE][+\-]?[0-9_]+)?', Number.Float),
-            (r'\.[0-9_]+([eE][+\-]?[0-9_]+)?', Number.Float),
-            (r'0[dD][0-9_]+(\.[\d_]+[eEpP][+\-]?[0-9_]+|'
-             r'0[dD]\.[0-9_]*|[pP][+\-]?[0-9_]+)?', Number.Float),
-            (r'0[dD]\.[0-9_]+([pP][+\-]?[0-9_]+)?', Number.Float),
             # -- octal_lit
             (r'0[oO][0-7_]+(\.[\d_]+[pP][+\-]?[0-7_]+|'
              r'0[oO]\.[0-7_]*|[pP][+\-]?[0-7_]+)?', Number.Oct),
-            (r'0[oO]\.[0-7_]+([pP][+\-]?[0-7_]+)?', Number.Oct),
             # -- hex_lit
             (r'0[xX][0-9A-Fa-f_]+(\.[\d_]+[pP][+\-]?[0-9A-Fa-f_]+|'
              r'0[xX]\.[0-9A-Fa-f_]*|[pP][+\-]?[0-9A-Fa-f_]+)?', Number.Hex),
-            (r'0[xX]\.[0-9A-Fa-f_]+([pP][+\-]?[0-9A-Fa-f_]+)?', Number.Hex),
             # -- binary_lit
             (r'0[bB][0-1_]+(\.[\d_]+[pP][+\-]?[0-1_]+|'
              r'0[bB]\.[0-1_]*|[pP][+\-]?[0-1_]+)?', Number.Bin),
-            (r'0[bB]\.[0-1_]+([pP][+\-]?[0-1_]+)?', Number.Bin),
+            # float_lit
+            (r'[0-9_]+(\.[\d_]+[eEpP][+\-]?[0-9_]+|'
+             r'\.[0-9_]*|[eE][+\-]?[0-9_]+)?', Number.Float),
+            (r'0[dD][0-9_]+(\.[\d_]+[eEpP][+\-]?[0-9_]+|'
+             r'0[dD]\.[0-9_]*|[pP][+\-]?[0-9_]+)?', Number.Float),
             # StringLiteral
             (r'"[^"]*"', String),
             # -- interpreted_string_lit
