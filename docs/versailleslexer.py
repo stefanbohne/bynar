@@ -60,7 +60,7 @@ class VersaillesLexer(RegexLexer):
             # Tokens
             (r'(&&|\|\||==>|<=>|==|!=|<=|>=|<|>|'
              r'<>-<>|<>->|<-<>|>-<|>->|<-<|=>|->|>-|-->|[+\-*/!~])', Operator),
-            (r'(::|[|!()\[\]\{\}\.,;:=\?])', Punctuation),
+            (r'(::|[|!\(\)\[\]\{\}\.,;:=\?])', Punctuation),
             # identifier
             (r'[^\W\d]\w*', Name.Other),
             (r'`[^`]*`', Name.Other),

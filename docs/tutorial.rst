@@ -48,7 +48,7 @@ reserved words. But unfortunately it also means that expressions and
 statements cannot be mixed as they are many other languages.
 
 In order to tell the repl to treat the input as an expression, we begin the
-line with an equals sign (`=`) [#fequstmt]_. So, for example to see the
+line with an equals sign (``=``) [#fequstmt]_. So, for example to see the
 value of `pi / 2` you type::
 
     > = pi / 2
@@ -58,8 +58,8 @@ value of `pi / 2` you type::
 
 .. [#fexprstmt] There are other syntactical categories (types, janus classes and
                 tuple components) which we will get into later.
-.. [#fequstmt] The `=` sign here is actually a special statement that simply
-               prints its single argument. The `=` statement only exists in
+.. [#fequstmt] The ``=`` sign here is actually a special statement that simply
+               prints its single argument. The ``=`` statement only exists in
                the repl. 
 
 Simple Types
@@ -119,12 +119,12 @@ in hexadecimal::
 Strings
 -------
 
-A string is written using quotation marks (`"`). Characters can be escaped with
+A string is written using quotation marks (``"``). Characters can be escaped with
 a backslash as in many other languages. For example, the string containing a 
-single quotation mark is written `"\""`.
+single quotation mark is written ``"\""``.
 
 An extended form called *string interpolation* is written using apostrophes 
-(`'`). Inside such strings the dollar sign (`$`) has a special meaning.
+(``'``). Inside such strings the dollar sign (``$``) has a special meaning.
 The dollar sign encloses expressions which are not constant strings but are
 computed into string. For example::
 
@@ -133,7 +133,7 @@ computed into string. For example::
     > = 'Hello $name$ of age $age$!'
     "Hello Bob of age 42!" 
 
-TODO: string functions, concatenation (++), substring, search
+TODO: string functions, concatenation (`++`), substring, search
 
 Booleans
 --------
@@ -279,7 +279,7 @@ Dictionaries
 
 A dictionary is a data structure that associates a number of keys with a number
 of entries. Dictionaries are written similar to lists except that each entry
-is a key and a value separated by an equals sign (`=`)::
+is a key and a value separated by an equals sign (``=``)::
 
     > let d1 = ["yes" = 1]
     > let d2 = ["no" = 0, "maybe" = 2]
@@ -366,7 +366,7 @@ There is also a syntax that lets you assign the result as a variable::
           let y = x + x
       }
 
-The meaning of the `*` is as explained in :ref:`tuples`. If it wasn't 
+The meaning of the ``*`` is as explained in :ref:`tuples`. If it wasn't 
 there the function would return a singleton-tuple and would technically not
 be the same the previous definition.
 
