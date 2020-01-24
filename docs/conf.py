@@ -20,6 +20,7 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('.'))
+import versailleslexer
 
 
 # -- General configuration ------------------------------------------------
@@ -32,8 +33,8 @@ sys.path.insert(0, os.path.abspath('.'))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = ['sphinx.ext.todo',
-    'sphinx.ext.mathjax']
-    #, 'sphinxcontrib.inlinesyntaxhighlight']
+    'sphinx.ext.mathjax',
+    'sphinxcontrib.inlinesyntaxhighlight']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -74,6 +75,8 @@ language = None
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
+def setup(app):
+    app.add_lexer('versailles', versailleslexer.VersaillesLexer())
 pygments_style = 'sphinx'
 highlight_language = 'versailles'
 
