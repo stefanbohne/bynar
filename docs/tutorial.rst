@@ -234,45 +234,53 @@ list. Similar to tuples, there is also a notation for expanding lists::
     > let x = [1]
     > let x2 = [x, 2, *x]
     > = x2
-    [1, 2, 1]
+    [[1], 2, 1]
     
 Accessing elements of a list uses parenthesis, same as function calls::
 
     > = x2(0)
-    3
+    [1]
     > = x2(1)
     2
     
 But we can also use a square brackets to access multiple elements at the same time::
 
     > = x2[0, 2]
-    [3, 1]
+    [[1], 1]
     > = x2[2, 1, 0]
-    [1, 2, 3]
+    [1, 2, [1]]
     > = x2[]
     []
     
 There is a special notation for defining ranges of numbers. `[1..5]` is equivalent 
-to `[1, 2, 3, 4]` -- the second number is not included in the list. This range 
+to `[1, 2, 3, 4]` and `[5..1]` is equivalent to `[4, 3, 2, 1]`. So the list goes from
+the first number to the second number but excluding the higher one. This range 
 notation can be combined with the simple list notation and is especially useful
 for accessing a sublist of a list. For example::
 
-	> = "1234567890"[0..2, 3, 5, 7..10]
-	"1246890"
+	> = "there! you, Hey, "[12..17, 12..17, 7..11, 5]
+	"Hey, Hey, you!"
 	    
-TODO: useful list functions (`range`, `++`, `flatten`).
+TODO: useful list functions (`range`, `++`, `flatten`, `*`).
 
-Duplicate::
+From mathematics we know set-comprehensions. Versailles also has list-comprehensions
+where you specify an expression to build the elements if the list, for example `n * n`,
+and a source for the variables in that expression, for example `n from [1..10]`. The
+first ten square numbers can then be written::
 
-    > = [42][0, 0, 0, 0]
-    [42, 42, 42, 42]
-    > = [4, 2] * 4
-    [4, 2, 4, 2, 4, 2, 4, 2]
-    
-From mathematics we know set-comprehensions. Versailles also has list-comprehensions::
+    [n * n for n from [1..10]]
+    > [1, 4, 9, 16, 25, 36, 49, 64, 81, 100]
 
-    > [n * n for n from [1..10] where is_prime(n)] // squares of prime numbers less than 10
+We can also filter the source list with a `when`-clause::
+
+    > [n * n for n from [1..10] where is_prime(n)]
     [4, 9, 25, 49]
+
+It is possible to have multiple `from`- and `when`-clauses. The result will be constructed
+from all possible combinations of the lists in the `from` clauses::
+
+    > [n * 10 + m for n from [1..9] where is_prime(n) m from [1..9] where m % n == 0]
+    > [22, 24, 26, 28, 33, 36, 39, 55, 77]
     
 Dictionaries
 ------------
@@ -319,13 +327,13 @@ statements depending on some conditions. It's written like this::
 where `a`, `b`, ..., `z` can be any statement. This will try to execute `a`,
 and if that rejects try `b`, and so on, and reject if everything fails.
 
-How can a statement fail? That's what the `fail` statement is for. It fails 
+How can a statement be rejected? That's what the `reject` statement is for. It fails 
 unconditionally and is thus only rarely useful.
 
-The normal  `let`-expression will result in an error if the pattern cannot 
+The normal `let`-expression will result in an error if the pattern cannot 
 be matched against the value. Therefore we cannot us it in a `switch`-statement.
 
-Using the `try`-statement we can turn those errors into match failures.
+Using the `try`-statement we can turn those errors into rejections.
 So instead of failing completely a failure to match the pattern would backtrack 
 and try the next `case` in a surrounding `switch`.
 
