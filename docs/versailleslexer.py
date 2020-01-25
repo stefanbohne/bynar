@@ -49,10 +49,10 @@ class VersaillesLexer(RegexLexer):
             (r'0[bB][0-1_]+(\.[0-1_]+[pP][+\-]?[\d_]+)?|'
              r'0[bB]\.[0-1_]*|[pP][+\-]?[\d_]+', Number.Bin),
             # float_lit
-            (r'[0-9_]+(\.[\d_]+[eEpP][+\-]?[\d_]+)?|'
-             r'\.[0-9_]*|[eE][+\-]?[\d_]+', Number.Float),
-            (r'0[dD][0-9_]+(\.[\d_]+[eEpP][+\-]?[\d_]+)?|'
+            (r'0[dD][0-9_]+(\.[0-9_]+[pP][+\-]?[\d_]+)?|'
              r'0[dD]\.[0-9_]*|[pP][+\-]?[\d_]+', Number.Float),
+            (r'[0-9_]+(\.[0-9_]+[eEpP][+\-]?[\d_]+)?|'
+             r'\.[0-9_]*|[eEpP][+\-]?[\d_]+', Number.Float),
             # StringLiteral
             (r'"[^"]*"', String),
             # -- interpreted_string_lit
