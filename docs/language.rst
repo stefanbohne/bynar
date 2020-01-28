@@ -896,17 +896,7 @@ The `from`-expression must be `true` before the `loop` is entered and must
 be `false` before every other repetition. The whole loop fails, if this is not
 the case. If the `from`-expression is omitted in an irreversible context,
 the `from`-expression is not checked at all. The `from`-expression is necessary
-for the loop to have a reverse, so it is always checked in a reversible context. 
-               
-`from f do d until u loop l` is actually equivalent to 
-`do { let !f; d } loop { let !u; l }`. All together, `do d loop l` does the 
-following:
-
-    #. In a reversible context only, try to execute `d`, and fail if it doesn't fail.
-    #. Execute `l`, and goto step 5 if it fails.
-    #. Execute `d`, and fail if it fails.
-    #. Goto step 2.
-    #. Done.
+for the loop to have a reverse, so it is always checked in a reversible context.
 
 The reverse of the loop `from f do d while w loop l` is `from w do dr while f loop lr`
 where `dr` and `lr` are the reverses of `d` and `l` respectively.
@@ -916,11 +906,6 @@ Return-Statements
 
 Returns ends the current block specifying its value. If a block has no 
 `return`-statement and no `def`- or `type`-statements, a `return ()` is implied.
-
-Yield-Statements
-----------------
-
-.. _module-statements:
 
 Module-Statements
 -----------------
@@ -943,17 +928,12 @@ Other uses are distinguished by their content.
 
 * :ref:`block-expressions`
     may contain `return`. If no `return`, `def` or `type` statement, then 
-    `return ()` is implied. Must not contain `for`, `when`, `yield`, `case`.
+    `return ()` is implied. Must not contain `case`.
 * :ref:`Tuples (longform) <tuples-long>`
     must contain at least one `def` or `type` statement. Must not contain 
-    `return`, `for`, `when`, `yield`, `case`.
-* monadic :ref:`block-expressions`
-    must contain at least one of `for`, `when` or `yield`. `return x` is equivalent
-    to `yield pure(x)`.
-    must not contain `case`.
+    `return`, `case`.
 * :ref:`case-expressions`
-    must contain at least one `case`-statement. Must not contain `return`, 
-    `for`, `when`, `yield`.
+    must contain at least one `case`-statement. Must not contain `return`.
 * :ref:`Type Tuples <type-tuples>`
     always begins with a type expression, which can be differentiated
     from statements by their first token.
@@ -961,7 +941,6 @@ Other uses are distinguished by their content.
 To avoid confusion none of these forms allows empty curly braces (`{}`).
 
 * empty block-expression: `{ pass }`
-* empty monad-block-expression: `pure()`
 * empty case-expression: `fail` (the built-in function), or `{ fail } => { fail }` 
 * empty tuple type: `Unit` or `tuple { pass }` 
 
